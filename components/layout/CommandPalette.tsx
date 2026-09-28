@@ -25,7 +25,7 @@ interface CommandPaletteProps {
   onClose: () => void;
 }
 
-type Mode = 'BUSCA' | 'AÇÃO' | 'PERGUNTA';
+type Mode = 'BUSCA' | 'AÇÃO';
 
 export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
   const router = useRouter();
@@ -47,7 +47,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  // Detecção inteligente de intenção à medida que o usuário digita
+  // Detecção de ação direta conforme digitação
   useEffect(() => {
     const text = query.toLowerCase().trim();
     if (!text) {
@@ -56,17 +56,6 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
     }
 
     if (
-      text.startsWith('como') ||
-      text.startsWith('quanto') ||
-      text.startsWith('quais') ||
-      text.startsWith('qual') ||
-      text.startsWith('o que') ||
-      text.includes('?') ||
-      text.includes('conversão') ||
-      text.includes('meta')
-    ) {
-      setActiveMode('PERGUNTA');
-    } else if (
       text.includes('pagou') ||
       text.includes('pagamento') ||
       text.startsWith('crie') ||
