@@ -8,7 +8,7 @@ export interface AIProviderConfig {
   activeProvider: AIProviderType;
   gemini: {
     apiKey: string;
-    model: string; // 'gemini-2.5-flash' | 'gemini-1.5-pro'
+    model: string; // 'gemini-1.5-flash' | 'gemini-1.5-pro'
     temperature: number;
     enabled: boolean;
   };
@@ -30,7 +30,7 @@ export const DEFAULT_AI_CONFIG: AIProviderConfig = {
   activeProvider: 'gemini',
   gemini: {
     apiKey: '',
-    model: 'gemini-2.5-flash',
+    model: 'gemini-1.5-flash',
     temperature: 0.4,
     enabled: false,
   },
@@ -81,7 +81,7 @@ class AIProviderService {
   }
 
   // Testar conexão com Google Gemini
-  public async testGemini(apiKey: string, model: string = 'gemini-2.5-flash'): Promise<{ success: boolean; message: string }> {
+  public async testGemini(apiKey: string, model: string = 'gemini-1.5-flash'): Promise<{ success: boolean; message: string }> {
     if (!apiKey) {
       return { success: false, message: 'API Key do Gemini não fornecida.' };
     }
@@ -100,9 +100,31 @@ class AIProviderService {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
+        let extraInfo = '';
+        
+        // Se for erro de NotFound, tentamos buscar a lista de modelos permitidos
+        if (res.status === 404 || errData.error?.message?.includes('not found')) {
+          try {
+            const modelsRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+            if (modelsRes.ok) {
+              const modelsData = await modelsRes.json();
+              const availableModels = modelsData.models
+                ?.filter((m: any) => m.name.includes('gemini') && m.supportedGenerationMethods?.includes('generateContent'))
+                .map((m: any) => m.name.replace('models/', ''))
+                .join(', ');
+              
+              if (availableModels) {
+                extraInfo = `\n\nModelos suportados por essa chave: ${availableModels}. Escolha um desses na lista.`;
+              }
+            }
+          } catch (e) {
+            // ignora erro silencioso
+          }
+        }
+
         return {
           success: false,
-          message: `Erro da API Gemini (${res.status}): ${errData.error?.message || 'Chave inválida ou modelo inacessível.'}`,
+          message: `Erro da API Gemini (${res.status}): ${errData.error?.message || 'Chave inválida ou modelo inacessível.'}${extraInfo}`,
         };
       }
 
