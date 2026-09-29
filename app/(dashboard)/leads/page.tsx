@@ -617,24 +617,22 @@ export default function LeadsPage() {
                     {/* Ações: WhatsApp, Gerar Mensagem, Olho & Excluir */}
                     <td className="py-3.5 px-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
-                        {/* Botão Chamar no WhatsApp */}
+                        {/* Botão Chamar no WhatsApp (Só a logo) */}
                         <button
                           onClick={() => handleDirectWhatsApp(lead.whatsapp, lead.company_name)}
-                          className="px-2.5 py-1.5 rounded-xl bg-[#25D366]/15 hover:bg-[#25D366]/25 border border-[#25D366]/30 text-[#25D366] text-xs font-heading font-medium flex items-center gap-1 transition-all active:scale-95 shadow-sm"
+                          className="p-1.5 rounded-xl bg-[#25D366]/15 hover:bg-[#25D366]/25 border border-[#25D366]/30 text-[#25D366] transition-all active:scale-95 shadow-sm flex items-center justify-center"
                           title={`Chamar ${lead.company_name} no WhatsApp`}
                         >
-                          <WhatsAppIcon className="w-3.5 h-3.5 fill-current" />
-                          <span className="hidden xl:inline">WhatsApp</span>
+                          <WhatsAppIcon className="w-4 h-4 fill-current" />
                         </button>
 
                         {/* Botão Gerar Mensagem (Anexo 1) */}
                         <button
                           onClick={() => handleOpenMessageModal(lead)}
-                          className="px-2.5 py-1.5 rounded-xl bg-[#10201E] hover:bg-[#163832] border border-[rgba(218,241,222,0.12)] text-[#8EB69B] hover:text-[#F1F9A1] text-xs font-heading font-medium flex items-center gap-1 transition-all active:scale-95"
+                          className="p-1.5 rounded-xl bg-[#10201E] hover:bg-[#163832] border border-[rgba(218,241,222,0.12)] text-[#8EB69B] hover:text-[#F1F9A1] transition-all active:scale-95 flex items-center justify-center"
                           title="Gerar Mensagem para WhatsApp"
                         >
                           <Sparkles className="w-3.5 h-3.5 text-[#F1F9A1]" />
-                          <span className="hidden xl:inline">Mensagem</span>
                         </button>
 
                         {/* Botão Olho: Ver Ficha do Lead */}

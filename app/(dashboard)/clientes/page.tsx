@@ -187,10 +187,7 @@ export default function ClientesPage() {
                 <th className="py-3 px-4">Cliente / Empresa</th>
                 <th className="py-3 px-4">Segmento</th>
                 <th className="py-3 px-4">Telefone / WhatsApp</th>
-                <th className="py-3 px-4 text-center">Projetos</th>
                 <th className="py-3 px-4 text-right">Lifetime Value</th>
-                <th className="py-3 px-4 text-right">Pendente</th>
-                <th className="py-3 px-4">Último Projeto</th>
                 <th className="py-3 px-4 text-right">Ações</th>
               </tr>
             </thead>
@@ -239,39 +236,21 @@ export default function ClientesPage() {
                     )}
                   </td>
 
-                  {/* Projetos */}
-                  <td className="py-3.5 px-4 text-center font-mono">
-                    <span className="px-2 py-0.5 rounded bg-[#10201E] text-[#8EB69B] text-xs">
-                      {client.projects_count}
-                    </span>
-                  </td>
-
                   {/* LTV */}
                   <td className="py-3.5 px-4 text-right font-mono font-semibold text-[#F1F9A1]">
                     R$ {client.lifetime_value.toLocaleString('pt-BR')}
                   </td>
 
-                  {/* Total Pendente */}
-                  <td className="py-3.5 px-4 text-right font-mono text-xs text-[#E7ECE8]">
-                    R$ {client.total_pending.toLocaleString('pt-BR')}
-                  </td>
-
-                  {/* Último Projeto / Status */}
-                  <td className="py-3.5 px-4 text-xs text-[#9BA6A0]">
-                    {client.last_project_at || 'Em andamento'}
-                  </td>
-
                   {/* Ações */}
                   <td className="py-3.5 px-4 text-right">
                     <div className="flex items-center justify-end gap-1.5">
-                      {/* Botão WhatsApp Direto */}
+                      {/* Botão WhatsApp Direto (Só a logo) */}
                       <button
                         onClick={() => handleDirectWhatsApp(client.phone, client.company_name, client)}
-                        className="px-2.5 py-1.5 rounded-xl bg-[#25D366]/15 hover:bg-[#25D366]/25 border border-[#25D366]/30 text-[#25D366] text-xs font-heading font-medium flex items-center gap-1 transition-all active:scale-95 shadow-sm"
+                        className="p-1.5 rounded-xl bg-[#25D366]/15 hover:bg-[#25D366]/25 border border-[#25D366]/30 text-[#25D366] transition-all active:scale-95 shadow-sm flex items-center justify-center"
                         title={client.phone ? `Chamar ${client.company_name} no WhatsApp` : 'Adicionar WhatsApp'}
                       >
-                        <WhatsAppIcon className="w-3.5 h-3.5 fill-current" />
-                        <span className="hidden xl:inline">WhatsApp</span>
+                        <WhatsAppIcon className="w-4 h-4 fill-current" />
                       </button>
 
                       {/* Botão Gerar Mensagem WhatsApp */}
