@@ -8,9 +8,7 @@ import { Logo } from '@/components/ui/Logo';
 import {
   LayoutDashboard,
   Users,
-  Sparkles,
   Kanban,
-  Target,
   Building2,
   Briefcase,
   CheckSquare,
@@ -52,9 +50,7 @@ export function Sidebar() {
     {
       title: 'COMERCIAL',
       items: [
-        { label: 'Prospects', href: '/prospects', icon: Target },
         { label: 'Leads', href: '/leads', icon: Users },
-        { label: 'Prospecção IA', href: '/prospeccao', icon: Sparkles },
         { label: 'Pipeline', href: '/pipeline', icon: Kanban },
         { label: 'Oportunidades', href: '/oportunidades', icon: Crosshair },
       ],

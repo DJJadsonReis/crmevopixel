@@ -12,6 +12,8 @@ export interface QualifyInput {
   state?: string;
   email?: string;
   role?: string;
+  instagram?: string;
+  google_business?: string;
 }
 
 export function detectNiche(text: string): string {
@@ -87,6 +89,8 @@ export function qualifyLeadWithAI(input: QualifyInput): Omit<Lead, 'id'> {
     city: city,
     state: input.state || 'SP',
     email: input.email || '',
+    instagram: input.instagram || '',
+    google_business: input.google_business || '',
     phone: formattedPhone,
     whatsapp: formattedPhone,
     score: score,

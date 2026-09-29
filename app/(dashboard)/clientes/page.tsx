@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
 import Link from 'next/link';
@@ -9,12 +9,12 @@ import {
   Building2,
   Search,
   Plus,
-  Sparkles,
-  Phone,
   Pencil,
   Trash2,
   Eye,
   MessageSquare,
+  ArrowUpRight,
+  Mail,
 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon';
@@ -104,7 +104,11 @@ export default function ClientesPage() {
 
   const handleDirectWhatsApp = (phone?: string, companyName?: string, clientObj?: any) => {
     if (!phone || !cleanPhoneNumber(phone)) {
-      if (confirm(`O cliente "${companyName}" ainda não possui telefone/WhatsApp cadastrado. Deseja cadastrar agora?`)) {
+      if (
+        confirm(
+          `O cliente "${companyName}" ainda não possui telefone/WhatsApp cadastrado. Deseja cadastrar agora?`
+        )
+      ) {
         handleEdit(clientObj);
       }
       return;
@@ -127,7 +131,9 @@ export default function ClientesPage() {
     (c) =>
       c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.segment.toLowerCase().includes(searchTerm.toLowerCase())
+      c.segment.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (c.phone && c.phone.includes(searchTerm)) ||
+      (c.email && c.email.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   return (
@@ -143,12 +149,17 @@ export default function ClientesPage() {
             Clientes da EvoPixel
           </h1>
           <p className="text-xs text-[#9BA6A0] mt-1">
-            Visão consolidada de Lifetime Value, projetos entregues, contato direto via WhatsApp e histórico.
+            Lista consolidada de clientes, Lifetime Value, histórico, contato direto via WhatsApp e perfil.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          <Button onClick={() => setIsModalOpen(true)} variant="primary" size="sm" className="gap-1.5">
+          <Button
+            onClick={() => setIsModalOpen(true)}
+            variant="primary"
+            size="sm"
+            className="gap-1.5"
+          >
             <Plus className="w-3.5 h-3.5 text-[#07100F]" />
             <span>Novo Cliente</span>
           </Button>
@@ -160,154 +171,174 @@ export default function ClientesPage() {
         <Search className="w-3.5 h-3.5 text-[#8EB69B] absolute left-3.5 top-1/2 -translate-y-1/2" />
         <input
           type="text"
-          placeholder="Buscar por cliente, empresa ou segmento..."
+          placeholder="Buscar por cliente, empresa, segmento, telefone..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full pl-9 pr-4 py-2 text-xs rounded-xl bg-[#0C1A19] border border-[rgba(218,241,222,0.08)] text-[#E7ECE8] placeholder-[#65706A] focus:outline-none focus:border-[#8EB69B]"
         />
       </div>
 
-      {/* Grid de Clientes */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredClients.map((client) => (
-          <div
-            key={client.id}
-            className="p-6 rounded-2xl bg-[#0C1A19] border border-[rgba(218,241,222,0.08)] hover:border-[rgba(218,241,222,0.18)] transition-all group flex flex-col justify-between space-y-4 shadow-sm"
-          >
-            <div>
-              <div className="flex items-start justify-between gap-2 mb-2">
-                <span className="text-[10px] font-mono text-[#8EB69B] uppercase tracking-wider">
-                  {client.segment}
-                </span>
-                <span className="text-[10px] px-2 py-0.5 rounded bg-[#10201E] text-[#8EB69B] font-mono">
-                  {client.projects_count} projetos
-                </span>
-              </div>
+      {/* Lista / Tabela de Clientes */}
+      <div className="bg-[#0C1A19] border border-[rgba(218,241,222,0.08)] rounded-2xl overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="border-b border-[rgba(218,241,222,0.06)] bg-[#07100F] text-[11px] font-mono text-[#65706A] uppercase tracking-wider">
+                <th className="py-3 px-4">Cliente / Empresa</th>
+                <th className="py-3 px-4">Segmento</th>
+                <th className="py-3 px-4">Telefone / WhatsApp</th>
+                <th className="py-3 px-4 text-center">Projetos</th>
+                <th className="py-3 px-4 text-right">Lifetime Value</th>
+                <th className="py-3 px-4 text-right">Pendente</th>
+                <th className="py-3 px-4">Último Projeto</th>
+                <th className="py-3 px-4 text-right">Ações</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[rgba(218,241,222,0.04)]">
+              {filteredClients.map((client) => (
+                <tr
+                  key={client.id}
+                  className="hover:bg-[#10201E]/40 transition-colors group"
+                >
+                  {/* Empresa e Contato */}
+                  <td className="py-3.5 px-4">
+                    <Link
+                      href={`/clientes/${client.id}`}
+                      className="font-medium text-[#E7ECE8] group-hover:text-[#F1F9A1] transition-colors flex items-center gap-1.5"
+                    >
+                      <span>{client.company_name}</span>
+                      <ArrowUpRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </Link>
+                    <div className="text-[11px] text-[#9BA6A0] mt-0.5 flex items-center gap-2 flex-wrap">
+                      <span>{client.name}</span>
+                      {client.email && (
+                        <>
+                          <span>•</span>
+                          <span className="flex items-center gap-1 text-[#65706A]">
+                            <Mail className="w-3 h-3" />
+                            {client.email}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </td>
 
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <h3 className="text-base font-semibold text-[#E7ECE8] font-heading group-hover:text-[#F1F9A1] transition-colors">
-                    {client.company_name}
-                  </h3>
-                  <div className="text-xs text-[#9BA6A0] mt-0.5 flex items-center gap-1.5">
-                    <span>{client.name}</span>
-                    {client.phone && (
-                      <span className="font-mono text-[11px] text-[#8EB69B]">
-                        • {client.phone}
-                      </span>
+                  {/* Segmento */}
+                  <td className="py-3.5 px-4">
+                    <span className="text-[11px] font-mono text-[#8EB69B] px-2 py-0.5 rounded bg-[#10201E] border border-[rgba(218,241,222,0.06)]">
+                      {client.segment}
+                    </span>
+                  </td>
+
+                  {/* Telefone / WhatsApp */}
+                  <td className="py-3.5 px-4 font-mono text-xs">
+                    {client.phone ? (
+                      <span className="text-[#8EB69B]">{client.phone}</span>
+                    ) : (
+                      <span className="text-[#65706A] italic">Não informado</span>
                     )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
-                    onClick={() => handleEdit(client)}
-                    className="p-1.5 rounded-lg bg-[#10201E] text-[#8EB69B] hover:text-[#E7ECE8] transition-colors"
-                    title="Editar cliente"
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(client.id)}
-                    className="p-1.5 rounded-lg bg-[#10201E] text-red-400 hover:text-red-300 transition-colors"
-                    title="Excluir cliente"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
+                  </td>
 
-              {/* LTV & Indicadores Financeiros */}
-              <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-[rgba(218,241,222,0.06)] text-xs">
-                <div>
-                  <span className="text-[#65706A] text-[11px]">Lifetime Value</span>
-                  <div className="text-sm font-semibold font-mono text-[#F1F9A1] mt-0.5">
+                  {/* Projetos */}
+                  <td className="py-3.5 px-4 text-center font-mono">
+                    <span className="px-2 py-0.5 rounded bg-[#10201E] text-[#8EB69B] text-xs">
+                      {client.projects_count}
+                    </span>
+                  </td>
+
+                  {/* LTV */}
+                  <td className="py-3.5 px-4 text-right font-mono font-semibold text-[#F1F9A1]">
                     R$ {client.lifetime_value.toLocaleString('pt-BR')}
-                  </div>
-                </div>
-                <div>
-                  <span className="text-[#65706A] text-[11px]">Pendente</span>
-                  <div className="text-sm font-semibold font-mono text-[#E7ECE8] mt-0.5">
+                  </td>
+
+                  {/* Total Pendente */}
+                  <td className="py-3.5 px-4 text-right font-mono text-xs text-[#E7ECE8]">
                     R$ {client.total_pending.toLocaleString('pt-BR')}
-                  </div>
-                </div>
-              </div>
+                  </td>
 
-              {/* Oportunidades de Cross-sell */}
-              {client.cross_sell_opportunities && client.cross_sell_opportunities.length > 0 && (
-                <div className="mt-4 pt-3 border-t border-[rgba(218,241,222,0.04)]">
-                  <div className="text-[10px] font-mono text-[#8EB69B] uppercase mb-1.5 flex items-center gap-1">
-                    <Sparkles className="w-3 h-3 text-[#8EB69B]" />
-                    Oportunidade de Expansão
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {client.cross_sell_opportunities.map((opp, idx) => (
-                      <span
-                        key={idx}
-                        className="text-[10px] px-2 py-0.5 rounded bg-[#10201E] text-[#9BA6A0] border border-[rgba(218,241,222,0.06)]"
+                  {/* Último Projeto / Status */}
+                  <td className="py-3.5 px-4 text-xs text-[#9BA6A0]">
+                    {client.last_project_at || 'Em andamento'}
+                  </td>
+
+                  {/* Ações */}
+                  <td className="py-3.5 px-4 text-right">
+                    <div className="flex items-center justify-end gap-1.5">
+                      {/* Botão WhatsApp Direto */}
+                      <button
+                        onClick={() => handleDirectWhatsApp(client.phone, client.company_name, client)}
+                        className="px-2.5 py-1.5 rounded-xl bg-[#25D366]/15 hover:bg-[#25D366]/25 border border-[#25D366]/30 text-[#25D366] text-xs font-heading font-medium flex items-center gap-1 transition-all active:scale-95 shadow-sm"
+                        title={client.phone ? `Chamar ${client.company_name} no WhatsApp` : 'Adicionar WhatsApp'}
                       >
-                        {opp}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+                        <WhatsAppIcon className="w-3.5 h-3.5 fill-current" />
+                        <span className="hidden xl:inline">WhatsApp</span>
+                      </button>
 
-            {/* Rodapé do Card: Telefone, WhatsApp e Olho para Ficha */}
-            <div className="pt-3 border-t border-[rgba(218,241,222,0.06)] flex items-center justify-between gap-2">
-              <span className="text-[10px] text-[#65706A] truncate">
-                {client.last_project_at ? `Último: ${client.last_project_at}` : 'Cliente Ativo'}
-              </span>
+                      {/* Botão Gerar Mensagem WhatsApp */}
+                      <button
+                        onClick={() => handleOpenMessageModal(client)}
+                        className="p-1.5 rounded-xl bg-[#10201E] hover:bg-[#163832] border border-[rgba(218,241,222,0.12)] text-[#8EB69B] hover:text-[#F1F9A1] transition-all flex items-center justify-center active:scale-95"
+                        title="Gerar Mensagem para WhatsApp"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                      </button>
 
-              <div className="flex items-center gap-2 shrink-0">
-                {/* Botão Gerar Mensagem WhatsApp */}
-                <button
-                  onClick={() => handleOpenMessageModal(client)}
-                  className="p-1.5 rounded-xl bg-[#10201E] hover:bg-[#163832] border border-[rgba(218,241,222,0.12)] text-[#8EB69B] hover:text-[#F1F9A1] transition-all flex items-center justify-center active:scale-95"
-                  title="Gerar Mensagem para WhatsApp"
-                >
-                  <MessageSquare className="w-3.5 h-3.5" />
-                </button>
+                      {/* Botão Olho: Ficha do Cliente */}
+                      <Link href={`/clientes/${client.id}`} title="Abrir Ficha do Cliente">
+                        <button className="p-1.5 rounded-xl bg-[#10201E] hover:bg-[#163832] border border-[rgba(218,241,222,0.12)] text-[#8EB69B] hover:text-[#F1F9A1] transition-all flex items-center justify-center active:scale-95">
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+                      </Link>
 
-                {/* Botão WhatsApp Direto */}
-                <button
-                  onClick={() => handleDirectWhatsApp(client.phone, client.company_name, client)}
-                  className="px-2.5 py-1.5 rounded-xl bg-[#25D366]/15 hover:bg-[#25D366]/25 border border-[#25D366]/30 text-[#25D366] text-xs font-heading font-medium flex items-center gap-1.5 transition-all active:scale-95 shadow-sm"
-                  title={client.phone ? `Chamar ${client.company_name} no WhatsApp` : 'Adicionar WhatsApp'}
-                >
-                  <WhatsAppIcon className="w-3.5 h-3.5 fill-current" />
-                  <span>WhatsApp</span>
-                </button>
+                      {/* Botão Editar */}
+                      <button
+                        onClick={() => handleEdit(client)}
+                        className="p-1.5 rounded-xl bg-[#10201E] hover:bg-[#163832] text-[#8EB69B] hover:text-[#E7ECE8] transition-colors"
+                        title="Editar cliente"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
 
-                {/* Botão Olho: Abre a Ficha do Cliente (Substitui "Ver 360°") */}
-                <Link href={`/clientes/${client.id}`} title="Abrir Ficha do Cliente">
-                  <button className="p-1.5 rounded-xl bg-[#10201E] hover:bg-[#163832] border border-[rgba(218,241,222,0.12)] text-[#8EB69B] hover:text-[#F1F9A1] transition-all flex items-center justify-center active:scale-95">
-                    <Eye className="w-4 h-4" />
-                  </button>
-                </Link>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {filteredClients.length === 0 && (
-        <div className="p-12 text-center text-xs text-[#9BA6A0] bg-[#0C1A19] rounded-2xl border border-[rgba(218,241,222,0.06)]">
-          Nenhum cliente encontrado com os critérios de busca.
+                      {/* Botão Excluir */}
+                      <button
+                        onClick={() => handleDelete(client.id)}
+                        className="p-1.5 rounded-xl bg-[#10201E] hover:bg-red-500/20 text-[#65706A] hover:text-red-400 transition-colors"
+                        title="Excluir cliente"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      )}
+
+        {filteredClients.length === 0 && (
+          <div className="p-12 text-center text-xs text-[#9BA6A0]">
+            Nenhum cliente encontrado com os critérios de busca.
+          </div>
+        )}
+      </div>
 
       {/* Modal Cadastrar / Editar Cliente */}
       <Modal
         isOpen={isModalOpen}
         onClose={closeModal}
         title={editId ? 'Editar Cliente' : 'Cadastrar Novo Cliente'}
-        subtitle={editId ? 'Altere os dados básicos do cliente' : 'Preencha os dados básicos do novo cliente'}
+        subtitle={
+          editId
+            ? 'Altere os dados básicos do cliente'
+            : 'Preencha os dados básicos do novo cliente'
+        }
         maxWidth="md"
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-[var(--evo-muted)] mb-1">Nome do Cliente / Contato *</label>
+            <label className="block text-xs font-medium text-[var(--evo-muted)] mb-1">
+              Nome do Cliente / Contato *
+            </label>
             <input
               type="text"
               value={cName}
@@ -317,7 +348,9 @@ export default function ClientesPage() {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-[var(--evo-muted)] mb-1">Empresa / Razão Social *</label>
+            <label className="block text-xs font-medium text-[var(--evo-muted)] mb-1">
+              Empresa / Razão Social *
+            </label>
             <input
               type="text"
               value={cCompany}
@@ -327,13 +360,17 @@ export default function ClientesPage() {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-[var(--evo-muted)] mb-1">Segmento / Nicho</label>
+            <label className="block text-xs font-medium text-[var(--evo-muted)] mb-1">
+              Segmento / Nicho
+            </label>
             <select
               value={cSegment}
               onChange={(e) => setCSegment(e.target.value)}
               className="w-full px-3 py-2 rounded-xl bg-[var(--evo-surface)] border border-[var(--evo-border)] text-[var(--evo-text)] focus:outline-none focus:border-[#8EB69B] text-xs appearance-none"
             >
-              <option value="" disabled>Selecione um Nicho</option>
+              <option value="" disabled>
+                Selecione um Nicho
+              </option>
               <option value="Geral">Geral</option>
               {crmService.getNiches().map((niche) => (
                 <option key={niche.id} value={niche.name}>
@@ -344,7 +381,9 @@ export default function ClientesPage() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-[var(--evo-muted)] mb-1">E-mail</label>
+              <label className="block text-xs font-medium text-[var(--evo-muted)] mb-1">
+                E-mail
+              </label>
               <input
                 type="email"
                 value={cEmail}
@@ -354,7 +393,9 @@ export default function ClientesPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-[var(--evo-muted)] mb-1">Telefone / WhatsApp</label>
+              <label className="block text-xs font-medium text-[var(--evo-muted)] mb-1">
+                Telefone / WhatsApp
+              </label>
               <input
                 type="text"
                 value={cPhone}
@@ -384,4 +425,3 @@ export default function ClientesPage() {
     </div>
   );
 }
-

@@ -87,6 +87,7 @@ export interface Lead {
   whatsapp?: string;
   instagram?: string;
   website?: string;
+  google_business?: string;
   city: string;
   state: string;
   score: number;
