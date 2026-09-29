@@ -5,23 +5,25 @@ import Link from 'next/link';
 import { crmService } from '@/lib/services/crm-service';
 import { useCrmSync } from '@/lib/hooks/useCrmSync';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
 import {
   Building2,
   Search,
   Plus,
-  ArrowUpRight,
   Sparkles,
   Phone,
-  Mail,
-  Layers,
   Pencil,
   Trash2,
+  Eye,
+  MessageSquare,
 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
+import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon';
+import { openWhatsApp, cleanPhoneNumber } from '@/lib/utils/whatsapp';
+import { formatPhoneNumber } from '@/lib/utils';
+import { GenerateMessageModal, TargetEntity } from '@/components/modals/GenerateMessageModal';
 
 export default function ClientesPage() {
+  useCrmSync();
   const clients = crmService.getClients();
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -32,6 +34,9 @@ export default function ClientesPage() {
   const [cEmail, setCEmail] = useState('');
   const [cPhone, setCPhone] = useState('');
   const [editId, setEditId] = useState<string | null>(null);
+
+  // Modal de Geração de Mensagem para WhatsApp
+  const [messageTarget, setMessageTarget] = useState<TargetEntity | null>(null);
 
   const handleAddClient = () => {
     if (!cCompany || !cName) {
@@ -55,8 +60,7 @@ export default function ClientesPage() {
     };
 
     if (editId) {
-      // Retain the existing numbers
-      const existingClient = clients.find(c => c.id === editId);
+      const existingClient = clients.find((c) => c.id === editId);
       crmService.updateClient(editId, {
         ...payload,
         projects_count: existingClient?.projects_count || 0,
@@ -68,8 +72,7 @@ export default function ClientesPage() {
     } else {
       crmService.addClient(payload);
     }
-    
-    setClients([...crmService.getClients()]);
+
     closeModal();
   };
 
@@ -86,7 +89,6 @@ export default function ClientesPage() {
   const handleDelete = (id: string) => {
     if (confirm('Tem certeza que deseja excluir este cliente?')) {
       crmService.deleteClient(id);
-      setClients([...crmService.getClients()]);
     }
   };
 
@@ -98,6 +100,27 @@ export default function ClientesPage() {
     setCSegment('');
     setCEmail('');
     setCPhone('');
+  };
+
+  const handleDirectWhatsApp = (phone?: string, companyName?: string, clientObj?: any) => {
+    if (!phone || !cleanPhoneNumber(phone)) {
+      if (confirm(`O cliente "${companyName}" ainda não possui telefone/WhatsApp cadastrado. Deseja cadastrar agora?`)) {
+        handleEdit(clientObj);
+      }
+      return;
+    }
+    openWhatsApp(phone);
+  };
+
+  const handleOpenMessageModal = (client: any) => {
+    setMessageTarget({
+      id: client.id,
+      name: client.name,
+      company_name: client.company_name,
+      phone: client.phone,
+      whatsapp: client.phone,
+      segment: client.segment,
+    });
   };
 
   const filteredClients = clients.filter(
@@ -113,14 +136,14 @@ export default function ClientesPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[rgba(218,241,222,0.06)] pb-5">
         <div>
           <div className="flex items-center gap-2 text-xs font-mono text-[#8EB69B] uppercase tracking-wider mb-1">
-            <Building2 className="w-3.5 h-3.5" />
-            Gestão de Carteira & Client 360
+            <Building2 className="w-3.5 h-3.5 text-[#F1F9A1]" />
+            Gestão de Carteira & Clientes
           </div>
           <h1 className="text-2xl lg:text-3xl font-semibold text-[#E7ECE8] font-heading">
             Clientes da EvoPixel
           </h1>
           <p className="text-xs text-[#9BA6A0] mt-1">
-            Visão consolidada de Lifetime Value, projetos entregues e oportunidades de expansão/cross-sell.
+            Visão consolidada de Lifetime Value, projetos entregues, contato direto via WhatsApp e histórico.
           </p>
         </div>
 
@@ -140,11 +163,11 @@ export default function ClientesPage() {
           placeholder="Buscar por cliente, empresa ou segmento..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-9 pr-4 py-2 text-xs rounded-xl bg-[#0C1A19] border border-[rgba(218,241,222,0.08)] text-[#E7ECE8] placeholder-[#65706A] focus:outline-none"
+          className="w-full pl-9 pr-4 py-2 text-xs rounded-xl bg-[#0C1A19] border border-[rgba(218,241,222,0.08)] text-[#E7ECE8] placeholder-[#65706A] focus:outline-none focus:border-[#8EB69B]"
         />
       </div>
 
-      {/* Grid de Clientes 360 */}
+      {/* Grid de Clientes */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredClients.map((client) => (
           <div
@@ -166,13 +189,28 @@ export default function ClientesPage() {
                   <h3 className="text-base font-semibold text-[#E7ECE8] font-heading group-hover:text-[#F1F9A1] transition-colors">
                     {client.company_name}
                   </h3>
-                  <p className="text-xs text-[#9BA6A0] mt-0.5">{client.name}</p>
+                  <div className="text-xs text-[#9BA6A0] mt-0.5 flex items-center gap-1.5">
+                    <span>{client.name}</span>
+                    {client.phone && (
+                      <span className="font-mono text-[11px] text-[#8EB69B]">
+                        • {client.phone}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => handleEdit(client)} className="p-1.5 rounded bg-[#10201E] text-[#8EB69B] hover:text-[#E7ECE8]">
+                  <button
+                    onClick={() => handleEdit(client)}
+                    className="p-1.5 rounded-lg bg-[#10201E] text-[#8EB69B] hover:text-[#E7ECE8] transition-colors"
+                    title="Editar cliente"
+                  >
                     <Pencil className="w-3.5 h-3.5" />
                   </button>
-                  <button onClick={() => handleDelete(client.id)} className="p-1.5 rounded bg-[#10201E] text-red-400 hover:text-red-300">
+                  <button
+                    onClick={() => handleDelete(client.id)}
+                    className="p-1.5 rounded-lg bg-[#10201E] text-red-400 hover:text-red-300 transition-colors"
+                    title="Excluir cliente"
+                  >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -194,7 +232,7 @@ export default function ClientesPage() {
                 </div>
               </div>
 
-              {/* Oportunidades de Cross-sell (Seção 27) */}
+              {/* Oportunidades de Cross-sell */}
               {client.cross_sell_opportunities && client.cross_sell_opportunities.length > 0 && (
                 <div className="mt-4 pt-3 border-t border-[rgba(218,241,222,0.04)]">
                   <div className="text-[10px] font-mono text-[#8EB69B] uppercase mb-1.5 flex items-center gap-1">
@@ -215,45 +253,76 @@ export default function ClientesPage() {
               )}
             </div>
 
-            <div className="pt-3 border-t border-[rgba(218,241,222,0.06)] flex items-center justify-between">
-              <span className="text-[10px] text-[#65706A]">
-                Último projeto: {client.last_project_at || 'Em andamento'}
+            {/* Rodapé do Card: Telefone, WhatsApp e Olho para Ficha */}
+            <div className="pt-3 border-t border-[rgba(218,241,222,0.06)] flex items-center justify-between gap-2">
+              <span className="text-[10px] text-[#65706A] truncate">
+                {client.last_project_at ? `Último: ${client.last_project_at}` : 'Cliente Ativo'}
               </span>
-              <Link href={`/clientes/${client.id}`}>
-                <Button variant="secondary" size="sm" className="text-xs h-7 px-2.5">
-                  Ver 360°
-                </Button>
-              </Link>
+
+              <div className="flex items-center gap-2 shrink-0">
+                {/* Botão Gerar Mensagem WhatsApp */}
+                <button
+                  onClick={() => handleOpenMessageModal(client)}
+                  className="p-1.5 rounded-xl bg-[#10201E] hover:bg-[#163832] border border-[rgba(218,241,222,0.12)] text-[#8EB69B] hover:text-[#F1F9A1] transition-all flex items-center justify-center active:scale-95"
+                  title="Gerar Mensagem para WhatsApp"
+                >
+                  <MessageSquare className="w-3.5 h-3.5" />
+                </button>
+
+                {/* Botão WhatsApp Direto */}
+                <button
+                  onClick={() => handleDirectWhatsApp(client.phone, client.company_name, client)}
+                  className="px-2.5 py-1.5 rounded-xl bg-[#25D366]/15 hover:bg-[#25D366]/25 border border-[#25D366]/30 text-[#25D366] text-xs font-heading font-medium flex items-center gap-1.5 transition-all active:scale-95 shadow-sm"
+                  title={client.phone ? `Chamar ${client.company_name} no WhatsApp` : 'Adicionar WhatsApp'}
+                >
+                  <WhatsAppIcon className="w-3.5 h-3.5 fill-current" />
+                  <span>WhatsApp</span>
+                </button>
+
+                {/* Botão Olho: Abre a Ficha do Cliente (Substitui "Ver 360°") */}
+                <Link href={`/clientes/${client.id}`} title="Abrir Ficha do Cliente">
+                  <button className="p-1.5 rounded-xl bg-[#10201E] hover:bg-[#163832] border border-[rgba(218,241,222,0.12)] text-[#8EB69B] hover:text-[#F1F9A1] transition-all flex items-center justify-center active:scale-95">
+                    <Eye className="w-4 h-4" />
+                  </button>
+                </Link>
+              </div>
             </div>
           </div>
         ))}
       </div>
 
+      {filteredClients.length === 0 && (
+        <div className="p-12 text-center text-xs text-[#9BA6A0] bg-[#0C1A19] rounded-2xl border border-[rgba(218,241,222,0.06)]">
+          Nenhum cliente encontrado com os critérios de busca.
+        </div>
+      )}
+
+      {/* Modal Cadastrar / Editar Cliente */}
       <Modal
         isOpen={isModalOpen}
         onClose={closeModal}
-        title={editId ? "Editar Cliente" : "Cadastrar Novo Cliente"}
-        subtitle={editId ? "Altere os dados básicos do cliente" : "Preencha os dados básicos do novo cliente"}
+        title={editId ? 'Editar Cliente' : 'Cadastrar Novo Cliente'}
+        subtitle={editId ? 'Altere os dados básicos do cliente' : 'Preencha os dados básicos do novo cliente'}
         maxWidth="md"
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-[var(--evo-muted)] mb-1">Nome do Cliente *</label>
+            <label className="block text-xs font-medium text-[var(--evo-muted)] mb-1">Nome do Cliente / Contato *</label>
             <input
               type="text"
               value={cName}
               onChange={(e) => setCName(e.target.value)}
-              placeholder="Ex: João Silva"
+              placeholder="Ex: Dra Dulce"
               className="w-full px-3 py-2 rounded-xl bg-[var(--evo-surface)] border border-[var(--evo-border)] text-[var(--evo-text)] focus:outline-none focus:border-[#8EB69B] text-xs"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-[var(--evo-muted)] mb-1">Empresa *</label>
+            <label className="block text-xs font-medium text-[var(--evo-muted)] mb-1">Empresa / Razão Social *</label>
             <input
               type="text"
               value={cCompany}
               onChange={(e) => setCCompany(e.target.value)}
-              placeholder="Ex: Clínica Vida"
+              placeholder="Ex: Dulce Guerra Advocacia"
               className="w-full px-3 py-2 rounded-xl bg-[var(--evo-surface)] border border-[var(--evo-border)] text-[var(--evo-text)] focus:outline-none focus:border-[#8EB69B] text-xs"
             />
           </div>
@@ -285,13 +354,13 @@ export default function ClientesPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-[var(--evo-muted)] mb-1">Telefone/WhatsApp</label>
+              <label className="block text-xs font-medium text-[var(--evo-muted)] mb-1">Telefone / WhatsApp</label>
               <input
                 type="text"
                 value={cPhone}
-                onChange={(e) => setCPhone(e.target.value)}
-                placeholder="(00) 00000-0000"
-                className="w-full px-3 py-2 rounded-xl bg-[var(--evo-surface)] border border-[var(--evo-border)] text-[var(--evo-text)] focus:outline-none focus:border-[#8EB69B] text-xs"
+                onChange={(e) => setCPhone(formatPhoneNumber(e.target.value))}
+                placeholder="(11) 99999-9999"
+                className="w-full px-3 py-2 rounded-xl bg-[var(--evo-surface)] border border-[var(--evo-border)] text-[var(--evo-text)] focus:outline-none focus:border-[#8EB69B] text-xs font-mono"
               />
             </div>
           </div>
@@ -300,11 +369,19 @@ export default function ClientesPage() {
               Cancelar
             </Button>
             <Button variant="primary" size="sm" onClick={handleAddClient}>
-              {editId ? "Salvar Alterações" : "Salvar Cliente"}
+              {editId ? 'Salvar Alterações' : 'Salvar Cliente'}
             </Button>
           </div>
         </div>
       </Modal>
+
+      {/* Modal Gerar Mensagem WhatsApp (Anexo 1) */}
+      <GenerateMessageModal
+        isOpen={Boolean(messageTarget)}
+        onClose={() => setMessageTarget(null)}
+        target={messageTarget}
+      />
     </div>
   );
 }
+
