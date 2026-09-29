@@ -32,6 +32,7 @@ import {
   Layers,
   Compass,
   ArrowUpRight,
+} from 'lucide-react';
 import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon';
 import { openWhatsApp, cleanPhoneNumber } from '@/lib/utils/whatsapp';
 import { GenerateMessageModal, TargetEntity } from '@/components/modals/GenerateMessageModal';
