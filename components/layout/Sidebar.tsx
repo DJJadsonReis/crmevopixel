@@ -19,14 +19,10 @@ import {
   FileCheck,
   Layers,
   DollarSign,
-  BarChart3,
-  BrainCircuit,
-  Workflow,
   Settings,
   ChevronLeft,
   ChevronRight,
   History,
-  Bot,
   Crosshair,
   CalendarCheck,
 } from 'lucide-react';
@@ -83,16 +79,6 @@ export function Sidebar() {
         { label: 'Meu Histórico', href: '/minha-historia', icon: History },
       ],
     },
-    {
-      title: 'INTELIGÊNCIA',
-      items: [
-        { label: 'Evo Assistant', href: '/assistant', icon: Bot, badge: 'IA' },
-        { label: 'Evo Intelligence', href: '/intelligence', icon: BrainCircuit },
-        { label: 'Relatórios', href: '/relatorios', icon: BarChart3 },
-        { label: 'Automações', href: '/automacoes', icon: Workflow },
-      ],
-    },
-
   ];
 
   return (

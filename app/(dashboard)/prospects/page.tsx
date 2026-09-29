@@ -25,12 +25,16 @@ import { Badge } from '@/components/ui/Badge';
 import { Prospect, ProspectStatus } from '@/types/database';
 import { Modal } from '@/components/ui/Modal';
 import { aiProvider } from '@/lib/ai/ai-provider';
+import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon';
+import { openWhatsApp, cleanPhoneNumber } from '@/lib/utils/whatsapp';
+import { GenerateMessageModal, TargetEntity } from '@/components/modals/GenerateMessageModal';
 
 export default function ProspectsPage() {
   const [prospects, setProspects] = useState<Prospect[]>(crmService.getProspects());
   const [search, setSearch] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [convertedToast, setConvertedToast] = useState<string | null>(null);
+  const [messageTarget, setMessageTarget] = useState<TargetEntity | null>(null);
 
   // Apify + AI Capture State
   const [isApifyModalOpen, setIsApifyModalOpen] = useState(false);
@@ -410,24 +414,58 @@ export default function ProspectsPage() {
                 Origem: {prospect.source}
               </span>
 
-              {prospect.status === 'converted_to_lead' ? (
-                <Link href={prospect.converted_lead_id ? `/leads/${prospect.converted_lead_id}` : '/leads'}>
-                  <Button variant="secondary" size="sm" className="text-xs gap-1.5 text-[#8EB69B]">
-                    <span>Ver Lead</span>
-                    <ArrowUpRight className="w-3.5 h-3.5" />
+              <div className="flex items-center gap-2">
+                {prospect.telefone && (
+                  <>
+                    {/* Botão Gerar Mensagem */}
+                    <button
+                      onClick={() =>
+                        setMessageTarget({
+                          id: prospect.id,
+                          name: prospect.nome,
+                          company_name: prospect.empresa,
+                          phone: prospect.telefone,
+                          whatsapp: prospect.telefone,
+                          segment: prospect.segment,
+                        })
+                      }
+                      className="p-1.5 rounded-xl bg-[#10201E] hover:bg-[#163832] border border-[rgba(218,241,222,0.12)] text-[#8EB69B] hover:text-[#F1F9A1] transition-all flex items-center justify-center active:scale-95"
+                      title="Gerar Mensagem para WhatsApp"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                    </button>
+
+                    {/* Botão WhatsApp Direto */}
+                    <button
+                      onClick={() => openWhatsApp(prospect.telefone!)}
+                      className="px-2.5 py-1.5 rounded-xl bg-[#25D366]/15 hover:bg-[#25D366]/25 border border-[#25D366]/30 text-[#25D366] text-xs font-heading font-medium flex items-center gap-1.5 transition-all active:scale-95 shadow-sm"
+                      title={`Chamar ${prospect.empresa} no WhatsApp`}
+                    >
+                      <WhatsAppIcon className="w-3.5 h-3.5 fill-current" />
+                      <span>WhatsApp</span>
+                    </button>
+                  </>
+                )}
+
+                {prospect.status === 'converted_to_lead' ? (
+                  <Link href={prospect.converted_lead_id ? `/leads/${prospect.converted_lead_id}` : '/leads'}>
+                    <Button variant="secondary" size="sm" className="text-xs gap-1.5 text-[#8EB69B]">
+                      <span>Ver Lead</span>
+                      <ArrowUpRight className="w-3.5 h-3.5" />
+                    </Button>
+                  </Link>
+                ) : (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => handleConvert(prospect.id, prospect.empresa)}
+                    className="text-xs gap-1.5"
+                  >
+                    <span>Qualificar</span>
+                    <ArrowUpRight className="w-3.5 h-3.5 text-[#07100F]" />
                   </Button>
-                </Link>
-              ) : (
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={() => handleConvert(prospect.id, prospect.empresa)}
-                  className="text-xs gap-1.5"
-                >
-                  <span>Qualificar como Lead</span>
-                  <ArrowUpRight className="w-3.5 h-3.5 text-[#07100F]" />
-                </Button>
-              )}
+                )}
+              </div>
             </div>
           </div>
         ))}
@@ -524,6 +562,12 @@ export default function ProspectsPage() {
         </div>
       </Modal>
 
+      {/* Modal Gerador de Mensagens */}
+      <GenerateMessageModal
+        isOpen={!!messageTarget}
+        onClose={() => setMessageTarget(null)}
+        target={messageTarget}
+      />
     </div>
   );
 }

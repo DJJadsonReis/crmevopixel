@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { crmService } from '@/lib/services/crm-service';
@@ -18,11 +18,15 @@ import {
   Sparkles,
   ArrowUpRight,
 } from 'lucide-react';
+import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon';
+import { openWhatsApp, cleanPhoneNumber } from '@/lib/utils/whatsapp';
+import { GenerateMessageModal } from '@/components/modals/GenerateMessageModal';
 
 export default function ClienteDetailPage() {
   const params = useParams();
   const clientId = params.id as string;
   const client = crmService.getClientById(clientId);
+  const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
 
   if (!client) {
     return (
@@ -63,7 +67,33 @@ export default function ClienteDetailPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Chamar no WhatsApp */}
+            <button
+              onClick={() => {
+                if (!client.phone || !cleanPhoneNumber(client.phone)) {
+                  alert(`O cliente "${client.company_name}" não possui WhatsApp válido cadastrado.`);
+                  return;
+                }
+                openWhatsApp(client.phone);
+              }}
+              className="px-3.5 py-2 rounded-xl bg-[#25D366]/15 hover:bg-[#25D366]/25 border border-[#25D366]/30 text-[#25D366] text-xs font-heading font-medium flex items-center gap-1.5 transition-all active:scale-95 shadow-sm"
+              title="Abrir WhatsApp Web / App"
+            >
+              <WhatsAppIcon className="w-4 h-4 fill-current" />
+              <span>WhatsApp</span>
+            </button>
+
+            {/* Gerar Mensagem */}
+            <button
+              onClick={() => setIsGenerateModalOpen(true)}
+              className="px-3.5 py-2 rounded-xl bg-[#10201E] hover:bg-[#163832] border border-[rgba(218,241,222,0.12)] text-[#8EB69B] hover:text-[#F1F9A1] text-xs font-heading font-medium flex items-center gap-1.5 transition-all active:scale-95"
+              title="Gerar Mensagem para WhatsApp"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-[#F1F9A1]" />
+              <span>Gerar Mensagem</span>
+            </button>
+
             <Link href="/propostas">
               <Button variant="primary" size="sm" className="gap-1.5">
                 <span>Criar Proposta</span>
@@ -185,6 +215,20 @@ export default function ClienteDetailPage() {
           </Card>
         </div>
       </div>
+
+      {/* Modal Gerador de Mensagens */}
+      <GenerateMessageModal
+        isOpen={isGenerateModalOpen}
+        onClose={() => setIsGenerateModalOpen(false)}
+        target={{
+          id: client.id,
+          name: client.name,
+          company_name: client.company_name,
+          phone: client.phone,
+          whatsapp: client.phone,
+          segment: client.segment,
+        }}
+      />
     </div>
   );
 }

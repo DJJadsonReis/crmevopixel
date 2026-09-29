@@ -230,6 +230,17 @@ export class DatabaseService {
     }
   }
 
+  public async deleteProspect(id: string): Promise<boolean> {
+    if (!isSupabaseConfigured()) return false;
+    try {
+      const supabase = getSupabase();
+      const { error } = await supabase.from('prospects').delete().eq('id', id);
+      return !error;
+    } catch {
+      return false;
+    }
+  }
+
   // ============================================================================
   // OPORTUNIDADES / PIPELINE KANBAN
   // ============================================================================

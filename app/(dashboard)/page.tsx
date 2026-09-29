@@ -18,7 +18,7 @@ import {
   CheckCircle2,
   Zap,
   Target,
-  Bot,
+  BarChart3,
   Compass,
   Building2,
   HelpCircle,
@@ -36,7 +36,6 @@ export default function DashboardPage() {
   const opportunities = crmService.getOpportunities();
   const sequences = crmService.getSequences();
   const prospects = crmService.getProspects();
-  const evoInsights = crmService.getEvoInsights();
   const nextBestActions = crmService.getNextBestActions();
   const commercialGoals = crmService.getCommercialGoals();
   const monthlyEvolution = crmService.getMonthlyEvolution();
@@ -90,12 +89,6 @@ export default function DashboardPage() {
             ))}
           </div>
 
-          <Link href="/assistant">
-            <Button variant="secondary" size="sm" className="gap-2 text-xs">
-              <Bot className="w-3.5 h-3.5 text-[#F1F9A1]" />
-              <span>Evo Assistant</span>
-            </Button>
-          </Link>
           <Link href="/prospects">
             <Button variant="primary" size="sm" className="gap-2 text-xs">
               <Target className="w-3.5 h-3.5 text-[#07100F]" />
@@ -353,84 +346,6 @@ export default function DashboardPage() {
             </span>
           </div>
         </div>
-      </div>
-
-      {/* 4. NOVO BLOCO: EVO DIZ (Seção 12 da Spec — DADO vs INFERÊNCIA vs RECOMENDAÇÃO) */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-semibold text-[#E7ECE8] font-heading flex items-center gap-2.5">
-              <Sparkles className="w-4 h-4 text-[#F1F9A1]" />
-              EVO DIZ
-            </h2>
-            <p className="text-xs text-[#9BA6A0] mt-0.5">
-              Insights calculados pelo motor de inteligência analítica a partir dos dados reais da operação.
-            </p>
-          </div>
-          <Link href="/intelligence" className="text-xs text-[#8EB69B] hover:text-[#F1F9A1] transition-colors">
-            Abrir Central de Inteligência →
-          </Link>
-        </div>
-
-        {evoInsights.length === 0 ? (
-          <div className="py-8 px-6 rounded-2xl bg-[#0C1A19]/50 border border-[rgba(218,241,222,0.06)] text-center">
-            <Sparkles className="w-5 h-5 text-[#8EB69B] mx-auto mb-2" />
-            <p className="text-sm text-[#E7ECE8] font-medium">Motor Evo Intelligence Pronto</p>
-            <p className="text-xs text-[#9BA6A0] mt-0.5 max-w-md mx-auto">
-              Conforme você cadastrar seus leads, propostas e clientes, a inteligência analítica gerará recomendações e análises automaticamente.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {evoInsights.map((item) => (
-              <div
-                key={item.id}
-                className="bg-[#0C1A19] border border-[rgba(218,241,222,0.08)] hover:border-[rgba(218,241,222,0.18)] rounded-2xl p-5 flex flex-col justify-between transition-all group shadow-sm"
-              >
-                <div>
-                  <div className="flex items-center justify-between text-xs mb-3">
-                    <span
-                      className={`text-[9px] font-mono font-semibold px-2 py-0.5 rounded tracking-wider uppercase ${
-                        item.type === 'DADO'
-                          ? 'bg-[#10201E] text-[#8EB69B] border border-[#8EB69B]/30'
-                          : item.type === 'INFERENCIA'
-                          ? 'bg-amber-500/10 text-amber-300 border border-amber-500/20'
-                          : 'bg-[#163832] text-[#F1F9A1] border border-[#F1F9A1]/30'
-                      }`}
-                    >
-                      [{item.type}]
-                    </span>
-                    <span className="text-[10px] font-mono text-[#65706A]">
-                      {item.period}
-                    </span>
-                  </div>
-
-                  <h4 className="text-xs font-semibold text-[#E7ECE8] font-heading leading-snug mb-2">
-                    {item.title}
-                  </h4>
-
-                  <p className="text-xs text-[#9BA6A0] leading-relaxed">
-                    {item.explanation}
-                  </p>
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-[rgba(218,241,222,0.06)] space-y-2">
-                  <div className="text-[10px] font-mono text-[#65706A]">
-                    Origem: {item.data_source}
-                  </div>
-                  {item.suggested_action && (
-                    <Link href={item.suggested_action.link}>
-                      <Button variant="secondary" size="sm" className="w-full text-xs gap-1 py-1 h-7">
-                        <span>{item.suggested_action.label}</span>
-                        <ArrowRight className="w-3 h-3 text-[#8EB69B]" />
-                      </Button>
-                    </Link>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* 5. BLOCO PRESERVADO: "O que precisa da sua atenção" (Seção 14 da Spec) */}
@@ -744,9 +659,137 @@ export default function DashboardPage() {
 
             <div className="p-4 rounded-2xl bg-[#10201E]/50 border border-[rgba(218,241,222,0.06)] text-xs text-[#9BA6A0] flex items-center justify-between">
               <span>Taxa de resposta no Follow-up 1 é a mais alta (34%)</span>
-              <Link href="/relatorios" className="text-[#8EB69B] hover:underline font-mono text-[11px]">
+              <a href="#relatorios-estrategicos" className="text-[#8EB69B] hover:underline font-mono text-[11px]">
                 Ver métricas
-              </Link>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 8. Resumo Estratégico & Métricas de Performance (Antiga tela de relatórios integrada ao Dashboard) */}
+      <div id="relatorios-estrategicos" className="pt-6 border-t border-[rgba(218,241,222,0.06)] space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2 text-xs font-mono text-[#8EB69B] uppercase tracking-wider mb-1">
+              <BarChart3 className="w-3.5 h-3.5 text-[#F1F9A1]" />
+              Performance & Inteligência de Negócio
+            </div>
+            <h3 className="text-xl font-semibold text-[#E7ECE8] font-heading">
+              Relatórios & Eficiência Comercial
+            </h3>
+            <p className="text-xs text-[#9BA6A0] mt-0.5">
+              Consolidado de conversão por nicho, participação por serviço e métricas de fechamento.
+            </p>
+          </div>
+        </div>
+
+        {/* Três Cards de Resumo */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="p-5 rounded-2xl bg-[#0C1A19] border border-[rgba(218,241,222,0.08)] space-y-2">
+            <span className="text-xs text-[#9BA6A0]">Ticket Médio no Período</span>
+            <div className="text-2xl font-bold font-mono text-[#F1F9A1]">R$ 4.280</div>
+            <p className="text-xs text-[#8EB69B] font-medium">+18% vs trimestre anterior</p>
+          </div>
+
+          <div className="p-5 rounded-2xl bg-[#0C1A19] border border-[rgba(218,241,222,0.08)] space-y-2">
+            <span className="text-xs text-[#9BA6A0]">Taxa de Fechamento de Propostas</span>
+            <div className="text-2xl font-bold font-mono text-[#8EB69B]">74.2%</div>
+            <p className="text-xs text-[#9BA6A0]">3 em cada 4 propostas enviadas são aprovadas</p>
+          </div>
+
+          <div className="p-5 rounded-2xl bg-[#0C1A19] border border-[rgba(218,241,222,0.08)] space-y-2">
+            <span className="text-xs text-[#9BA6A0]">Tempo Médio de Ciclo</span>
+            <div className="text-2xl font-bold font-mono text-[#E7ECE8]">12 dias</div>
+            <p className="text-xs text-[#9BA6A0]">Do primeiro contato à assinatura do contrato</p>
+          </div>
+        </div>
+
+        {/* Grid: Desempenho por Nicho + Participação por Serviço */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Tabela de Nichos (7 cols) */}
+          <div className="lg:col-span-7 p-6 rounded-2xl bg-[#0C1A19] border border-[rgba(218,241,222,0.08)] space-y-4">
+            <div className="flex items-center justify-between border-b border-[rgba(218,241,222,0.06)] pb-3">
+              <div>
+                <h4 className="text-sm font-semibold text-[#E7ECE8] font-heading">
+                  Resposta por Nicho na Régua de Disparos
+                </h4>
+                <p className="text-[11px] text-[#9BA6A0]">
+                  Etapa onde cada segmento tem pico de resposta no WhatsApp
+                </p>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-[rgba(218,241,222,0.06)] text-[10px] font-mono text-[#65706A] uppercase">
+                    <th className="py-2.5 px-3">Nicho</th>
+                    <th className="py-2.5 px-3">Leads</th>
+                    <th className="py-2.5 px-3">Follow-up 1</th>
+                    <th className="py-2.5 px-3">Conversão</th>
+                    <th className="py-2.5 px-3">Padrão Detectado</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[rgba(218,241,222,0.04)]">
+                  {[
+                    { niche: 'Contabilidade', total: 48, fu1: '34%', conv: '28%', pattern: 'Pico no Follow-up 1' },
+                    { niche: 'Clínicas / Odonto', total: 36, fu1: '18%', conv: '31%', pattern: 'Alta resp. na Abertura' },
+                    { niche: 'Advocacia', total: 22, fu1: '22%', conv: '24%', pattern: 'Ciclo consultivo' },
+                    { niche: 'Imobiliárias', total: 30, fu1: '16%', conv: '19%', pattern: 'Respostas no meio da tarde' },
+                  ].map((row, i) => (
+                    <tr key={i} className="hover:bg-[#10201E]/40">
+                      <td className="py-2.5 px-3 font-semibold text-[#E7ECE8]">{row.niche}</td>
+                      <td className="py-2.5 px-3 font-mono text-[#9BA6A0]">{row.total}</td>
+                      <td className="py-2.5 px-3 font-mono font-semibold text-[#F1F9A1]">{row.fu1}</td>
+                      <td className="py-2.5 px-3 font-mono text-[#8EB69B]">{row.conv}</td>
+                      <td className="py-2.5 px-3 text-[11px] text-[#9BA6A0]">{row.pattern}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Participação na Receita por Serviço (5 cols) */}
+          <div className="lg:col-span-5 p-6 rounded-2xl bg-[#0C1A19] border border-[rgba(218,241,222,0.08)] space-y-4">
+            <div className="border-b border-[rgba(218,241,222,0.06)] pb-3">
+              <h4 className="text-sm font-semibold text-[#E7ECE8] font-heading">
+                Receita por Categoria de Serviço
+              </h4>
+              <p className="text-[11px] text-[#9BA6A0]">Distribuição do faturamento acumulado</p>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              <div>
+                <div className="flex justify-between text-[#E7ECE8] mb-1.5">
+                  <span className="font-medium">Websites & Landing Pages</span>
+                  <span className="font-mono text-[#F1F9A1]">54% (R$ 79.800)</span>
+                </div>
+                <div className="w-full bg-[#10201E] h-2 rounded-full overflow-hidden">
+                  <div className="bg-[#8EB69B] h-full rounded-full" style={{ width: '54%' }} />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex justify-between text-[#E7ECE8] mb-1.5">
+                  <span className="font-medium">Automação WhatsApp & Agentes IA</span>
+                  <span className="font-mono text-[#F1F9A1]">28% (R$ 41.400)</span>
+                </div>
+                <div className="w-full bg-[#10201E] h-2 rounded-full overflow-hidden">
+                  <div className="bg-[#F1F9A1] h-full rounded-full" style={{ width: '28%' }} />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex justify-between text-[#E7ECE8] mb-1.5">
+                  <span className="font-medium">Presença Digital & Recorrência</span>
+                  <span className="font-mono text-[#F1F9A1]">18% (R$ 26.650)</span>
+                </div>
+                <div className="w-full bg-[#10201E] h-2 rounded-full overflow-hidden">
+                  <div className="bg-[#235347] h-full rounded-full" style={{ width: '18%' }} />
+                </div>
+              </div>
             </div>
           </div>
         </div>

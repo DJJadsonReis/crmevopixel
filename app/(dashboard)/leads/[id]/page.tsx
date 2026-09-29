@@ -32,7 +32,9 @@ import {
   Layers,
   Compass,
   ArrowUpRight,
-} from 'lucide-react';
+import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon';
+import { openWhatsApp, cleanPhoneNumber } from '@/lib/utils/whatsapp';
+import { GenerateMessageModal, TargetEntity } from '@/components/modals/GenerateMessageModal';
 
 export default function LeadProfilePage() {
   const params = useParams();
@@ -43,6 +45,7 @@ export default function LeadProfilePage() {
   const [activeTab, setActiveTab] = useState<'sequencia' | 'visao' | 'ia' | 'conversas'>('sequencia');
   const [sequenceStatus, setSequenceStatus] = useState(lead?.sequence_progress?.status || 'aguardando_envio');
   const [isApproachModalOpen, setIsApproachModalOpen] = useState(false);
+  const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
   const [approachMessage, setApproachMessage] = useState('');
 
   if (!lead) {
@@ -124,25 +127,42 @@ export default function LeadProfilePage() {
             </div>
           </div>
 
-          {/* Ações Principais (Seção 16) */}
-          <div className="flex flex-wrap items-center gap-2.5">
-            <Button
-              variant="primary"
-              size="sm"
-              className="gap-1.5"
-              onClick={openApproachModal}
+          {/* Ações Principais (WhatsApp Direto, Gerar Mensagem, Follow-up, Proposta) */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Chamar no WhatsApp */}
+            <button
+              onClick={() => {
+                if (!lead.whatsapp || !cleanPhoneNumber(lead.whatsapp)) {
+                  alert(`O lead "${lead.company_name}" não possui WhatsApp válido cadastrado.`);
+                  return;
+                }
+                openWhatsApp(lead.whatsapp);
+              }}
+              className="px-3.5 py-2 rounded-xl bg-[#25D366]/15 hover:bg-[#25D366]/25 border border-[#25D366]/30 text-[#25D366] text-xs font-heading font-medium flex items-center gap-1.5 transition-all active:scale-95 shadow-sm"
+              title="Abrir WhatsApp Web / App"
             >
-              <Send className="w-3.5 h-3.5 text-[#07100F]" />
-              <span>Iniciar Abordagem</span>
-            </Button>
+              <WhatsAppIcon className="w-4 h-4 fill-current" />
+              <span>WhatsApp</span>
+            </button>
+
+            {/* Gerar Mensagem (Anexo 1) */}
+            <button
+              onClick={() => setIsGenerateModalOpen(true)}
+              className="px-3.5 py-2 rounded-xl bg-[#10201E] hover:bg-[#163832] border border-[rgba(218,241,222,0.12)] text-[#8EB69B] hover:text-[#F1F9A1] text-xs font-heading font-medium flex items-center gap-1.5 transition-all active:scale-95"
+              title="Gerar Mensagem Personalizada de Abordagem"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-[#F1F9A1]" />
+              <span>Gerar Mensagem</span>
+            </button>
+
             <Link href="/follow-ups">
-              <Button variant="secondary" size="sm" className="gap-1.5">
+              <Button variant="secondary" size="sm" className="gap-1.5 text-xs py-2">
                 <Clock className="w-3.5 h-3.5 text-[#8EB69B]" />
                 <span>Follow-up</span>
               </Button>
             </Link>
             <Link href="/propostas">
-              <Button variant="secondary" size="sm" className="gap-1.5">
+              <Button variant="secondary" size="sm" className="gap-1.5 text-xs py-2">
                 <FileText className="w-3.5 h-3.5 text-[#8EB69B]" />
                 <span>Criar Proposta</span>
               </Button>
@@ -539,6 +559,24 @@ export default function LeadProfilePage() {
           </div>
         </div>
       </Modal>
+
+      {/* Modal Gerador de Mensagens (Anexo 1) */}
+      <GenerateMessageModal
+        isOpen={isGenerateModalOpen}
+        onClose={() => setIsGenerateModalOpen(false)}
+        target={{
+          id: lead.id,
+          name: lead.name,
+          company_name: lead.company_name,
+          phone: lead.whatsapp,
+          whatsapp: lead.whatsapp,
+          segment: lead.segment,
+          city: lead.city,
+          state: lead.state,
+          services: lead.services,
+          role: lead.role,
+        }}
+      />
     </div>
   );
 }

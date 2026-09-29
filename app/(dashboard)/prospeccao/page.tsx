@@ -21,6 +21,7 @@ import {
   MessageSquare,
   Flame,
 } from 'lucide-react';
+import { qualifyProspectWithAI, qualifyLeadWithAI } from '@/lib/ai/qualification';
 
 export default function ProspeccaoPage() {
   const niches = crmService.getNiches();
@@ -57,26 +58,27 @@ export default function ProspeccaoPage() {
           const city = row['Cidade'] || row['City'] || row['cidade'] || 'Não informada';
 
           if (company || name) {
-            // Updated to add to Prospects instead of Leads
-            crmService.addProspect({
-              nome: name || company,
-              empresa: company,
-              segment: segment,
-              email: email,
-              telefone: phone,
+            const qualifiedProspect = qualifyProspectWithAI({
+              name,
+              company_name: company,
+              phone,
               whatsapp: phone,
-              cidade: city,
-              estado: 'N/A', // ou mapear da planilha se existir
-              icp_score: 50,
-              opportunity_score: 50,
-              digital_presence_score: 50,
-              source: 'Importação XLSX/CSV',
-              suggested_service: 'A definir',
-              identified_signals: [],
-              status: 'new',
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            } as any); // using any to avoid partial missing fields type errors if any exist, but providing all typical fields
+              segment,
+              email,
+              city,
+            });
+            crmService.addProspect(qualifiedProspect as any);
+
+            const qualifiedLead = qualifyLeadWithAI({
+              name,
+              company_name: company,
+              phone,
+              whatsapp: phone,
+              segment,
+              email,
+              city,
+            });
+            crmService.addLead(qualifiedLead);
             importedCount++;
           }
         });

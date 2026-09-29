@@ -341,6 +341,13 @@ class CrmService {
     this.notify();
   }
 
+  public deleteLeads(ids: string[]): void {
+    const idSet = new Set(ids);
+    this.leads = this.leads.filter(l => !idSet.has(l.id));
+    ids.forEach(id => dbService.deleteLead(id));
+    this.notify();
+  }
+
   // Sequências & Nichos (Seção 18.1 & 18.2)
   public getNiches(): Niche[] {
     return this.niches;
@@ -1012,6 +1019,19 @@ class CrmService {
     dbService.insertProspect(newProspect);
     this.notify();
     return newProspect;
+  }
+
+  public deleteProspect(id: string): void {
+    this.prospects = this.prospects.filter(p => p.id !== id);
+    dbService.deleteProspect(id);
+    this.notify();
+  }
+
+  public deleteProspects(ids: string[]): void {
+    const idSet = new Set(ids);
+    this.prospects = this.prospects.filter(p => !idSet.has(p.id));
+    ids.forEach(id => dbService.deleteProspect(id));
+    this.notify();
   }
 
   public convertProspectToLead(prospectId: string): Lead | undefined {

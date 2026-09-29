@@ -10,7 +10,6 @@ import {
   Layers,
   Sparkles,
   X,
-  Bot,
   Zap,
   HelpCircle,
   ArrowRight,
@@ -129,11 +128,6 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
     }, 2500);
   };
 
-  const handleOpenInAssistant = () => {
-    onClose();
-    router.push('/assistant');
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 p-4">
       <div
@@ -150,7 +144,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
           </div>
         )}
 
-        {/* Barra de Modos: BUSCA, AÇÃO, PERGUNTA */}
+        {/* Barra de Modos: BUSCA, AÇÃO */}
         <div className="flex items-center justify-between px-4 py-2 bg-[#050706]/80 border-b border-[rgba(218,241,222,0.06)] text-[10px] font-mono">
           <div className="flex items-center gap-2">
             <span className="text-[#65706A]">MODO:</span>
@@ -175,17 +169,6 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
               <Zap className="w-2.5 h-2.5" />
               <span>AÇÃO</span>
             </button>
-            <button
-              onClick={() => setActiveMode('PERGUNTA')}
-              className={`px-2.5 py-0.5 rounded-md transition-colors flex items-center gap-1 ${
-                activeMode === 'PERGUNTA'
-                  ? 'bg-[#163832] text-[#F1F9A1] border border-[#8EB69B]/30'
-                  : 'text-[#65706A] hover:text-[#9BA6A0]'
-              }`}
-            >
-              <Bot className="w-2.5 h-2.5" />
-              <span>PERGUNTA</span>
-            </button>
           </div>
 
           <span className="text-[#65706A] hidden sm:inline">Pressione ESC para fechar</span>
@@ -193,9 +176,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
 
         {/* Campo de Busca / Comando */}
         <div className="flex items-center px-4 py-3.5 border-b border-[rgba(218,241,222,0.08)] bg-[#07100F]/70">
-          {activeMode === 'PERGUNTA' ? (
-            <Bot className="w-4 h-4 text-[#F1F9A1] shrink-0 mr-3" />
-          ) : activeMode === 'AÇÃO' ? (
+          {activeMode === 'AÇÃO' ? (
             <Zap className="w-4 h-4 text-[#F1F9A1] shrink-0 mr-3" />
           ) : (
             <Search className="w-4 h-4 text-[#8EB69B] shrink-0 mr-3" />
@@ -204,9 +185,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
           <input
             type="text"
             placeholder={
-              activeMode === 'PERGUNTA'
-                ? 'Pergunte ao CRM... Ex: "Como está nossa conversão?", "Mostre leads quentes"'
-                : activeMode === 'AÇÃO'
+              activeMode === 'AÇÃO'
                 ? 'Digite a ação... Ex: "João pagou 2 mil", "Crie uma tarefa para amanhã"'
                 : 'Buscar por lead, cliente, prospect, serviço, proposta...'
             }
@@ -215,7 +194,6 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 if (activeMode === 'AÇÃO') handleExecuteActionInline();
-                if (activeMode === 'PERGUNTA') handleOpenInAssistant();
               }
             }}
             autoFocus
@@ -231,30 +209,6 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
 
         {/* Lista de Resultados conforme o Modo */}
         <div className="max-h-[60vh] overflow-y-auto p-3 space-y-4">
-          {/* MODO PERGUNTA */}
-          {activeMode === 'PERGUNTA' && (
-            <div className="p-4 rounded-xl bg-[#07100F] border border-[rgba(218,241,222,0.08)] space-y-3">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-heading text-xs font-semibold text-[#F1F9A1] flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  Pergunta para o Evo Assistant
-                </span>
-                <span className="text-[10px] font-mono text-[#8EB69B]">Inteligência Comercial</span>
-              </div>
-              <p className="text-xs text-[#9BA6A0] leading-relaxed">
-                Você digitou uma pergunta de negócio: &quot;{query || '...'}&quot;. O Evo Assistant interpretará as métricas e dados auditados.
-              </p>
-              <div className="flex items-center gap-3 pt-1">
-                <button
-                  onClick={handleOpenInAssistant}
-                  className="px-3 py-1.5 rounded-lg bg-[#163832] hover:bg-[#235347] border border-[#8EB69B]/30 text-xs font-heading text-[#F1F9A1] flex items-center gap-1.5 transition-colors"
-                >
-                  <span>Consultar no Evo Assistant</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-          )}
 
           {/* MODO AÇÃO */}
           {activeMode === 'AÇÃO' && (
