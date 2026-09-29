@@ -32,6 +32,7 @@ import {
   Layers,
   Compass,
   ArrowUpRight,
+  Kanban,
 } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon';
 import { openWhatsApp, cleanPhoneNumber } from '@/lib/utils/whatsapp';
@@ -48,6 +49,45 @@ export default function LeadProfilePage() {
   const [isApproachModalOpen, setIsApproachModalOpen] = useState(false);
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
   const [approachMessage, setApproachMessage] = useState('');
+  const [isPipelineModalOpen, setIsPipelineModalOpen] = useState(false);
+  const [pipelineStage, setPipelineStage] = useState('primeiro_contato');
+  const [pipelineTitle, setPipelineTitle] = useState(
+    lead?.services && lead.services.length > 0
+      ? lead.services.join(' + ')
+      : `Oportunidade - ${lead?.company_name || ''}`
+  );
+  const [pipelineValue, setPipelineValue] = useState('3500');
+
+  const handleAddToPipeline = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!lead) return;
+
+    crmService.addOpportunity({
+      lead_id: lead.id,
+      lead_name: lead.name,
+      company_name: lead.company_name,
+      stage_slug: pipelineStage,
+      title: pipelineTitle.trim() || `Oportunidade - ${lead.company_name}`,
+      estimated_value: Number(pipelineValue) || 3500,
+      probability:
+        pipelineStage === 'fechado'
+          ? 100
+          : pipelineStage === 'negociacao'
+          ? 70
+          : pipelineStage === 'follow_up'
+          ? 50
+          : 30,
+      score: lead.score || 85,
+      temperature: lead.temperature || 'quente',
+      priority: 'alta',
+      services: lead.services || ['Site Institucional'],
+      last_interaction: 'Adicionado ao pipeline',
+    });
+
+    setIsPipelineModalOpen(false);
+    alert(`Lead "${lead.company_name}" adicionado com sucesso ao Pipeline!`);
+    router.push('/pipeline');
+  };
 
   if (!lead) {
     return (
@@ -139,11 +179,10 @@ export default function LeadProfilePage() {
                 }
                 openWhatsApp(lead.whatsapp);
               }}
-              className="px-3.5 py-2 rounded-xl bg-[#25D366]/15 hover:bg-[#25D366]/25 border border-[#25D366]/30 text-[#25D366] text-xs font-heading font-medium flex items-center gap-1.5 transition-all active:scale-95 shadow-sm"
-              title="Abrir WhatsApp Web / App"
+              className="p-2 rounded-xl bg-[#25D366]/15 hover:bg-[#25D366]/25 border border-[#25D366]/30 text-[#25D366] transition-all active:scale-95 shadow-sm flex items-center justify-center"
+              title={`Chamar ${lead.company_name} no WhatsApp`}
             >
               <WhatsAppIcon className="w-4 h-4 fill-current" />
-              <span>WhatsApp</span>
             </button>
 
             {/* Gerar Mensagem (Anexo 1) */}
@@ -162,12 +201,17 @@ export default function LeadProfilePage() {
                 <span>Follow-up</span>
               </Button>
             </Link>
-            <Link href="/propostas">
-              <Button variant="secondary" size="sm" className="gap-1.5 text-xs py-2">
-                <FileText className="w-3.5 h-3.5 text-[#8EB69B]" />
-                <span>Criar Proposta</span>
-              </Button>
-            </Link>
+
+            {/* Colocar no Pipeline */}
+            <Button
+              onClick={() => setIsPipelineModalOpen(true)}
+              variant="primary"
+              size="sm"
+              className="gap-1.5 text-xs py-2"
+            >
+              <Kanban className="w-3.5 h-3.5 text-[#07100F]" />
+              <span>Colocar no Pipeline</span>
+            </Button>
           </div>
         </div>
       </div>
@@ -578,6 +622,68 @@ export default function LeadProfilePage() {
           role: lead.role,
         }}
       />
+
+      {/* Modal Adicionar ao Pipeline */}
+      <Modal
+        isOpen={isPipelineModalOpen}
+        onClose={() => setIsPipelineModalOpen(false)}
+        title="Colocar Lead no Pipeline"
+        subtitle={`Configure a oportunidade para ${lead.company_name} no funil comercial`}
+        maxWidth="md"
+      >
+        <form onSubmit={handleAddToPipeline} className="space-y-4 text-xs">
+          <div>
+            <label className="block text-[#9BA6A0] mb-1 font-medium">Título da Oportunidade *</label>
+            <input
+              type="text"
+              required
+              value={pipelineTitle}
+              onChange={(e) => setPipelineTitle(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl bg-[#10201E] border border-[rgba(218,241,222,0.08)] text-[#E7ECE8] focus:outline-none"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[#9BA6A0] mb-1 font-medium">Valor Estimado (R$)</label>
+              <input
+                type="number"
+                value={pipelineValue}
+                onChange={(e) => setPipelineValue(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl bg-[#10201E] border border-[rgba(218,241,222,0.08)] text-[#E7ECE8] focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-[#9BA6A0] mb-1 font-medium">Estágio no Pipeline</label>
+              <select
+                value={pipelineStage}
+                onChange={(e) => setPipelineStage(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl bg-[#10201E] border border-[rgba(218,241,222,0.08)] text-[#E7ECE8] focus:outline-none"
+              >
+                <option value="primeiro_contato">Primeiro Contato</option>
+                <option value="negociacao">Negociação</option>
+                <option value="fechado">Fechado</option>
+                <option value="follow_up">Follow-up</option>
+                <option value="lead_perdido">Lead Perdido</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4 border-t border-[rgba(218,241,222,0.06)]">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setIsPipelineModalOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" variant="primary" size="sm">
+              Confirmar e Ir para Pipeline
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

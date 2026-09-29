@@ -77,11 +77,10 @@ export default function ClienteDetailPage() {
                 }
                 openWhatsApp(client.phone);
               }}
-              className="px-3.5 py-2 rounded-xl bg-[#25D366]/15 hover:bg-[#25D366]/25 border border-[#25D366]/30 text-[#25D366] text-xs font-heading font-medium flex items-center gap-1.5 transition-all active:scale-95 shadow-sm"
+              className="p-2 rounded-xl bg-[#25D366]/15 hover:bg-[#25D366]/25 border border-[#25D366]/30 text-[#25D366] transition-all active:scale-95 shadow-sm flex items-center justify-center"
               title="Abrir WhatsApp Web / App"
             >
               <WhatsAppIcon className="w-4 h-4 fill-current" />
-              <span>WhatsApp</span>
             </button>
 
             {/* Gerar Mensagem */}
@@ -94,9 +93,9 @@ export default function ClienteDetailPage() {
               <span>Gerar Mensagem</span>
             </button>
 
-            <Link href="/propostas">
+            <Link href="/pipeline">
               <Button variant="primary" size="sm" className="gap-1.5">
-                <span>Criar Proposta</span>
+                <span>Ver no Pipeline</span>
                 <ArrowUpRight className="w-3.5 h-3.5 text-[#07100F]" />
               </Button>
             </Link>

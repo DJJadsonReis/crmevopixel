@@ -91,7 +91,7 @@ class MetricsService {
       ? Number(((fechamentosPeriodo / totalLeadsPeriodo) * 100).toFixed(1))
       : 0;
 
-    const openOpps = opportunities.filter((o) => o.stage_slug !== 'fechado' && o.stage_slug !== 'perdido');
+    const openOpps = opportunities.filter((o) => o.stage_slug !== 'fechado' && o.stage_slug !== 'perdido' && o.stage_slug !== 'lead_perdido');
     const valorOppsAbertas = openOpps.reduce((acc, o) => acc + (o.estimated_value || 0), 0);
 
     // Receita por nicho dinâmica

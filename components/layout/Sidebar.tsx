@@ -13,8 +13,6 @@ import {
   Briefcase,
   CheckSquare,
   Clock,
-  FileText,
-  FileCheck,
   Layers,
   DollarSign,
   Settings,
@@ -68,8 +66,6 @@ export function Sidebar() {
     {
       title: 'NEGÓCIOS',
       items: [
-        { label: 'Propostas', href: '/propostas', icon: FileText },
-        { label: 'Contratos', href: '/contratos', icon: FileCheck },
         { label: 'Serviços', href: '/servicos', icon: Layers },
         { label: 'Financeiro', href: '/financeiro', icon: DollarSign },
         { label: 'Meu Histórico', href: '/minha-historia', icon: History },

@@ -73,7 +73,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
   const leads = crmService.getLeads();
   const clients = crmService.getClients();
   const prospects = crmService.getProspects();
-  const proposals = crmService.getProposals();
+  const opportunities = crmService.getOpportunities();
   const services = crmService.getServices();
 
   const filteredLeads = leads.filter(
@@ -96,10 +96,10 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
       p.segment.toLowerCase().includes(query.toLowerCase())
   );
 
-  const filteredProposals = proposals.filter(
-    (p) =>
-      p.code.toLowerCase().includes(query.toLowerCase()) ||
-      p.company_name.toLowerCase().includes(query.toLowerCase())
+  const filteredOpportunities = opportunities.filter(
+    (o) =>
+      o.company_name.toLowerCase().includes(query.toLowerCase()) ||
+      o.title.toLowerCase().includes(query.toLowerCase())
   );
 
   const filteredServices = services.filter(
@@ -329,28 +329,30 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
                 </div>
               )}
 
-              {/* Propostas */}
-              {filteredProposals.length > 0 && (
+              {/* Oportunidades */}
+              {filteredOpportunities.length > 0 && (
                 <div>
                   <div className="text-[10px] font-heading font-semibold text-[#65706A] uppercase px-2 mb-1.5 flex items-center gap-1.5">
-                    <FileText className="w-3 h-3 text-[#8EB69B]" />
-                    Propostas ({filteredProposals.length})
+                    <Target className="w-3 h-3 text-[#8EB69B]" />
+                    Oportunidades ({filteredOpportunities.length})
                   </div>
                   <div className="space-y-1">
-                    {filteredProposals.map((prop) => (
+                    {filteredOpportunities.map((opp) => (
                       <div
-                        key={prop.id}
-                        onClick={() => navigateTo('/propostas')}
+                        key={opp.id}
+                        onClick={() => navigateTo('/pipeline')}
                         className="flex items-center justify-between p-2.5 rounded-xl hover:bg-[#10201E] cursor-pointer transition-colors"
                       >
                         <div className="flex flex-col">
                           <span className="text-xs font-medium text-[#E7ECE8]">
-                            {prop.code} — {prop.company_name}
+                            {opp.company_name} — {opp.title}
                           </span>
-                          <span className="text-[11px] text-[#9BA6A0]">Status: {prop.status}</span>
+                          <span className="text-[11px] text-[#9BA6A0]">
+                            Estágio: {opp.stage_slug.replace('_', ' ')}
+                          </span>
                         </div>
-                        <span className="text-xs font-mono text-[#E7ECE8]">
-                          R$ {prop.total.toLocaleString('pt-BR')}
+                        <span className="text-xs font-mono text-[#F1F9A1]">
+                          R$ {opp.estimated_value.toLocaleString('pt-BR')}
                         </span>
                       </div>
                     ))}

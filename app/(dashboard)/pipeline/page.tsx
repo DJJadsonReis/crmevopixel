@@ -20,14 +20,11 @@ import {
 } from 'lucide-react';
 
 const STAGES = [
-  { slug: 'novo_lead', name: 'Novo Lead' },
-  { slug: 'qualificacao', name: 'Qualificação' },
   { slug: 'primeiro_contato', name: 'Primeiro Contato' },
-  { slug: 'diagnostico', name: 'Diagnóstico' },
-  { slug: 'proposta', name: 'Proposta' },
   { slug: 'negociacao', name: 'Negociação' },
   { slug: 'fechado', name: 'Fechado' },
-  { slug: 'perdido', name: 'Perdido' },
+  { slug: 'follow_up', name: 'Follow-up' },
+  { slug: 'lead_perdido', name: 'Lead Perdido' },
 ];
 
 export default function PipelinePage() {
@@ -41,7 +38,7 @@ export default function PipelinePage() {
   const [newCompany, setNewCompany] = useState('');
   const [newContact, setNewContact] = useState('');
   const [newValue, setNewValue] = useState('');
-  const [newStage, setNewStage] = useState('novo_lead');
+  const [newStage, setNewStage] = useState('primeiro_contato');
 
   const setStage = (oppId: string, stageSlug: string) => {
     setOpportunities((prev) =>
@@ -81,7 +78,7 @@ export default function PipelinePage() {
       stage_slug: newStage,
       title: newTitle.trim(),
       estimated_value: Number(newValue) || 3500,
-      probability: newStage === 'fechado' ? 100 : newStage === 'proposta' ? 70 : 40,
+      probability: newStage === 'fechado' ? 100 : newStage === 'negociacao' ? 70 : newStage === 'follow_up' ? 50 : 30,
       score: 85,
       temperature: 'quente',
       priority: 'alta',
@@ -98,7 +95,7 @@ export default function PipelinePage() {
   };
 
   const totalPipelineValue = opportunities
-    .filter((o) => o.stage_slug !== 'perdido' && o.stage_slug !== 'fechado')
+    .filter((o) => o.stage_slug !== 'lead_perdido' && o.stage_slug !== 'perdido' && o.stage_slug !== 'fechado')
     .reduce((acc, o) => acc + o.estimated_value, 0);
 
   return (
@@ -114,7 +111,7 @@ export default function PipelinePage() {
             Pipeline de Vendas
           </h1>
           <p className="text-xs text-[#9BA6A0] mt-1">
-            8 etapas estratégicas com suporte a drag-and-drop e movimentação assistida conectada ao n8n.
+            5 etapas estratégicas com suporte a drag-and-drop e movimentação assistida conectada ao n8n.
           </p>
         </div>
 
