@@ -28,7 +28,6 @@ import {
   Mail,
   MapPin,
   Globe,
-  Kanban,
 } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon';
 import { openWhatsApp, cleanPhoneNumber } from '@/lib/utils/whatsapp';
@@ -60,13 +59,6 @@ export default function LeadsPage() {
 
   // Multi-selection states
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
-
-  // Pipeline modal states
-  const [pipelineLead, setPipelineLead] = useState<Lead | null>(null);
-  const [isPipelineModalOpen, setIsPipelineModalOpen] = useState(false);
-  const [pipelineStage, setPipelineStage] = useState('primeiro_contato');
-  const [pipelineTitle, setPipelineTitle] = useState('');
-  const [pipelineValue, setPipelineValue] = useState('3500');
 
   // Modal de Mensagem WhatsApp (Anexo 1)
   const [messageTarget, setMessageTarget] = useState<TargetEntity | null>(null);
@@ -342,75 +334,6 @@ export default function LeadsPage() {
     });
   };
 
-  const handleOpenPipelineModal = (lead: Lead) => {
-    setPipelineLead(lead);
-    setPipelineStage('primeiro_contato');
-    setPipelineTitle(
-      lead.services && lead.services.length > 0
-        ? lead.services.join(' + ')
-        : `Oportunidade - ${lead.company_name}`
-    );
-    setPipelineValue('3500');
-    setIsPipelineModalOpen(true);
-  };
-
-  const handleConfirmAddToPipeline = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!pipelineLead) return;
-
-    crmService.addOpportunity({
-      lead_id: pipelineLead.id,
-      lead_name: pipelineLead.name,
-      company_name: pipelineLead.company_name,
-      stage_slug: pipelineStage,
-      title: pipelineTitle.trim() || `Oportunidade - ${pipelineLead.company_name}`,
-      estimated_value: Number(pipelineValue) || 3500,
-      probability:
-        pipelineStage === 'fechado'
-          ? 100
-          : pipelineStage === 'negociacao'
-          ? 70
-          : pipelineStage === 'follow_up'
-          ? 50
-          : 30,
-      score: pipelineLead.score || 85,
-      temperature: pipelineLead.temperature || 'quente',
-      priority: 'alta',
-      services: pipelineLead.services || ['Site Institucional'],
-      last_interaction: 'Adicionado ao pipeline',
-    });
-
-    setIsPipelineModalOpen(false);
-    alert(`Lead "${pipelineLead.company_name}" adicionado com sucesso ao Pipeline!`);
-  };
-
-  const handleBulkAddToPipeline = () => {
-    if (selectedLeadIds.length === 0) return;
-    const selected = leads.filter((l) => selectedLeadIds.includes(l.id));
-    selected.forEach((l) => {
-      crmService.addOpportunity({
-        lead_id: l.id,
-        lead_name: l.name,
-        company_name: l.company_name,
-        stage_slug: 'primeiro_contato',
-        title:
-          l.services && l.services.length > 0
-            ? l.services.join(' + ')
-            : `Oportunidade - ${l.company_name}`,
-        estimated_value: 3500,
-        probability: 30,
-        score: l.score || 85,
-        temperature: l.temperature || 'quente',
-        priority: 'alta',
-        services: l.services || ['Site Institucional'],
-        last_interaction: 'Adicionado ao pipeline',
-      });
-    });
-    const count = selected.length;
-    setSelectedLeadIds([]);
-    alert(`${count} lead(s) adicionado(s) com sucesso ao Pipeline na etapa "Primeiro Contato"!`);
-  };
-
   const filteredLeads = leads.filter((lead) => {
     const matchesSearch =
       lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -496,23 +419,13 @@ export default function LeadsPage() {
 
         <div className="flex flex-wrap items-center gap-2">
           {selectedLeadIds.length > 0 && (
-            <div className="flex items-center gap-2 animate-in fade-in">
-              <button
-                onClick={handleBulkAddToPipeline}
-                className="px-3 py-1.5 rounded-xl bg-[#163832] hover:bg-[#235347] border border-[#8EB69B]/40 text-[#F1F9A1] text-xs font-medium flex items-center gap-1.5 transition-all active:scale-95 shadow-sm"
-                title="Adicionar todos os leads selecionados ao funil comercial"
-              >
-                <Kanban className="w-3.5 h-3.5" />
-                <span>Mover para Pipeline ({selectedLeadIds.length})</span>
-              </button>
-              <button
-                onClick={handleBulkDelete}
-                className="px-3 py-1.5 rounded-xl bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 text-red-400 text-xs font-medium flex items-center gap-1.5 transition-all active:scale-95"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Excluir Selecionados ({selectedLeadIds.length})</span>
-              </button>
-            </div>
+            <button
+              onClick={handleBulkDelete}
+              className="px-3 py-1.5 rounded-xl bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 text-red-400 text-xs font-medium flex items-center gap-1.5 transition-all active:scale-95 animate-in fade-in"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Excluir Selecionados ({selectedLeadIds.length})</span>
+            </button>
           )}
 
           <select
@@ -567,10 +480,12 @@ export default function LeadsPage() {
                     )}
                   </button>
                 </th>
-                <th className="py-3 px-4">Empresa</th>
+                <th className="py-3 px-4">Lead / Empresa</th>
                 <th className="py-3 px-4">Segmento</th>
                 <th className="py-3 px-4">Temperatura</th>
                 <th className="py-3 px-4 text-center">Score IA</th>
+                <th className="py-3 px-4">Serviços Sugeridos</th>
+                <th className="py-3 px-4">Próxima Ação</th>
                 <th className="py-3 px-4 text-right">Ações</th>
               </tr>
             </thead>
@@ -599,15 +514,53 @@ export default function LeadsPage() {
                       </button>
                     </td>
 
-                    {/* Empresa (Apenas o nome da empresa) */}
+                    {/* Nome & Empresa */}
                     <td className="py-3.5 px-4">
                       <Link
                         href={`/leads/${lead.id}`}
-                        className="font-medium text-[#E7ECE8] group-hover:text-[#F1F9A1] transition-colors inline-flex items-center gap-1.5"
+                        className="font-medium text-[#E7ECE8] group-hover:text-[#F1F9A1] transition-colors flex items-center gap-1.5"
                       >
                         <span>{lead.company_name}</span>
                         <ArrowUpRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                       </Link>
+                      <div className="text-[11px] text-[#9BA6A0] mt-0.5 flex items-center gap-1.5 flex-wrap">
+                        <span>{lead.name}</span>
+                        <span>•</span>
+                        <span>{lead.city}/{lead.state}</span>
+                        {lead.whatsapp && (
+                          <>
+                            <span>•</span>
+                            <span className="font-mono text-[#8EB69B]">{lead.whatsapp}</span>
+                          </>
+                        )}
+                        {lead.email && (
+                          <>
+                            <span>•</span>
+                            <span className="text-[#9BA6A0] flex items-center gap-0.5">
+                              <Mail className="w-3 h-3 text-[#65706A]" />
+                              {lead.email}
+                            </span>
+                          </>
+                        )}
+                        {lead.instagram && (
+                          <>
+                            <span>•</span>
+                            <span className="text-[#F1F9A1] flex items-center gap-0.5">
+                              <Instagram className="w-3 h-3 text-[#F1F9A1]" />
+                              {lead.instagram}
+                            </span>
+                          </>
+                        )}
+                        {lead.google_business && (
+                          <>
+                            <span>•</span>
+                            <span className="text-[#8EB69B] flex items-center gap-0.5">
+                              <MapPin className="w-3 h-3 text-[#8EB69B]" />
+                              Google Meu Negócio
+                            </span>
+                          </>
+                        )}
+                      </div>
                     </td>
 
                     {/* Segmento */}
@@ -642,7 +595,26 @@ export default function LeadsPage() {
                       </span>
                     </td>
 
-                    {/* Ações: WhatsApp, Colocar no Pipeline, Gerar Mensagem, Olho & Excluir */}
+                    {/* Serviços Identificados */}
+                    <td className="py-3.5 px-4">
+                      <div className="flex flex-wrap gap-1 max-w-xs">
+                        {lead.services.map((srv, idx) => (
+                          <span
+                            key={idx}
+                            className="px-2 py-0.5 rounded text-[10px] bg-[#10201E] text-[#9BA6A0] border border-[rgba(218,241,222,0.06)] truncate max-w-[160px]"
+                          >
+                            {srv}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+
+                    {/* Próxima Ação */}
+                    <td className="py-3.5 px-4 text-[11px] text-[#9BA6A0] max-w-xs">
+                      <div className="truncate">{lead.next_action || 'Nenhuma ação pendente'}</div>
+                    </td>
+
+                    {/* Ações: WhatsApp, Gerar Mensagem, Olho & Excluir */}
                     <td className="py-3.5 px-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         {/* Botão Chamar no WhatsApp (Só a logo) */}
@@ -652,15 +624,6 @@ export default function LeadsPage() {
                           title={`Chamar ${lead.company_name} no WhatsApp`}
                         >
                           <WhatsAppIcon className="w-4 h-4 fill-current" />
-                        </button>
-
-                        {/* Botão Colocar no Pipeline */}
-                        <button
-                          onClick={() => handleOpenPipelineModal(lead)}
-                          className="p-1.5 rounded-xl bg-[#10201E] hover:bg-[#163832] border border-[rgba(218,241,222,0.12)] text-[#8EB69B] hover:text-[#F1F9A1] transition-all active:scale-95 flex items-center justify-center"
-                          title={`Colocar ${lead.company_name} no Pipeline`}
-                        >
-                          <Kanban className="w-3.5 h-3.5" />
                         </button>
 
                         {/* Botão Gerar Mensagem (Anexo 1) */}
@@ -1006,72 +969,6 @@ export default function LeadsPage() {
         onClose={() => setMessageTarget(null)}
         target={messageTarget}
       />
-
-      {/* Modal Adicionar Lead ao Pipeline */}
-      <Modal
-        isOpen={isPipelineModalOpen}
-        onClose={() => setIsPipelineModalOpen(false)}
-        title="Colocar Lead no Pipeline"
-        subtitle={
-          pipelineLead
-            ? `Configure a oportunidade para ${pipelineLead.company_name} no funil comercial`
-            : 'Adicionar oportunidade ao funil'
-        }
-        maxWidth="md"
-      >
-        <form onSubmit={handleConfirmAddToPipeline} className="space-y-4 text-xs">
-          <div>
-            <label className="block text-[#9BA6A0] mb-1 font-medium">Título da Oportunidade *</label>
-            <input
-              type="text"
-              required
-              value={pipelineTitle}
-              onChange={(e) => setPipelineTitle(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl bg-[#10201E] border border-[rgba(218,241,222,0.08)] text-[#E7ECE8] focus:outline-none"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-[#9BA6A0] mb-1 font-medium">Valor Estimado (R$)</label>
-              <input
-                type="number"
-                value={pipelineValue}
-                onChange={(e) => setPipelineValue(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-[#10201E] border border-[rgba(218,241,222,0.08)] text-[#E7ECE8] focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-[#9BA6A0] mb-1 font-medium">Estágio no Pipeline</label>
-              <select
-                value={pipelineStage}
-                onChange={(e) => setPipelineStage(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-[#10201E] border border-[rgba(218,241,222,0.08)] text-[#E7ECE8] focus:outline-none cursor-pointer"
-              >
-                <option value="primeiro_contato">Primeiro Contato</option>
-                <option value="negociacao">Negociação</option>
-                <option value="fechado">Fechado</option>
-                <option value="follow_up">Follow-up</option>
-                <option value="lead_perdido">Lead Perdido</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-2 pt-4 border-t border-[rgba(218,241,222,0.06)]">
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => setIsPipelineModalOpen(false)}
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" variant="primary" size="sm">
-              Confirmar Oportunidade
-            </Button>
-          </div>
-        </form>
-      </Modal>
     </div>
   );
 }
