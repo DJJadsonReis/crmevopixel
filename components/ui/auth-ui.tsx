@@ -2,17 +2,8 @@
 
 import * as React from "react";
 import { useState, useId, useEffect } from "react";
-import { Slot } from "@radix-ui/react-slot";
-import * as LabelPrimitive from "@radix-ui/react-label";
-import { cva, type VariantProps } from "class-variance-authority";
 import { Eye, EyeOff } from "lucide-react";
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
 import { createClient } from "@/utils/supabase/client";
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
 
 export interface TypewriterProps {
   text: string | string[];
@@ -41,9 +32,8 @@ export function Typewriter({
   const textArray = Array.isArray(text) ? text : [text];
 
   useEffect(() => {
-    let timeout: NodeJS.Timeout;
-
-    const currentString = textArray[textArrayIndex];
+    let timeout: any;
+    const currentString = textArray[textArrayIndex] || "";
 
     if (isDeleting) {
       if (displayText.length > 0) {
@@ -92,86 +82,6 @@ export function Typewriter({
   );
 }
 
-const labelVariants = cva(
-  "text-xs font-medium text-[var(--evo-muted)] leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-);
-
-const Label = React.forwardRef<
-  React.ElementRef<typeof LabelPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof LabelPrimitive.Root> &
-    VariantProps<typeof labelVariants>
->(({ className, ...props }, ref) => (
-  <LabelPrimitive.Root
-    ref={ref}
-    className={cn(labelVariants(), className)}
-    {...props}
-  />
-));
-Label.displayName = LabelPrimitive.Root.displayName;
-
-const inputVariants = cva(
-  "flex h-10 w-full rounded-xl border border-[var(--evo-border)] bg-[var(--evo-surface)] px-3 py-2 text-sm text-[var(--evo-text)] ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-[var(--evo-muted)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-evo-accent disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
-);
-
-export interface InputProps
-  extends React.InputHTMLAttributes<HTMLInputElement> {}
-
-const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, ...props }, ref) => {
-    return (
-      <input
-        type={type}
-        className={cn(inputVariants(), className)}
-        ref={ref}
-        {...props}
-      />
-    );
-  }
-);
-Input.displayName = "Input";
-
-const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-xl text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-  {
-    variants: {
-      variant: {
-        default: "bg-evo-accent text-black font-semibold hover:bg-evo-accent/90 shadow-md",
-        link: "text-evo-accent underline-offset-4 hover:underline p-0 h-auto font-normal",
-      },
-      size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
-        lg: "h-11 rounded-md px-8",
-        icon: "h-10 w-10",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
-  }
-);
-
-interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
-  asChild?: boolean;
-}
-
-const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
-    const Comp = asChild ? Slot : "button";
-    return (
-      <Comp
-        className={cn(buttonVariants({ variant, size, className }))}
-        ref={ref}
-        {...props}
-      />
-    );
-  }
-);
-Button.displayName = "Button";
-
 function PasswordInput({
   name,
   label,
@@ -189,25 +99,23 @@ function PasswordInput({
   const id = useId();
 
   return (
-    <div className="grid gap-2">
-      <div className="flex items-center justify-between">
-        <Label htmlFor={id}>{label}</Label>
-      </div>
+    <div className="grid gap-2 text-left">
+      <label htmlFor={id} className="text-xs font-medium text-[var(--evo-muted)]">
+        {label}
+      </label>
       <div className="relative">
-        <Input
+        <input
           id={id}
           name={name}
           type={showPassword ? "text" : "password"}
           placeholder={placeholder}
           autoComplete={autoComplete}
           required={required}
-          className="pr-10"
+          className="flex h-10 w-full rounded-xl border border-[var(--evo-border)] bg-[var(--evo-surface)] px-3 py-2 pr-10 text-sm text-[var(--evo-text)] placeholder:text-[var(--evo-muted)] focus:outline-none focus:border-evo-accent transition-colors"
         />
-        <Button
+        <button
           type="button"
-          variant="link"
-          size="sm"
-          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-[var(--evo-muted)] hover:text-[var(--evo-text)]"
+          className="absolute right-0 top-0 h-full px-3 py-2 text-[var(--evo-muted)] hover:text-[var(--evo-text)]"
           onClick={() => setShowPassword((prev) => !prev)}
         >
           {showPassword ? (
@@ -218,7 +126,7 @@ function PasswordInput({
           <span className="sr-only">
             {showPassword ? "Esconder senha" : "Ver senha"}
           </span>
-        </Button>
+        </button>
       </div>
     </div>
   );
@@ -228,19 +136,39 @@ function SignInForm({ onSubmit, loading }: { onSubmit: (e: React.FormEvent<HTMLF
   return (
     <form onSubmit={onSubmit} autoComplete="on" className="flex flex-col gap-6">
       <div className="flex flex-col items-center gap-2 text-center">
-        <div className="w-14 h-14 bg-evo-accent text-black rounded-2xl flex items-center justify-center font-bold text-xl mb-1 font-heading tracking-tighter shadow-lg">EVO</div>
-        <h1 className="text-2xl font-bold text-[var(--evo-text)] font-heading">Acesso ao EVO PIXEL</h1>
-        <p className="text-balance text-xs text-[var(--evo-muted)]">Insira suas credenciais corporativas</p>
+        <div className="w-14 h-14 bg-evo-accent text-black rounded-2xl flex items-center justify-center font-bold text-xl mb-1 font-heading tracking-tighter shadow-lg">
+          EVO
+        </div>
+        <h1 className="text-2xl font-bold text-[var(--evo-text)] font-heading">
+          Acesso ao EVO PIXEL
+        </h1>
+        <p className="text-balance text-xs text-[var(--evo-muted)]">
+          Insira suas credenciais corporativas
+        </p>
       </div>
-      <div className="grid gap-4">
+      <div className="grid gap-4 text-left">
         <div className="grid gap-2">
-          <Label htmlFor="email">Email Corporativo</Label>
-          <Input id="email" name="email" type="email" placeholder="seu-email@empresa.com" required autoComplete="email" />
+          <label htmlFor="email" className="text-xs font-medium text-[var(--evo-muted)]">
+            Email Corporativo
+          </label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            placeholder="seu-email@empresa.com"
+            required
+            autoComplete="email"
+            className="flex h-10 w-full rounded-xl border border-[var(--evo-border)] bg-[var(--evo-surface)] px-3 py-2 text-sm text-[var(--evo-text)] placeholder:text-[var(--evo-muted)] focus:outline-none focus:border-evo-accent transition-colors"
+          />
         </div>
         <PasswordInput name="password" label="Senha" required autoComplete="current-password" placeholder="••••••••" />
-        <Button type="submit" variant="default" className="mt-2 w-full" disabled={loading}>
+        <button
+          type="submit"
+          disabled={loading}
+          className="mt-2 w-full h-10 rounded-xl bg-evo-accent text-black font-semibold text-sm hover:bg-evo-accent/90 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+        >
           {loading ? "Autenticando..." : "Entrar no CRM"}
-        </Button>
+        </button>
       </div>
     </form>
   );
@@ -250,23 +178,53 @@ function SignUpForm({ onSubmit, loading }: { onSubmit: (e: React.FormEvent<HTMLF
   return (
     <form onSubmit={onSubmit} autoComplete="on" className="flex flex-col gap-6">
       <div className="flex flex-col items-center gap-2 text-center">
-        <div className="w-14 h-14 bg-evo-accent text-black rounded-2xl flex items-center justify-center font-bold text-xl mb-1 font-heading tracking-tighter shadow-lg">EVO</div>
-        <h1 className="text-2xl font-bold text-[var(--evo-text)] font-heading">Novo Acesso</h1>
-        <p className="text-balance text-xs text-[var(--evo-muted)]">Crie sua conta administrativa</p>
+        <div className="w-14 h-14 bg-evo-accent text-black rounded-2xl flex items-center justify-center font-bold text-xl mb-1 font-heading tracking-tighter shadow-lg">
+          EVO
+        </div>
+        <h1 className="text-2xl font-bold text-[var(--evo-text)] font-heading">
+          Novo Acesso
+        </h1>
+        <p className="text-balance text-xs text-[var(--evo-muted)]">
+          Crie sua conta administrativa
+        </p>
       </div>
-      <div className="grid gap-4">
+      <div className="grid gap-4 text-left">
         <div className="grid gap-2">
-          <Label htmlFor="name">Nome Completo</Label>
-          <Input id="name" name="name" type="text" placeholder="Seu Nome" required autoComplete="name" />
+          <label htmlFor="name" className="text-xs font-medium text-[var(--evo-muted)]">
+            Nome Completo
+          </label>
+          <input
+            id="name"
+            name="name"
+            type="text"
+            placeholder="Seu Nome"
+            required
+            autoComplete="name"
+            className="flex h-10 w-full rounded-xl border border-[var(--evo-border)] bg-[var(--evo-surface)] px-3 py-2 text-sm text-[var(--evo-text)] placeholder:text-[var(--evo-muted)] focus:outline-none focus:border-evo-accent transition-colors"
+          />
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="email">Email Corporativo</Label>
-          <Input id="email" name="email" type="email" placeholder="seu-email@empresa.com" required autoComplete="email" />
+          <label htmlFor="email" className="text-xs font-medium text-[var(--evo-muted)]">
+            Email Corporativo
+          </label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            placeholder="seu-email@empresa.com"
+            required
+            autoComplete="email"
+            className="flex h-10 w-full rounded-xl border border-[var(--evo-border)] bg-[var(--evo-surface)] px-3 py-2 text-sm text-[var(--evo-text)] placeholder:text-[var(--evo-muted)] focus:outline-none focus:border-evo-accent transition-colors"
+          />
         </div>
         <PasswordInput name="password" label="Definir Senha" required autoComplete="new-password" placeholder="••••••••" />
-        <Button type="submit" variant="default" className="mt-2 w-full" disabled={loading}>
+        <button
+          type="submit"
+          disabled={loading}
+          className="mt-2 w-full h-10 rounded-xl bg-evo-accent text-black font-semibold text-sm hover:bg-evo-accent/90 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+        >
           {loading ? "Criando Conta..." : "Registrar"}
-        </Button>
+        </button>
       </div>
     </form>
   );
@@ -347,83 +305,43 @@ function AuthFormContainer({ isSignIn, onToggle }: { isSignIn: boolean; onToggle
       )}
       <div className="text-center text-xs mt-4 text-[var(--evo-muted)]">
         {isSignIn ? "Ainda não possui conta?" : "Já possui cadastro?"}{" "}
-        <Button variant="link" type="button" className="pl-1 text-xs" onClick={onToggle}>
+        <button
+          type="button"
+          className="pl-1 text-xs text-evo-accent hover:underline font-medium"
+          onClick={onToggle}
+        >
           {isSignIn ? "Criar conta" : "Fazer login"}
-        </Button>
+        </button>
       </div>
     </div>
   );
 }
 
-interface AuthContentProps {
-  image?: {
-    src: string;
-    alt: string;
-  };
-  quote?: {
-    text: string;
-    author: string;
-  };
-}
-
-interface AuthUIProps {
-  signInContent?: AuthContentProps;
-  signUpContent?: AuthContentProps;
-}
-
-const defaultSignInContent = {
-  image: {
-    src: "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?q=80&w=2000&auto=format&fit=crop",
-    alt: "EVO PIXEL Design"
-  },
-  quote: {
-    text: "Performance Estratégica, Design Impecável. O controle do seu império começa aqui.",
-    author: "Rafael Costa - EVO PIXEL"
-  }
-};
-
-const defaultSignUpContent = {
-  image: {
-    src: "https://images.unsplash.com/photo-1600607686527-6fb886090705?q=80&w=2000&auto=format&fit=crop",
-    alt: "A vibrant, modern space for new beginnings"
-  },
-  quote: {
-    text: "O primeiro passo para estruturar seu processo de prospecção e vendas B2B.",
-    author: "Rafael Costa - EVO PIXEL"
-  }
-};
-
-export function AuthUI({ signInContent = {}, signUpContent = {} }: AuthUIProps) {
+export function AuthUI() {
   const [isSignIn, setIsSignIn] = useState(true);
   const toggleForm = () => setIsSignIn((prev) => !prev);
 
-  const finalSignInContent = {
-    image: { ...defaultSignInContent.image, ...signInContent.image },
-    quote: { ...defaultSignInContent.quote, ...signInContent.quote },
-  };
-  const finalSignUpContent = {
-    image: { ...defaultSignUpContent.image, ...signUpContent.image },
-    quote: { ...defaultSignUpContent.quote, ...signUpContent.quote },
-  };
-
-  const currentContent = isSignIn ? finalSignInContent : finalSignUpContent;
+  const quote = isSignIn
+    ? {
+        text: "Performance Estratégica, Design Impecável. O controle do seu império começa aqui.",
+        author: "Rafael Costa - EVO PIXEL",
+        image: "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?q=80&w=2000&auto=format&fit=crop"
+      }
+    : {
+        text: "O primeiro passo para estruturar seu processo de prospecção e vendas B2B.",
+        author: "Rafael Costa - EVO PIXEL",
+        image: "https://images.unsplash.com/photo-1600607686527-6fb886090705?q=80&w=2000&auto=format&fit=crop"
+      };
 
   return (
     <div className="w-full min-h-screen md:grid md:grid-cols-2 bg-[var(--evo-bg)]">
-      <style>{`
-        input[type="password"]::-ms-reveal,
-        input[type="password"]::-ms-clear {
-          display: none;
-        }
-      `}</style>
       <div className="flex min-h-screen items-center justify-center p-6 md:p-12 bg-gradient-to-br from-[var(--evo-bg)] to-[var(--evo-surface)]">
         <AuthFormContainer isSignIn={isSignIn} onToggle={toggleForm} />
       </div>
 
       <div
         className="hidden md:block relative bg-cover bg-center transition-all duration-1000 ease-in-out border-l border-[var(--evo-border)]"
-        style={{ backgroundImage: `url(${currentContent.image.src})` }}
-        key={currentContent.image.src}
+        style={{ backgroundImage: `url(${quote.image})` }}
       >
         <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" />
         <div className="absolute inset-x-0 bottom-0 h-[300px] bg-gradient-to-t from-[var(--evo-bg)] to-transparent" />
@@ -432,13 +350,13 @@ export function AuthUI({ signInContent = {}, signUpContent = {} }: AuthUIProps) 
           <blockquote className="space-y-4 text-center text-white max-w-lg">
             <p className="text-2xl font-medium font-heading leading-tight">
               “<Typewriter
-                key={currentContent.quote.text}
-                text={currentContent.quote.text}
+                key={quote.text}
+                text={quote.text}
                 speed={50}
               />”
             </p>
             <cite className="block text-sm font-light text-gray-300 not-italic uppercase tracking-widest">
-              — {currentContent.quote.author}
+              — {quote.author}
             </cite>
           </blockquote>
         </div>

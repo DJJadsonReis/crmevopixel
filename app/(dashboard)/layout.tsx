@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Topbar } from '@/components/layout/Topbar';
 import { CommandPalette } from '@/components/layout/CommandPalette';
 import { createClient } from '@/utils/supabase/client';
+import { AuthUI } from '@/components/ui/auth-ui';
 
 export default function DashboardLayout({
   children,
@@ -14,7 +14,7 @@ export default function DashboardLayout({
 }) {
   const [isCommandOpen, setIsCommandOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
+  const [session, setSession] = useState<any>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -22,18 +22,16 @@ export default function DashboardLayout({
     async function checkAuth() {
       try {
         const supabase = createClient();
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data } = await supabase.auth.getSession();
 
-        if (!session) {
-          router.replace('/login');
-        } else if (mounted) {
+        if (mounted) {
+          setSession(data.session);
           setLoading(false);
         }
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
-          if (!currentSession && mounted) {
-            router.replace('/login');
-          } else if (mounted) {
+          if (mounted) {
+            setSession(currentSession);
             setLoading(false);
           }
         });
@@ -42,7 +40,7 @@ export default function DashboardLayout({
           subscription.unsubscribe();
         };
       } catch (err) {
-        // Fallback: se falhar a conexão, permite a visualização
+        // Se houver erro de inicialização do Supabase, permite a visualização
         if (mounted) setLoading(false);
       }
     }
@@ -52,17 +50,22 @@ export default function DashboardLayout({
     return () => {
       mounted = false;
     };
-  }, [router]);
+  }, []);
 
   if (loading) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-evo-deep text-[var(--evo-muted)]">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-evo-accent border-t-transparent rounded-full animate-spin" />
-          <span className="text-xs font-mono tracking-wider text-evo-support">AUTENTICANDO EVO PIXEL...</span>
+          <span className="text-xs font-mono tracking-wider text-evo-support">CARREGANDO EVO PIXEL...</span>
         </div>
       </div>
     );
+  }
+
+  // Se não houver sessão ativa no Supabase, exibe a tela de login imediatamente
+  if (!session) {
+    return <AuthUI />;
   }
 
   return (
