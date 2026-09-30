@@ -568,6 +568,105 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* 7. BLOCOS PRESERVADOS: Oportunidades no Pipeline & Sequências por Nicho */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Pipeline & Oportunidades Abertas (7 cols) */}
+        <div className="lg:col-span-7 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-medium text-[#E7ECE8] font-heading">
+              Oportunidades em Aberto
+            </h3>
+            <Link href="/pipeline" className="text-xs text-[#8EB69B] hover:text-[#F1F9A1] transition-colors">
+              Ver Pipeline Kanban →
+            </Link>
+          </div>
+
+          <div className="bg-[#0C1A19] border border-[rgba(218,241,222,0.08)] rounded-2xl divide-y divide-[rgba(218,241,222,0.06)] overflow-hidden">
+            {opportunities.map((opp) => (
+              <div
+                key={opp.id}
+                className="p-4 hover:bg-[#10201E]/60 transition-colors flex items-center justify-between gap-4"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs font-semibold text-[#E7ECE8] font-heading truncate">
+                      {opp.company_name}
+                    </span>
+                    <Badge temperature={opp.temperature} className="text-[10px] py-0 px-1.5">
+                      Score {opp.score}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-[#9BA6A0] truncate">{opp.title}</p>
+                  <div className="flex items-center gap-2 mt-1 text-[11px] text-[#65706A]">
+                    <span>{opp.services.join(' + ')}</span>
+                    {opp.n8n_automated && (
+                      <span className="text-[#8EB69B] font-mono">• Automação n8n ativa</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="text-right shrink-0">
+                  <div className="text-sm font-semibold text-[#E7ECE8] font-mono">
+                    R$ {opp.estimated_value.toLocaleString('pt-BR')}
+                  </div>
+                  <span className="text-[11px] text-[#8EB69B]">
+                    Probabilidade {opp.probability}%
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Sequências de Prospecção por Nicho (5 cols - Seção 18.1) */}
+        <div className="lg:col-span-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-medium text-[#E7ECE8] font-heading">
+              Sequências por Nicho (n8n)
+            </h3>
+            <Link href="/prospeccao/mensagens" className="text-xs text-[#8EB69B] hover:text-[#F1F9A1] transition-colors">
+              Banco de Mensagens →
+            </Link>
+          </div>
+
+          <div className="space-y-3">
+            {sequences.map((seq) => (
+              <div
+                key={seq.id}
+                className="p-4 rounded-2xl bg-[#0C1A19] border border-[rgba(218,241,222,0.08)] hover:border-[rgba(218,241,222,0.16)] transition-all"
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-[#8EB69B]">
+                      {seq.niche_name}
+                    </span>
+                    <h4 className="text-xs font-semibold text-[#E7ECE8] font-heading mt-0.5">
+                      {seq.name}
+                    </h4>
+                  </div>
+                  <Badge variant="outline" className="text-[10px]">
+                    {seq.steps.length} etapas
+                  </Badge>
+                </div>
+
+                <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-[rgba(218,241,222,0.06)] text-[11px] text-[#9BA6A0]">
+                  <span className="text-[#E7ECE8]">Fluxo:</span>
+                  <span className="truncate">Abertura → Follow-up 1 ({seq.steps[1]?.wait_days || 2}d) → Follow-up 2</span>
+                </div>
+              </div>
+            ))}
+
+            <div className="p-4 rounded-2xl bg-[#10201E]/50 border border-[rgba(218,241,222,0.06)] text-xs text-[#9BA6A0] flex items-center justify-between">
+              <span>Taxa de resposta no Follow-up 1 é a mais alta (34%)</span>
+              <a href="#relatorios-estrategicos" className="text-[#8EB69B] hover:underline font-mono text-[11px]">
+                Ver métricas
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* 8. Resumo Estratégico & Métricas de Performance (Antiga tela de relatórios integrada ao Dashboard) */}
       <div id="relatorios-estrategicos" className="pt-6 border-t border-[rgba(218,241,222,0.06)] space-y-6">
         <div className="flex items-center justify-between">
