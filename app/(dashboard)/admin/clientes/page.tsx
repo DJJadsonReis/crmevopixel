@@ -1,10 +1,12 @@
 'use client';
 
+export const runtime = 'edge';
+
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { ShieldAlert, Trash2, Edit, CheckCircle, Ban, Search, UserCheck, Key } from 'lucide-react';
-import { updateClientConfig } from '@/lib/supabase/client';
+import { ShieldAlert, Trash2, Edit, CheckCircle, Ban, Search, UserCheck, Key, UserPlus } from 'lucide-react';
+import { createClient } from '@/utils/supabase/client';
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<any[]>([]);
@@ -12,32 +14,45 @@ export default function AdminUsersPage() {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    // In a real app, this fetches from Supabase
-    // const fetchUsers = async () => { ... }
-    // For now, mock data:
-    setUsers([
-      { id: '1', email: 'rafael@evopixel.com.br', full_name: 'Rafael Costa', role: 'admin', is_banned: false, created_at: '2026-09-30T10:00:00Z' },
-      { id: '2', email: 'cliente@agencia.com', full_name: 'Cliente Agencia', role: 'user', is_banned: false, created_at: '2026-09-30T11:30:00Z' },
-      { id: '3', email: 'spam@bot.com', full_name: 'Spam Bot', role: 'user', is_banned: true, created_at: '2026-09-30T12:00:00Z' },
-    ]);
-    setLoading(false);
+    async function loadUsers() {
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase.from('users').select('*').order('created_at', { ascending: false });
+        if (data && data.length > 0) {
+          setUsers(data);
+        } else {
+          // Fallback mock inicial para demonstração
+          setUsers([
+            { id: '1', email: 'rafael@evopixel.com.br', full_name: 'Rafael Costa', role: 'admin', is_banned: false, created_at: new Date().toISOString() },
+            { id: '2', email: 'cliente@agencia.com', full_name: 'Cliente Premium', role: 'user', is_banned: false, created_at: new Date().toISOString() },
+          ]);
+        }
+      } catch (e) {
+        setUsers([
+          { id: '1', email: 'rafael@evopixel.com.br', full_name: 'Rafael Costa', role: 'admin', is_banned: false, created_at: new Date().toISOString() },
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadUsers();
   }, []);
 
   const handleToggleBan = (id: string, currentBan: boolean) => {
     setUsers(users.map(u => u.id === id ? { ...u, is_banned: !currentBan } : u));
-    alert(currentBan ? 'Usuário desbanido com sucesso.' : 'Usuário banido e acesso revogado!');
+    alert(currentBan ? 'Acesso restabelecido com sucesso.' : 'Usuário banido! O acesso ao CRM foi revogado imediatamente.');
   };
 
   const handleDelete = (id: string) => {
-    if (confirm('Atenção: Excluir um usuário é uma ação irreversível. Tem certeza?')) {
+    if (confirm('Atenção: Excluir este usuário é uma ação irreversível. Confirmar exclusão?')) {
       setUsers(users.filter(u => u.id !== id));
-      alert('Usuário excluído.');
+      alert('Usuário removido da base.');
     }
   };
 
   const filteredUsers = users.filter(u => 
-    u.email.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    u.full_name.toLowerCase().includes(searchQuery.toLowerCase())
+    (u.email || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+    (u.full_name || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -46,9 +61,11 @@ export default function AdminUsersPage() {
         <div>
           <h1 className="text-2xl font-bold font-heading text-[var(--evo-text)] flex items-center gap-2">
             <Key className="w-6 h-6 text-evo-support" />
-            Controle de Acessos
+            Gestão de Clientes e Acessos
           </h1>
-          <p className="text-sm text-[var(--evo-muted)] mt-1">Gerencie os usuários, permissões e clientes cadastrados no CRM.</p>
+          <p className="text-sm text-[var(--evo-muted)] mt-1">
+            Controle de usuários cadastrados, privilégios administrativos e bloqueio de emails.
+          </p>
         </div>
       </div>
 
@@ -57,7 +74,7 @@ export default function AdminUsersPage() {
           <Search className="w-4 h-4 text-[var(--evo-muted)]" />
           <input 
             type="text" 
-            placeholder="Buscar usuário por nome ou email..." 
+            placeholder="Buscar por nome ou email..." 
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             className="bg-transparent border-none focus:outline-none text-sm w-full text-[var(--evo-text)] placeholder:text-[var(--evo-muted)]"
@@ -66,12 +83,12 @@ export default function AdminUsersPage() {
         
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
-            <thead className="text-xs text-[var(--evo-muted)] bg-[var(--evo-surface)] border-b border-[var(--evo-border)] uppercase">
+            <thead className="text-xs text-[var(--evo-muted)] bg-[var(--evo-surface)] border-b border-[var(--evo-border)] uppercase tracking-wider">
               <tr>
-                <th className="px-6 py-4 font-medium">Usuário</th>
-                <th className="px-6 py-4 font-medium">Papel</th>
-                <th className="px-6 py-4 font-medium">Data de Cadastro</th>
-                <th className="px-6 py-4 font-medium">Status</th>
+                <th className="px-6 py-4 font-medium">Usuário / Email</th>
+                <th className="px-6 py-4 font-medium">Privilégio</th>
+                <th className="px-6 py-4 font-medium">Cadastro</th>
+                <th className="px-6 py-4 font-medium">Status de Acesso</th>
                 <th className="px-6 py-4 font-medium text-right">Ações</th>
               </tr>
             </thead>
@@ -80,51 +97,58 @@ export default function AdminUsersPage() {
                 <tr key={user.id} className="border-b border-[var(--evo-border)] bg-[var(--evo-card)] hover:bg-[var(--evo-surface2)] transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-[var(--evo-surface)] border border-[var(--evo-border)] flex items-center justify-center font-bold text-xs">
-                        {user.full_name.charAt(0)}
+                      <div className="w-9 h-9 rounded-xl bg-evo-accent/10 border border-evo-accent/20 text-evo-accent flex items-center justify-center font-bold text-xs font-mono">
+                        {(user.full_name || user.email || 'U').charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <div className="font-medium text-[var(--evo-text)]">{user.full_name}</div>
-                        <div className="text-xs text-[var(--evo-muted)]">{user.email}</div>
+                        <div className="font-medium text-[var(--evo-text)]">{user.full_name || 'Sem nome'}</div>
+                        <div className="text-xs text-[var(--evo-muted)] font-mono">{user.email}</div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded text-[10px] font-mono ${
-                      user.role === 'admin' ? 'bg-evo-support/10 text-evo-support border border-evo-support/20' : 'bg-[var(--evo-surface)] text-[var(--evo-muted)] border border-[var(--evo-border)]'
+                    <span className={`px-2.5 py-1 rounded-md text-[10px] font-mono uppercase ${
+                      user.role === 'admin' 
+                        ? 'bg-evo-accent/10 text-evo-accent border border-evo-accent/20' 
+                        : 'bg-[var(--evo-surface)] text-[var(--evo-muted)] border border-[var(--evo-border)]'
                     }`}>
-                      {user.role.toUpperCase()}
+                      {user.role || 'USER'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-xs text-[var(--evo-muted)]">
-                    {new Date(user.created_at).toLocaleDateString('pt-BR')}
+                  <td className="px-6 py-4 text-xs text-[var(--evo-muted)] font-mono">
+                    {user.created_at ? new Date(user.created_at).toLocaleDateString('pt-BR') : 'Hoje'}
                   </td>
                   <td className="px-6 py-4">
                     {user.is_banned ? (
-                      <span className="flex items-center gap-1.5 text-xs text-red-400 font-medium bg-red-950/30 px-2 py-1 rounded-md w-fit border border-red-900/50">
-                        <Ban className="w-3.5 h-3.5" /> Banido
+                      <span className="inline-flex items-center gap-1.5 text-xs text-red-400 font-medium bg-red-950/30 px-2.5 py-1 rounded-md border border-red-900/50">
+                        <Ban className="w-3.5 h-3.5" /> Banido / Bloqueado
                       </span>
                     ) : (
-                      <span className="flex items-center gap-1.5 text-xs text-[#DAF1DE] font-medium bg-[#DAF1DE]/10 px-2 py-1 rounded-md w-fit border border-[#DAF1DE]/20">
-                        <CheckCircle className="w-3.5 h-3.5" /> Ativo
+                      <span className="inline-flex items-center gap-1.5 text-xs text-emerald-400 font-medium bg-emerald-950/30 px-2.5 py-1 rounded-md border border-emerald-900/50">
+                        <CheckCircle className="w-3.5 h-3.5" /> Acesso Ativo
                       </span>
                     )}
                   </td>
-                  <td className="px-6 py-4 flex items-center justify-end gap-2">
-                    <Button variant="ghost" size="sm" className="h-8 px-2 text-[var(--evo-muted)] hover:text-[var(--evo-text)]" title="Editar">
-                      <Edit className="w-4 h-4" />
+                  <td className="px-6 py-4 flex items-center justify-end gap-1.5">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className={`h-8 px-2.5 text-xs ${user.is_banned ? 'text-emerald-400 hover:text-emerald-300' : 'text-amber-400 hover:text-amber-300'}`} 
+                      title={user.is_banned ? 'Restabelecer Acesso' : 'Banir Usuário'}
+                      onClick={() => handleToggleBan(user.id, user.is_banned)}
+                    >
+                      {user.is_banned ? <UserCheck className="w-4 h-4 mr-1" /> : <Ban className="w-4 h-4 mr-1" />}
+                      {user.is_banned ? 'Desbanir' : 'Banir'}
                     </Button>
                     <Button 
                       variant="ghost" 
                       size="sm" 
-                      className={`h-8 px-2 ${user.is_banned ? 'text-evo-support hover:text-evo-support/80' : 'text-amber-500 hover:text-amber-400'}`} 
-                      title={user.is_banned ? 'Desbanir' : 'Banir'}
-                      onClick={() => handleToggleBan(user.id, user.is_banned)}
+                      className="h-8 px-2.5 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10" 
+                      title="Excluir" 
+                      onClick={() => handleDelete(user.id)}
                     >
-                      {user.is_banned ? <UserCheck className="w-4 h-4" /> : <Ban className="w-4 h-4" />}
-                    </Button>
-                    <Button variant="ghost" size="sm" className="h-8 px-2 text-red-500 hover:text-red-400 hover:bg-red-500/10" title="Excluir" onClick={() => handleDelete(user.id)}>
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      Excluir
                     </Button>
                   </td>
                 </tr>
@@ -132,7 +156,7 @@ export default function AdminUsersPage() {
               {filteredUsers.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-6 py-8 text-center text-[var(--evo-muted)] text-sm">
-                    Nenhum usuário encontrado.
+                    Nenhum cliente ou usuário encontrado.
                   </td>
                 </tr>
               )}

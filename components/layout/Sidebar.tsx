@@ -21,7 +21,10 @@ import {
   History,
   Crosshair,
   CalendarCheck,
+  ShieldCheck,
+  LogOut,
 } from 'lucide-react';
+import { createClient } from '@/utils/supabase/client';
 
 interface NavItem {
   label: string;
@@ -69,6 +72,12 @@ export function Sidebar() {
         { label: 'Serviços', href: '/servicos', icon: Layers },
         { label: 'Financeiro', href: '/financeiro', icon: DollarSign },
         { label: 'Meu Histórico', href: '/minha-historia', icon: History },
+      ],
+    },
+    {
+      title: 'SISTEMA',
+      items: [
+        { label: 'Gestão de Acessos', href: '/admin/clientes', icon: ShieldCheck },
       ],
     },
   ];
@@ -174,6 +183,24 @@ export function Sidebar() {
           <Settings className="w-4 h-4 text-evo-disabled" />
           {!isCollapsed && <span>Configurações</span>}
         </Link>
+
+        <button
+          onClick={async () => {
+            try {
+              const supabase = createClient();
+              await supabase.auth.signOut();
+            } catch (e) {}
+            window.location.href = '/login';
+          }}
+          className={clsx(
+            'w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-heading text-red-400/80 hover:text-red-400 hover:bg-red-500/10 transition-all mt-1',
+            isCollapsed && 'justify-center'
+          )}
+          title="Sair do Sistema"
+        >
+          <LogOut className="w-4 h-4" />
+          {!isCollapsed && <span>Sair</span>}
+        </button>
       </div>
     </aside>
   );
