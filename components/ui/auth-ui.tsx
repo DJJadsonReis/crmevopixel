@@ -179,7 +179,7 @@ const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputProps>(
 );
 PasswordInput.displayName = "PasswordInput";
 
-function SignInForm({ onSubmit }: { onSubmit: (e: React.FormEvent) => void }) {
+function SignInForm({ onSubmit, loading }: { onSubmit: (e: React.FormEvent<HTMLFormElement>) => void, loading?: boolean }) {
   return (
     <form onSubmit={onSubmit} autoComplete="on" className="flex flex-col gap-8">
       <div className="flex flex-col items-center gap-2 text-center">
@@ -190,13 +190,13 @@ function SignInForm({ onSubmit }: { onSubmit: (e: React.FormEvent) => void }) {
       <div className="grid gap-4">
         <div className="grid gap-2"><Label htmlFor="email">Email de Acesso</Label><Input id="email" name="email" type="email" placeholder="ceo@evopixel.com.br" required autoComplete="email" /></div>
         <PasswordInput name="password" label="Senha" required autoComplete="current-password" placeholder="••••••••" />
-        <Button type="submit" variant="default" className="mt-2">Entrar no CRM</Button>
+        <Button type="submit" variant="default" className="mt-2" disabled={loading}>{loading ? "Entrando..." : "Entrar no CRM"}</Button>
       </div>
     </form>
   );
 }
 
-function SignUpForm({ onSubmit }: { onSubmit: (e: React.FormEvent) => void }) {
+function SignUpForm({ onSubmit, loading }: { onSubmit: (e: React.FormEvent<HTMLFormElement>) => void, loading?: boolean }) {
   return (
     <form onSubmit={onSubmit} autoComplete="on" className="flex flex-col gap-8">
       <div className="flex flex-col items-center gap-2 text-center">
@@ -208,25 +208,46 @@ function SignUpForm({ onSubmit }: { onSubmit: (e: React.FormEvent) => void }) {
         <div className="grid gap-1"><Label htmlFor="name">Nome Completo</Label><Input id="name" name="name" type="text" placeholder="Seu Nome" required autoComplete="name" /></div>
         <div className="grid gap-2"><Label htmlFor="email">Email</Label><Input id="email" name="email" type="email" placeholder="ceo@evopixel.com.br" required autoComplete="email" /></div>
         <PasswordInput name="password" label="Senha" required autoComplete="new-password" placeholder="••••••••"/>
-        <Button type="submit" variant="default" className="mt-2">Registrar</Button>
+        <Button type="submit" variant="default" className="mt-2" disabled={loading}>{loading ? "Registrando..." : "Registrar"}</Button>
       </div>
     </form>
   );
 }
 
+import { login, signup } from '@/app/login/actions';
+
 function AuthFormContainer({ isSignIn, onToggle }: { isSignIn: boolean; onToggle: () => void; }) {
-    const handleSubmit = (e: React.FormEvent) => {
+    const [error, setError] = useState<string | null>(null);
+    const [loading, setLoading] = useState(false);
+
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        // Mock authentication for now - redirects to dashboard
-        window.location.href = '/dashboard';
+        setError(null);
+        setLoading(true);
+        const formData = new FormData(e.currentTarget);
+        
+        try {
+            if (isSignIn) {
+                const res = await login(formData);
+                if (res?.error) setError(res.error);
+            } else {
+                const res = await signup(formData);
+                if (res?.error) setError(res.error);
+            }
+        } catch(err) {
+            setError('Ocorreu um erro.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
         <div className="mx-auto grid w-[350px] gap-2 p-8 bg-[var(--evo-surface)] border border-[var(--evo-border)] rounded-2xl shadow-2xl">
-            {isSignIn ? <SignInForm onSubmit={handleSubmit} /> : <SignUpForm onSubmit={handleSubmit} />}
+            {error && <div className="p-3 bg-red-500/10 border border-red-500/30 text-red-500 rounded-lg text-sm text-center mb-4">{error}</div>}
+            {isSignIn ? <SignInForm onSubmit={handleSubmit} loading={loading} /> : <SignUpForm onSubmit={handleSubmit} loading={loading} />}
             <div className="text-center text-sm mt-4 text-[var(--evo-muted)]">
-                {isSignIn ? "Ainda não tem acesso?" : "Já possui conta?"}{" "}
-                <Button variant="link" className="pl-1" onClick={onToggle}>
+                {isSignIn ? "Ainda não tem acesso?" : "Já possui conta?"}
+                <Button variant="link" type="button" className="pl-1" onClick={onToggle}>
                     {isSignIn ? "Criar conta" : "Fazer login"}
                 </Button>
             </div>
