@@ -36,8 +36,10 @@ import {
 import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon';
 import { openWhatsApp, cleanPhoneNumber } from '@/lib/utils/whatsapp';
 import { GenerateMessageModal, TargetEntity } from '@/components/modals/GenerateMessageModal';
+import { useCrmSync } from '@/lib/hooks/useCrmSync';
 
 export default function LeadProfilePage() {
+  useCrmSync();
   const params = useParams();
   const router = useRouter();
   const leadId = params.id as string;

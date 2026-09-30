@@ -85,7 +85,46 @@ class CrmService {
 
   constructor() {
     if (typeof window !== 'undefined') {
+      this.loadFromLocalStorage();
       this.initFromSupabase();
+    }
+  }
+
+  private saveToLocalStorage(key: string, data: any): void {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(`evocrm_${key}`, JSON.stringify(data));
+    } catch (e) {
+      console.warn(`Erro ao salvar ${key} no localStorage:`, e);
+    }
+  }
+
+  private loadFromLocalStorage(): void {
+    if (typeof window === 'undefined') return;
+    try {
+      const cachedLeads = localStorage.getItem('evocrm_leads');
+      if (cachedLeads) {
+        const parsed = JSON.parse(cachedLeads);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          this.leads = parsed;
+        }
+      }
+      const cachedOpps = localStorage.getItem('evocrm_opps');
+      if (cachedOpps) {
+        const parsed = JSON.parse(cachedOpps);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          this.opportunities = parsed;
+        }
+      }
+      const cachedClients = localStorage.getItem('evocrm_clients');
+      if (cachedClients) {
+        const parsed = JSON.parse(cachedClients);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          this.clients = parsed;
+        }
+      }
+    } catch (e) {
+      console.warn('Erro ao carregar do localStorage:', e);
     }
   }
 
@@ -134,11 +173,27 @@ class CrmService {
       ]);
 
       let changed = false;
-      if (clients && clients.length > 0) { this.clients = clients; changed = true; }
+      if (clients && clients.length > 0) { 
+        this.clients = clients; 
+        this.saveToLocalStorage('clients', this.clients);
+        changed = true; 
+      }
       if (monthly && monthly.length > 0) { this.monthlyClients = monthly; changed = true; }
-      if (leads && leads.length > 0) { this.leads = leads; changed = true; }
+      if (leads && leads.length > 0) { 
+        const supabaseIds = new Set(leads.map(l => l.id));
+        const localUnsynced = this.leads.filter(l => !supabaseIds.has(l.id));
+        this.leads = [...leads, ...localUnsynced];
+        this.saveToLocalStorage('leads', this.leads);
+        changed = true; 
+      } else if (this.leads.length > 0) {
+        this.leads.forEach(l => dbService.insertLead(l));
+      }
       if (prospects && prospects.length > 0) { this.prospects = prospects; changed = true; }
-      if (opps && opps.length > 0) { this.opportunities = opps; changed = true; }
+      if (opps && opps.length > 0) { 
+        this.opportunities = opps; 
+        this.saveToLocalStorage('opps', this.opportunities);
+        changed = true; 
+      }
       if (proposals && proposals.length > 0) { this.proposals = proposals; changed = true; }
       if (contracts && contracts.length > 0) { this.contracts = contracts; changed = true; }
       if (projects && projects.length > 0) { this.projects = projects; changed = true; }
@@ -318,25 +373,51 @@ class CrmService {
     const lead = this.leads.find(l => l.id === id);
     if (lead) {
       lead.status = status;
+      this.saveToLocalStorage('leads', this.leads);
       dbService.updateLead(id, { status });
       this.notify();
     }
     return lead;
   }
 
+  public updateLead(id: string, data: Partial<Lead>): Lead | undefined {
+    const lead = this.leads.find(l => l.id === id);
+    if (lead) {
+      Object.assign(lead, data);
+      this.saveToLocalStorage('leads', this.leads);
+      dbService.updateLead(id, data);
+      this.notify();
+    }
+    return lead;
+  }
+
   public addLead(leadData: Omit<Lead, 'id'>): Lead {
+    const generatedId =
+      typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `lead-${Date.now()}`;
     const newLead: Lead = {
       ...leadData,
-      id: `lead-${Date.now()}`,
+      id: generatedId,
     };
     this.leads.unshift(newLead);
-    dbService.insertLead(newLead);
+    this.saveToLocalStorage('leads', this.leads);
     this.notify();
+
+    dbService.insertLead(newLead).then((inserted) => {
+      if (inserted && inserted.id && inserted.id !== newLead.id) {
+        newLead.id = inserted.id;
+        this.saveToLocalStorage('leads', this.leads);
+        this.notify();
+      }
+    });
+
     return newLead;
   }
 
   public deleteLead(id: string): void {
     this.leads = this.leads.filter(l => l.id !== id);
+    this.saveToLocalStorage('leads', this.leads);
     dbService.deleteLead(id);
     this.notify();
   }
@@ -344,7 +425,8 @@ class CrmService {
   public deleteLeads(ids: string[]): void {
     const idSet = new Set(ids);
     this.leads = this.leads.filter(l => !idSet.has(l.id));
-    ids.forEach(id => dbService.deleteLead(id));
+    this.saveToLocalStorage('leads', this.leads);
+    dbService.deleteLeads(ids);
     this.notify();
   }
 

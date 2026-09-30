@@ -13,6 +13,85 @@ import {
   FinancialTransaction,
 } from '@/types/database';
 
+function isValidUUID(str?: string | null): boolean {
+  if (!str) return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+}
+
+function sanitizeLeadForSupabase(lead: Partial<Lead>): any {
+  let notes = lead.notes || '';
+  const metadata: any = {};
+  if (lead.google_business) metadata.google_business = lead.google_business;
+  if (Array.isArray(lead.services) && lead.services.length > 0) metadata.services = lead.services;
+  if (lead.sequence_progress) metadata.sequence_progress = lead.sequence_progress;
+  if (lead.ai_analysis) metadata.ai_analysis = lead.ai_analysis;
+
+  if (Object.keys(metadata).length > 0) {
+    const cleanedNotes = notes.replace(/<!--METADATA:[\s\S]*?-->/, '').trim();
+    notes = cleanedNotes
+      ? `${cleanedNotes}\n<!--METADATA:${JSON.stringify(metadata)}-->`
+      : `<!--METADATA:${JSON.stringify(metadata)}-->`;
+  }
+
+  const payload: any = {};
+  if (lead.id && isValidUUID(lead.id)) payload.id = lead.id;
+  if (lead.name !== undefined) payload.name = lead.name;
+  if (lead.company_name !== undefined) payload.company_name = lead.company_name;
+  if (lead.role !== undefined) payload.role = lead.role || null;
+  if (lead.email !== undefined) payload.email = lead.email || null;
+  if (lead.phone !== undefined) payload.phone = lead.phone || null;
+  if (lead.whatsapp !== undefined) payload.whatsapp = lead.whatsapp || null;
+  if (lead.instagram !== undefined) payload.instagram = lead.instagram || null;
+  if (lead.website !== undefined) payload.website = lead.website || null;
+  if (lead.city !== undefined) payload.city = lead.city || null;
+  if (lead.state !== undefined) payload.state = lead.state || null;
+  if (lead.segment !== undefined) payload.segment = lead.segment || null;
+  if (lead.score !== undefined) payload.score = lead.score;
+  if (lead.temperature !== undefined) payload.temperature = lead.temperature;
+  if (lead.status !== undefined) payload.status = lead.status;
+  if (lead.next_action !== undefined) payload.next_action = lead.next_action || null;
+  if (lead.next_action_at !== undefined) payload.next_action_at = lead.next_action_at || null;
+  if (lead.last_contact_at !== undefined) payload.last_contact_at = lead.last_contact_at || null;
+  if (lead.company_id && isValidUUID(lead.company_id)) payload.company_id = lead.company_id;
+  if (lead.niche_id && isValidUUID(lead.niche_id)) payload.niche_id = lead.niche_id;
+  if (lead.source_id && isValidUUID(lead.source_id)) payload.source_id = lead.source_id;
+  payload.notes = notes || null;
+  payload.updated_at = new Date().toISOString();
+
+  return payload;
+}
+
+function parseLeadFromSupabase(row: any): Lead {
+  let google_business = row.google_business || '';
+  let services: string[] = Array.isArray(row.services) ? row.services : [];
+  let sequence_progress = row.sequence_progress;
+  let ai_analysis = row.ai_analysis;
+  let notes = row.notes || '';
+
+  if (notes && notes.includes('<!--METADATA:')) {
+    const match = notes.match(/<!--METADATA:([\s\S]*?)-->/);
+    if (match) {
+      try {
+        const parsed = JSON.parse(match[1]);
+        if (parsed.google_business && !google_business) google_business = parsed.google_business;
+        if (Array.isArray(parsed.services) && services.length === 0) services = parsed.services;
+        if (parsed.sequence_progress && !sequence_progress) sequence_progress = parsed.sequence_progress;
+        if (parsed.ai_analysis && !ai_analysis) ai_analysis = parsed.ai_analysis;
+        notes = notes.replace(/<!--METADATA:[\s\S]*?-->/, '').trim();
+      } catch (e) {}
+    }
+  }
+
+  return {
+    ...row,
+    notes,
+    google_business,
+    services,
+    sequence_progress,
+    ai_analysis,
+  } as Lead;
+}
+
 export class DatabaseService {
   // ============================================================================
   // CLIENTES
@@ -146,43 +225,76 @@ export class DatabaseService {
       const { data, error } = await supabase
         .from('leads')
         .select('*')
-        .order('score', { ascending: false });
-      if (error || !data) return null;
-      return data as Lead[];
-    } catch {
+        .order('created_at', { ascending: false });
+      if (error || !data) {
+        if (error) console.error('Supabase getLeads error:', error);
+        return null;
+      }
+      return data.map(parseLeadFromSupabase);
+    } catch (err) {
+      console.error('Supabase getLeads exception:', err);
       return null;
     }
   }
 
-  public async insertLead(lead: Lead): Promise<boolean> {
-    if (!isSupabaseConfigured()) return false;
+  public async insertLead(lead: Lead): Promise<Lead | null> {
+    if (!isSupabaseConfigured()) return null;
     try {
       const supabase = getSupabase();
-      const { error } = await supabase.from('leads').upsert([lead]);
-      return !error;
-    } catch {
-      return false;
+      const payload = sanitizeLeadForSupabase(lead);
+      const { data, error } = await supabase.from('leads').upsert([payload]).select();
+      if (error) {
+        console.error('Supabase insertLead error:', error);
+        return null;
+      }
+      if (data && data.length > 0) {
+        return parseLeadFromSupabase(data[0]);
+      }
+      return null;
+    } catch (err) {
+      console.error('Supabase insertLead exception:', err);
+      return null;
     }
   }
 
   public async updateLead(id: string, data: Partial<Lead>): Promise<boolean> {
-    if (!isSupabaseConfigured()) return false;
+    if (!isSupabaseConfigured() || !isValidUUID(id)) return false;
     try {
       const supabase = getSupabase();
-      const { error } = await supabase.from('leads').update(data).eq('id', id);
+      const payload = sanitizeLeadForSupabase(data);
+      delete payload.id;
+      const { error } = await supabase.from('leads').update(payload).eq('id', id);
+      if (error) console.error('Supabase updateLead error:', error);
       return !error;
-    } catch {
+    } catch (err) {
+      console.error('Supabase updateLead exception:', err);
       return false;
     }
   }
 
   public async deleteLead(id: string): Promise<boolean> {
-    if (!isSupabaseConfigured()) return false;
+    if (!isSupabaseConfigured() || !isValidUUID(id)) return false;
     try {
       const supabase = getSupabase();
       const { error } = await supabase.from('leads').delete().eq('id', id);
+      if (error) console.error('Supabase deleteLead error:', error);
       return !error;
-    } catch {
+    } catch (err) {
+      console.error('Supabase deleteLead exception:', err);
+      return false;
+    }
+  }
+
+  public async deleteLeads(ids: string[]): Promise<boolean> {
+    const validUuids = ids.filter(isValidUUID);
+    if (!isSupabaseConfigured() || validUuids.length === 0) return false;
+    try {
+      const supabase = getSupabase();
+      const { error } = await supabase.from('leads').delete().in('id', validUuids);
+      if (error) console.error('Supabase deleteLeads error:', error);
+      return !error;
+    } catch (err) {
+      console.error('Supabase deleteLeads exception:', err);
       return false;
     }
   }
