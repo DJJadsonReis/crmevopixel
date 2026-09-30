@@ -1,0 +1,42 @@
+
+url: https://kkhnchiytqkuqextwbsq.supabase.co
+Project ID: kkhnchiytqkuqextwbsq
+user: crmevo
+senha: rJ(uoPQjH+T^3LICUuJ=
+
+anon public:
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtraG5jaGl5dHFrdXFleHR3YnNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3OTAzNjIsImV4cCI6MjEwNjM2NjM2Mn0.d1TsA7Tjbh8chkpjDjpdoywDp_ZssWAjAGOrKRddSG4
+
+service_role secret: 
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtraG5jaGl5dHFrdXFleHR3YnNxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MDc5MDM2MiwiZXhwIjoyMTA2MzY2MzYyfQ.UNeZfR8Xiu9PrIkfW__sLtiLjOw-IwCKVKb2e1qFr0Q
+
+
+npx skills add supabase/agent-skills
+
+1. Configure MCP
+Set up your MCP client.
+Details:
+Add this configuration to ~/.gemini/antigravity/mcp_config.json:
+After saving the config, restart Antigravity. It will prompt you to complete the OAuth flow to authenticate with Supabase.
+To edit the config from within Antigravity, click the ··· menu at the top of the Agent pane > MCP Servers > Manage MCP Servers > View raw config. From the Manage MCP Servers page you can also Refresh server configs and enable/disable servers.
+If you run into authentication issues, open Agent Settings with Cmd+, (Mac) or Ctrl+, (Windows/Linux), navigate to the Customizations tab, and click the Authenticate button next to the Supabase server.
+Need help?View Antigravity docs
+Code:
+File: Code
+```
+1{
+2  "mcpServers": {
+3    "supabase": {
+4      "serverUrl": "https://mcp.supabase.com/mcp?project_ref=kkhnchiytqkuqextwbsq&features=docs%2Caccount%2Cdatabase%2Cdebugging%2Cdevelopment%2Cfunctions%2Cbranching"
+5    }
+6  }
+7}
+```
+
+2. Install Agent Skills (optional)
+Agent Skills give AI coding tools ready-made instructions, scripts, and resources for working with Supabase more accurately and efficiently.
+Code:
+File: Code
+```
+npx skills add supabase/agent-skills
+```
