@@ -31,22 +31,22 @@ export function MetricCard({
         clsx(
           'relative rounded-2xl border p-5 transition-all duration-200 overflow-hidden',
           highlight
-            ? 'bg-[#0C1A19] border-[rgba(241,249,161,0.22)] shadow-[0_0_30px_-5px_rgba(241,249,161,0.06)]'
-            : 'bg-[#0C1A19] border-[rgba(218,241,222,0.08)] hover:border-[rgba(218,241,222,0.16)]',
+            ? 'bg-evo-card border-[rgba(241,249,161,0.22)] shadow-[0_0_30px_-5px_rgba(241,249,161,0.06)]'
+            : 'bg-evo-card border-evo-border hover:border-evo-border-hover',
           className
         )
       )}
       {...props}
     >
-      <div className="flex items-center justify-between text-xs text-[#9BA6A0] mb-2 font-medium">
+      <div className="flex items-center justify-between text-xs text-evo-muted mb-2 font-medium">
         <span>{label}</span>
-        {icon && <div className="text-[#8EB69B] opacity-80">{icon}</div>}
+        {icon && <div className="text-evo-support opacity-80">{icon}</div>}
       </div>
 
       <div
         className={clsx(
           'text-2xl lg:text-3xl font-semibold tracking-tight font-heading my-1',
-          highlight ? 'text-[#F1F9A1]' : 'text-[#E7ECE8]'
+          highlight ? 'text-evo-accent' : 'text-evo-text'
         )}
       >
         {value}
@@ -59,14 +59,14 @@ export function MetricCard({
               className={clsx(
                 'inline-flex items-center font-medium px-1.5 py-0.5 rounded text-[11px]',
                 trendPositive
-                  ? 'bg-[#8EB69B]/10 text-[#8EB69B] border border-[#8EB69B]/20'
+                  ? 'bg-evo-support/10 text-evo-support border border-evo-support/20'
                   : 'bg-red-500/10 text-red-400 border border-red-500/20'
               )}
             >
               {trend}
             </span>
           )}
-          {subtitle && <span className="text-[#9BA6A0] truncate">{subtitle}</span>}
+          {subtitle && <span className="text-evo-muted truncate">{subtitle}</span>}
         </div>
       )}
     </div>

@@ -22,7 +22,7 @@ export function Tabs({ items, activeId, onChange, className }: TabsProps) {
     <div
       className={twMerge(
         clsx(
-          'inline-flex items-center gap-1 p-1 rounded-xl bg-[#07100F] border border-[rgba(218,241,222,0.06)]',
+          'inline-flex items-center gap-1 p-1 rounded-xl bg-evo-deep border border-evo-border',
           className
         )
       )}
@@ -36,8 +36,8 @@ export function Tabs({ items, activeId, onChange, className }: TabsProps) {
             className={clsx(
               'px-3.5 py-1.5 rounded-lg text-xs font-heading transition-all duration-200 flex items-center gap-2',
               isActive
-                ? 'bg-[#10201E] text-[#E7ECE8] border border-[rgba(218,241,222,0.12)] font-medium shadow-sm'
-                : 'text-[#9BA6A0] hover:text-[#E7ECE8] hover:bg-[#10201E]/40'
+                ? 'bg-evo-surface text-evo-text border border-evo-border font-medium shadow-sm'
+                : 'text-evo-muted hover:text-evo-text hover:bg-evo-surface/40'
             )}
           >
             <span>{item.label}</span>
@@ -46,8 +46,8 @@ export function Tabs({ items, activeId, onChange, className }: TabsProps) {
                 className={clsx(
                   'px-1.5 py-0.2 text-[10px] rounded font-mono',
                   isActive
-                    ? 'bg-[#F1F9A1]/15 text-[#F1F9A1]'
-                    : 'bg-[#163832] text-[#9BA6A0]'
+                    ? 'bg-evo-accent/15 text-evo-accent'
+                    : 'bg-evo-surface2 text-evo-muted'
                 )}
               >
                 {item.count}

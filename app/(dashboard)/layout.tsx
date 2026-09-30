@@ -13,7 +13,7 @@ export default function DashboardLayout({
   const [isCommandOpen, setIsCommandOpen] = useState(false);
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#07100F]">
+    <div className="flex h-screen w-screen overflow-hidden bg-evo-deep">
       {/* Sidebar Fixa recolhível */}
       <Sidebar />
 

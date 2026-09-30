@@ -25,7 +25,7 @@ export function Logo({ isCollapsed = false, className = '' }: LogoProps) {
       <div className={`flex items-center justify-center ${className}`}>
         <Image
           src={isDark ? '/logo-icon-dark.png' : '/logo-icon-light.png'}
-          alt="EvoPixel"
+          alt="EVO PIXEL"
           width={28}
           height={28}
           className="w-7 h-7 object-contain select-none"
@@ -40,7 +40,7 @@ export function Logo({ isCollapsed = false, className = '' }: LogoProps) {
     <div className={`flex items-center ${className}`}>
       <Image
         src={isDark ? '/logo-dark.png' : '/logo-light.png'}
-        alt="EvoPixel"
+        alt="EVO PIXEL"
         width={160}
         height={24}
         className="h-6 w-auto max-w-[160px] object-contain select-none"

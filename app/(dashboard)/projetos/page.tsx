@@ -93,17 +93,17 @@ export default function ProjetosPage() {
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* Cabeçalho */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[rgba(218,241,222,0.06)] pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-evo-border pb-5">
         <div>
-          <div className="flex items-center gap-2 text-xs font-mono text-[#8EB69B] uppercase tracking-wider mb-1">
+          <div className="flex items-center gap-2 text-xs font-mono text-evo-support uppercase tracking-wider mb-1">
             <Briefcase className="w-3.5 h-3.5" />
             Operações & Entregas Técnicas
           </div>
-          <h1 className="text-2xl lg:text-3xl font-semibold text-[#E7ECE8] font-heading">
+          <h1 className="text-2xl lg:text-3xl font-semibold text-evo-text font-heading">
             Gestão de Projetos
           </h1>
-          <p className="text-xs text-[#9BA6A0] mt-1">
-            Acompanhe prazos, checklists modulares por serviço e todo o histórico prévio da EvoPixel.
+          <p className="text-xs text-evo-muted mt-1">
+            Acompanhe prazos, checklists modulares por serviço e todo o histórico prévio da EVO PIXEL.
           </p>
         </div>
 
@@ -114,7 +114,7 @@ export default function ProjetosPage() {
             className="gap-1.5"
             onClick={() => setIsNewHistoryModalOpen(true)}
           >
-            <History className="w-3.5 h-3.5 text-[#8EB69B]" />
+            <History className="w-3.5 h-3.5 text-evo-support" />
             <span>Adicionar Histórico</span>
           </Button>
           <Button variant="primary" size="sm" className="gap-1.5" onClick={() => setIsNewProjectModalOpen(true)}>
@@ -140,33 +140,33 @@ export default function ProjetosPage() {
           {projects.map((proj) => (
             <div
               key={proj.id}
-              className="p-6 rounded-2xl bg-[#0C1A19] border border-[rgba(218,241,222,0.08)] hover:border-[rgba(218,241,222,0.16)] transition-all space-y-5"
+              className="p-6 rounded-2xl bg-evo-card border border-evo-border hover:border-evo-border-hover transition-all space-y-5"
             >
               <div className="flex items-start justify-between">
                 <div>
-                  <span className="text-[10px] font-mono text-[#8EB69B] uppercase tracking-wider">
+                  <span className="text-[10px] font-mono text-evo-support uppercase tracking-wider">
                     {proj.company_name}
                   </span>
-                  <h3 className="text-base font-semibold text-[#E7ECE8] font-heading mt-0.5">
+                  <h3 className="text-base font-semibold text-evo-text font-heading mt-0.5">
                     {proj.name}
                   </h3>
-                  <span className="text-xs text-[#9BA6A0]">{proj.client_name}</span>
+                  <span className="text-xs text-evo-muted">{proj.client_name}</span>
                 </div>
 
-                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-[#163832] text-[#8EB69B]">
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-evo-surface2 text-evo-support">
                   {proj.status.replace('_', ' ')}
                 </span>
               </div>
 
               {/* Progresso */}
               <div className="space-y-1.5">
-                <div className="flex justify-between text-xs text-[#9BA6A0]">
+                <div className="flex justify-between text-xs text-evo-muted">
                   <span>Progresso Geral</span>
-                  <span className="font-mono text-[#F1F9A1]">{proj.progress_percentage}%</span>
+                  <span className="font-mono text-evo-accent">{proj.progress_percentage}%</span>
                 </div>
-                <div className="w-full bg-[#07100F] h-2 rounded-full overflow-hidden">
+                <div className="w-full bg-evo-deep h-2 rounded-full overflow-hidden">
                   <div
-                    className="bg-[#8EB69B] h-full rounded-full transition-all"
+                    className="bg-evo-support h-full rounded-full transition-all"
                     style={{ width: `${proj.progress_percentage}%` }}
                   />
                 </div>
@@ -177,11 +177,11 @@ export default function ProjetosPage() {
                 {proj.services.map((srv, idx) => (
                   <div
                     key={idx}
-                    className="p-3.5 rounded-xl bg-[#10201E] border border-[rgba(218,241,222,0.06)] space-y-2"
+                    className="p-3.5 rounded-xl bg-evo-surface border border-evo-border space-y-2"
                   >
-                    <div className="text-xs font-semibold text-[#E7ECE8] flex items-center justify-between">
+                    <div className="text-xs font-semibold text-evo-text flex items-center justify-between">
                       <span>{srv.service_name}</span>
-                      <span className="text-[10px] text-[#65706A] font-mono">Checklist</span>
+                      <span className="text-[10px] text-evo-disabled font-mono">Checklist</span>
                     </div>
 
                     <div className="space-y-1.5 pt-1">
@@ -190,14 +190,14 @@ export default function ProjetosPage() {
                           key={cIdx}
                           type="button"
                           onClick={() => handleToggleChecklist(proj.id, idx, cIdx)}
-                          className="flex items-center gap-2 text-xs text-[#9BA6A0] hover:text-[#E7ECE8] text-left transition-colors w-full p-1 rounded hover:bg-[#07100F]/40 cursor-pointer"
+                          className="flex items-center gap-2 text-xs text-evo-muted hover:text-evo-text text-left transition-colors w-full p-1 rounded hover:bg-evo-deep/40 cursor-pointer"
                         >
                           <CheckCircle2
                             className={`w-3.5 h-3.5 shrink-0 ${
-                              item.completed ? 'text-[#8EB69B]' : 'text-[#65706A]'
+                              item.completed ? 'text-evo-support' : 'text-evo-disabled'
                             }`}
                           />
-                          <span className={item.completed ? 'line-through text-[#65706A]' : ''}>
+                          <span className={item.completed ? 'line-through text-evo-disabled' : ''}>
                             {item.item}
                           </span>
                         </button>
@@ -207,7 +207,7 @@ export default function ProjetosPage() {
                 ))}
               </div>
 
-              <div className="pt-3 border-t border-[rgba(218,241,222,0.06)] flex items-center justify-between text-xs text-[#9BA6A0]">
+              <div className="pt-3 border-t border-evo-border flex items-center justify-between text-xs text-evo-muted">
                 <span>Prazo Final: {proj.deadline}</span>
                 <Button variant="secondary" size="sm" className="h-7 text-xs px-2.5">
                   Ver Projeto
@@ -221,12 +221,12 @@ export default function ProjetosPage() {
       {/* Aba Históricos (Seção 29 & 30) */}
       {activeTab === 'historicos' && (
         <Card className="p-6 space-y-4">
-          <div className="flex items-center justify-between border-b border-[rgba(218,241,222,0.06)] pb-4">
+          <div className="flex items-center justify-between border-b border-evo-border pb-4">
             <div>
-              <h3 className="text-base font-medium text-[#E7ECE8] font-heading">
-                Projetos Anteriores ao EVOCRM
+              <h3 className="text-base font-medium text-evo-text font-heading">
+                Projetos Anteriores ao EVO PIXEL
               </h3>
-              <p className="text-xs text-[#9BA6A0] mt-0.5">
+              <p className="text-xs text-evo-muted mt-0.5">
                 Projetos cadastrados que compõem o faturamento acumulado oficial de R$ 147.850 sem exigir tarefas ou briefing ativos.
               </p>
             </div>
@@ -243,7 +243,7 @@ export default function ProjetosPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-[rgba(218,241,222,0.06)] text-[11px] font-mono text-[#65706A] uppercase">
+                <tr className="border-b border-evo-border text-[11px] font-mono text-evo-disabled uppercase">
                   <th className="py-2.5 px-3">Empresa / Cliente</th>
                   <th className="py-2.5 px-3">Serviços Executados</th>
                   <th className="py-2.5 px-3">Data</th>
@@ -254,23 +254,23 @@ export default function ProjetosPage() {
               </thead>
               <tbody className="divide-y divide-[rgba(218,241,222,0.04)]">
                 {historicalProjects.map((hp) => (
-                  <tr key={hp.id} className="hover:bg-[#10201E]/40">
+                  <tr key={hp.id} className="hover:bg-evo-surface/40">
                     <td className="py-3 px-3">
-                      <span className="font-medium text-[#E7ECE8]">{hp.company_name}</span>
-                      <div className="text-[11px] text-[#9BA6A0]">{hp.client_name}</div>
+                      <span className="font-medium text-evo-text">{hp.company_name}</span>
+                      <div className="text-[11px] text-evo-muted">{hp.client_name}</div>
                     </td>
-                    <td className="py-3 px-3 text-[#9BA6A0]">{hp.services_summary}</td>
-                    <td className="py-3 px-3 font-mono text-[#65706A]">
+                    <td className="py-3 px-3 text-evo-muted">{hp.services_summary}</td>
+                    <td className="py-3 px-3 font-mono text-evo-disabled">
                       {new Date(hp.project_date).toLocaleDateString('pt-BR')}
                     </td>
-                    <td className="py-3 px-3 font-mono text-[#E7ECE8]">
+                    <td className="py-3 px-3 font-mono text-evo-text">
                       R$ {hp.amount_contracted.toLocaleString('pt-BR')}
                     </td>
-                    <td className="py-3 px-3 font-mono text-[#8EB69B]">
+                    <td className="py-3 px-3 font-mono text-evo-support">
                       R$ {hp.amount_received.toLocaleString('pt-BR')}
                     </td>
                     <td className="py-3 px-3">
-                      <span className="px-2 py-0.5 rounded text-[10px] bg-[#163832] text-[#8EB69B] font-mono">
+                      <span className="px-2 py-0.5 rounded text-[10px] bg-evo-surface2 text-evo-support font-mono">
                         {hp.status}
                       </span>
                     </td>
@@ -287,60 +287,60 @@ export default function ProjetosPage() {
         isOpen={isNewHistoryModalOpen}
         onClose={() => setIsNewHistoryModalOpen(false)}
         title="Cadastrar Projeto Histórico"
-        subtitle="Adicione projetos realizados antes do EVOCRM para computar no faturamento acumulado e na página Minha História."
+        subtitle="Adicione projetos realizados antes do EVO PIXEL para computar no faturamento acumulado e na página Minha História."
       >
         <div className="space-y-4 text-xs">
           <div>
-            <label className="block text-[#9BA6A0] mb-1">Empresa</label>
+            <label className="block text-evo-muted mb-1">Empresa</label>
             <input
               type="text"
               value={hCompany}
               onChange={(e) => setHCompany(e.target.value)}
               placeholder="Ex: Martins Imóveis"
-              className="w-full px-3 py-2 rounded-xl bg-[#10201E] border border-[rgba(218,241,222,0.08)] text-[#E7ECE8] focus:outline-none"
+              className="w-full px-3 py-2 rounded-xl bg-evo-surface border border-evo-border text-evo-text focus:outline-none"
             />
           </div>
           <div>
-            <label className="block text-[#9BA6A0] mb-1">Cliente / Contato</label>
+            <label className="block text-evo-muted mb-1">Cliente / Contato</label>
             <input
               type="text"
               value={hClient}
               onChange={(e) => setHClient(e.target.value)}
               placeholder="Ex: Rodrigo Martins"
-              className="w-full px-3 py-2 rounded-xl bg-[#10201E] border border-[rgba(218,241,222,0.08)] text-[#E7ECE8] focus:outline-none"
+              className="w-full px-3 py-2 rounded-xl bg-evo-surface border border-evo-border text-evo-text focus:outline-none"
             />
           </div>
           <div>
-            <label className="block text-[#9BA6A0] mb-1">Serviços Executados</label>
+            <label className="block text-evo-muted mb-1">Serviços Executados</label>
             <input
               type="text"
               value={hServices}
               onChange={(e) => setHServices(e.target.value)}
               placeholder="Ex: Site Institucional + Automação WhatsApp"
-              className="w-full px-3 py-2 rounded-xl bg-[#10201E] border border-[rgba(218,241,222,0.08)] text-[#E7ECE8] focus:outline-none"
+              className="w-full px-3 py-2 rounded-xl bg-evo-surface border border-evo-border text-evo-text focus:outline-none"
             />
           </div>
           <div>
-            <label className="block text-[#9BA6A0] mb-1">Valor Contratado & Recebido (R$)</label>
+            <label className="block text-evo-muted mb-1">Valor Contratado & Recebido (R$)</label>
             <input
               type="number"
               value={hAmount}
               onChange={(e) => setHAmount(e.target.value)}
               placeholder="Ex: 4500"
-              className="w-full px-3 py-2 rounded-xl bg-[#10201E] border border-[rgba(218,241,222,0.08)] text-[#E7ECE8] focus:outline-none"
+              className="w-full px-3 py-2 rounded-xl bg-evo-surface border border-evo-border text-evo-text focus:outline-none"
             />
           </div>
           <div>
-            <label className="block text-[#9BA6A0] mb-1">Data do Projeto</label>
+            <label className="block text-evo-muted mb-1">Data do Projeto</label>
             <input
               type="date"
               value={hDate}
               onChange={(e) => setHDate(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl bg-[#10201E] border border-[rgba(218,241,222,0.08)] text-[#E7ECE8] focus:outline-none [color-scheme:dark]"
+              className="w-full px-3 py-2 rounded-xl bg-evo-surface border border-evo-border text-evo-text focus:outline-none [color-scheme:dark]"
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-4 border-t border-[rgba(218,241,222,0.06)]">
+          <div className="flex justify-end gap-2 pt-4 border-t border-evo-border">
             <Button
               variant="secondary"
               size="sm"
@@ -364,46 +364,46 @@ export default function ProjetosPage() {
       >
         <div className="space-y-4 text-xs">
           <div>
-            <label className="block text-[#9BA6A0] mb-1">Empresa</label>
+            <label className="block text-evo-muted mb-1">Empresa</label>
             <input
               type="text"
               value={pCompany}
               onChange={(e) => setPCompany(e.target.value)}
               placeholder="Ex: Martins Imóveis"
-              className="w-full px-3 py-2 rounded-xl bg-[#10201E] border border-[rgba(218,241,222,0.08)] text-[#E7ECE8] focus:outline-none"
+              className="w-full px-3 py-2 rounded-xl bg-evo-surface border border-evo-border text-evo-text focus:outline-none"
             />
           </div>
           <div>
-            <label className="block text-[#9BA6A0] mb-1">Cliente / Contato</label>
+            <label className="block text-evo-muted mb-1">Cliente / Contato</label>
             <input
               type="text"
               value={pClient}
               onChange={(e) => setPClient(e.target.value)}
               placeholder="Ex: Rodrigo Martins"
-              className="w-full px-3 py-2 rounded-xl bg-[#10201E] border border-[rgba(218,241,222,0.08)] text-[#E7ECE8] focus:outline-none"
+              className="w-full px-3 py-2 rounded-xl bg-evo-surface border border-evo-border text-evo-text focus:outline-none"
             />
           </div>
           <div>
-            <label className="block text-[#9BA6A0] mb-1">Serviços Contratados</label>
+            <label className="block text-evo-muted mb-1">Serviços Contratados</label>
             <input
               type="text"
               value={pServices}
               onChange={(e) => setPServices(e.target.value)}
               placeholder="Ex: Site Institucional"
-              className="w-full px-3 py-2 rounded-xl bg-[#10201E] border border-[rgba(218,241,222,0.08)] text-[#E7ECE8] focus:outline-none"
+              className="w-full px-3 py-2 rounded-xl bg-evo-surface border border-evo-border text-evo-text focus:outline-none"
             />
           </div>
           <div>
-            <label className="block text-[#9BA6A0] mb-1">Prazo Final</label>
+            <label className="block text-evo-muted mb-1">Prazo Final</label>
             <input
               type="date"
               value={pDeadline}
               onChange={(e) => setPDeadline(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl bg-[#10201E] border border-[rgba(218,241,222,0.08)] text-[#E7ECE8] focus:outline-none [color-scheme:dark]"
+              className="w-full px-3 py-2 rounded-xl bg-evo-surface border border-evo-border text-evo-text focus:outline-none [color-scheme:dark]"
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-4 border-t border-[rgba(218,241,222,0.06)]">
+          <div className="flex justify-end gap-2 pt-4 border-t border-evo-border">
             <Button
               variant="secondary"
               size="sm"

@@ -69,14 +69,20 @@ export default function ConfiguracoesPage() {
   const [isSavingSupabase, setIsSavingSupabase] = useState(false);
   const [supabaseFeedback, setSupabaseFeedback] = useState<{ success: boolean; message: string } | null>(null);
 
-  // AI Providers State
   const [aiConfig, setAiConfig] = useState<AIProviderConfig>(aiProvider.getConfig());
   const [showGeminiKey, setShowGeminiKey] = useState(false);
   const [showClaudeKey, setShowClaudeKey] = useState(false);
+  const [showOpenAIKey, setShowOpenAIKey] = useState(false);
+  const [showOpenRouterKey, setShowOpenRouterKey] = useState(false);
+
   const [isTestingGemini, setIsTestingGemini] = useState(false);
   const [geminiResult, setGeminiResult] = useState<{ success: boolean; message: string } | null>(null);
   const [isTestingClaude, setIsTestingClaude] = useState(false);
   const [claudeResult, setClaudeResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [isTestingOpenAI, setIsTestingOpenAI] = useState(false);
+  const [openAIResult, setOpenAIResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [isTestingOpenRouter, setIsTestingOpenRouter] = useState(false);
+  const [openRouterResult, setOpenRouterResult] = useState<{ success: boolean; message: string } | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   const checkSupabaseStatus = async () => {
@@ -184,6 +190,46 @@ export default function ConfiguracoesPage() {
     }
   };
 
+  const handleTestOpenAI = async () => {
+    setIsTestingOpenAI(true);
+    setOpenAIResult(null);
+    try {
+      const res = await aiProvider.testOpenAI(aiConfig.openai.apiKey, aiConfig.openai.model);
+      setOpenAIResult(res);
+      if (res.success) {
+        setAiConfig((prev) => ({
+          ...prev,
+          openai: { ...prev.openai, enabled: true },
+        }));
+        aiProvider.saveConfig({
+          openai: { ...aiConfig.openai, enabled: true },
+        });
+      }
+    } finally {
+      setIsTestingOpenAI(false);
+    }
+  };
+
+  const handleTestOpenRouter = async () => {
+    setIsTestingOpenRouter(true);
+    setOpenRouterResult(null);
+    try {
+      const res = await aiProvider.testOpenRouter(aiConfig.openrouter.apiKey, aiConfig.openrouter.model);
+      setOpenRouterResult(res);
+      if (res.success) {
+        setAiConfig((prev) => ({
+          ...prev,
+          openrouter: { ...prev.openrouter, enabled: true },
+        }));
+        aiProvider.saveConfig({
+          openrouter: { ...aiConfig.openrouter, enabled: true },
+        });
+      }
+    } finally {
+      setIsTestingOpenRouter(false);
+    }
+  };
+
   const TABLES_LIST = [
     { name: 'users', desc: 'Usuários, perfis e permissões' },
     { name: 'companies', desc: 'Empresas clientes e alvos' },
@@ -208,7 +254,7 @@ export default function ConfiguracoesPage() {
     { name: 'financial_transactions', desc: 'Transações (Contratado vs Recebido vs Pendente)' },
     { name: 'conversations', desc: 'Conversas por canal' },
     { name: 'messages', desc: 'Mensagens trocadas' },
-    { name: 'business_context', desc: 'Contexto operacional da EvoPixel para IA' },
+    { name: 'business_context', desc: 'Contexto operacional da EVO PIXEL para IA' },
     { name: 'commercial_goals', desc: 'Metas comerciais periódicas' },
     { name: 'prospects', desc: 'Base de prospecção pura com ICP Score' },
     { name: 'conversation_summaries', desc: 'Resumos estruturados para IA' },
@@ -222,7 +268,7 @@ export default function ConfiguracoesPage() {
       {/* Cabeçalho */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--evo-border)] pb-5">
         <div>
-          <div className="flex items-center gap-2 text-xs font-mono text-[#8EB69B] uppercase tracking-wider mb-1">
+          <div className="flex items-center gap-2 text-xs font-mono text-evo-support uppercase tracking-wider mb-1">
             <Settings className="w-3.5 h-3.5" />
             Infraestrutura & Integrações
           </div>
@@ -235,8 +281,8 @@ export default function ConfiguracoesPage() {
         </div>
 
         {saveSuccess && (
-          <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#163832] text-[#DAF1DE] border border-[#8EB69B]/40 text-xs animate-in fade-in">
-            <CheckCircle2 className="w-4 h-4 text-[#F1F9A1]" />
+          <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-evo-surface2 text-[#DAF1DE] border border-evo-support/40 text-xs animate-in fade-in">
+            <CheckCircle2 className="w-4 h-4 text-evo-accent" />
             <span>Configurações salvas e ativas!</span>
           </div>
         )}
@@ -248,8 +294,8 @@ export default function ConfiguracoesPage() {
       <Card className="p-6 space-y-6 border border-[var(--evo-border)]">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--evo-border)] pb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#10201E] border border-[var(--evo-border)] flex items-center justify-center text-[#F1F9A1]">
-              <Sparkles className="w-5 h-5 text-[#F1F9A1]" />
+            <div className="w-10 h-10 rounded-xl bg-evo-surface border border-[var(--evo-border)] flex items-center justify-center text-evo-accent">
+              <Sparkles className="w-5 h-5 text-evo-accent" />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -288,28 +334,28 @@ export default function ConfiguracoesPage() {
           <label className="text-xs font-heading font-semibold text-[var(--evo-text)]">
             Selecione o Motor Ativo para o Evo Assistant & Pipeline
           </label>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             {/* Opção Gemini */}
             <button
               type="button"
               onClick={() => setAiConfig((prev) => ({ ...prev, activeProvider: 'gemini' }))}
               className={`p-3 rounded-xl border text-left transition-all ${
                 aiConfig.activeProvider === 'gemini'
-                  ? 'bg-[#10201E] border-[#F1F9A1] shadow-sm'
+                  ? 'bg-evo-surface border-evo-accent shadow-sm'
                   : 'bg-[var(--evo-surface)] border-[var(--evo-border)] hover:border-[var(--evo-border-hover)]'
               }`}
             >
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2 font-heading font-semibold text-xs text-[var(--evo-text)]">
-                  <Cpu className="w-4 h-4 text-[#8EB69B]" />
+                  <Cpu className="w-4 h-4 text-evo-support" />
                   Google Gemini
                 </div>
                 {aiConfig.activeProvider === 'gemini' && (
-                  <span className="w-2 h-2 rounded-full bg-[#F1F9A1]" />
+                  <span className="w-2 h-2 rounded-full bg-evo-accent" />
                 )}
               </div>
               <p className="text-[10px] text-[var(--evo-muted)]">
-                Gemini 2.5 Flash & 1.5 Pro. Alto desempenho e janela de contexto estendida.
+                Gemini 2.5 Flash & 1.5 Pro.
               </p>
             </button>
 
@@ -319,21 +365,69 @@ export default function ConfiguracoesPage() {
               onClick={() => setAiConfig((prev) => ({ ...prev, activeProvider: 'claude' }))}
               className={`p-3 rounded-xl border text-left transition-all ${
                 aiConfig.activeProvider === 'claude'
-                  ? 'bg-[#10201E] border-[#F1F9A1] shadow-sm'
+                  ? 'bg-evo-surface border-evo-accent shadow-sm'
                   : 'bg-[var(--evo-surface)] border-[var(--evo-border)] hover:border-[var(--evo-border-hover)]'
               }`}
             >
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2 font-heading font-semibold text-xs text-[var(--evo-text)]">
-                  <Bot className="w-4 h-4 text-[#F1F9A1]" />
+                  <Bot className="w-4 h-4 text-evo-accent" />
                   Anthropic Claude
                 </div>
                 {aiConfig.activeProvider === 'claude' && (
-                  <span className="w-2 h-2 rounded-full bg-[#F1F9A1]" />
+                  <span className="w-2 h-2 rounded-full bg-evo-accent" />
                 )}
               </div>
               <p className="text-[10px] text-[var(--evo-muted)]">
-                Claude 3.7 Sonnet & 3.5 Haiku. Precisão analítica superior e raciocínio editorial.
+                Claude 3.7 & 3.5. Precisão analítica superior.
+              </p>
+            </button>
+
+            {/* Opção OpenAI */}
+            <button
+              type="button"
+              onClick={() => setAiConfig((prev) => ({ ...prev, activeProvider: 'openai' }))}
+              className={`p-3 rounded-xl border text-left transition-all ${
+                aiConfig.activeProvider === 'openai'
+                  ? 'bg-evo-surface border-evo-accent shadow-sm'
+                  : 'bg-[var(--evo-surface)] border-[var(--evo-border)] hover:border-[var(--evo-border-hover)]'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2 font-heading font-semibold text-xs text-[var(--evo-text)]">
+                  <Terminal className="w-4 h-4 text-evo-support" />
+                  OpenAI
+                </div>
+                {aiConfig.activeProvider === 'openai' && (
+                  <span className="w-2 h-2 rounded-full bg-evo-accent" />
+                )}
+              </div>
+              <p className="text-[10px] text-[var(--evo-muted)]">
+                GPT-4o & GPT-4o-mini.
+              </p>
+            </button>
+
+            {/* Opção OpenRouter */}
+            <button
+              type="button"
+              onClick={() => setAiConfig((prev) => ({ ...prev, activeProvider: 'openrouter' }))}
+              className={`p-3 rounded-xl border text-left transition-all ${
+                aiConfig.activeProvider === 'openrouter'
+                  ? 'bg-evo-surface border-evo-accent shadow-sm'
+                  : 'bg-[var(--evo-surface)] border-[var(--evo-border)] hover:border-[var(--evo-border-hover)]'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2 font-heading font-semibold text-xs text-[var(--evo-text)]">
+                  <Globe className="w-4 h-4 text-evo-support" />
+                  OpenRouter
+                </div>
+                {aiConfig.activeProvider === 'openrouter' && (
+                  <span className="w-2 h-2 rounded-full bg-evo-accent" />
+                )}
+              </div>
+              <p className="text-[10px] text-[var(--evo-muted)]">
+                Acesso a milhares de LLMs diferentes.
               </p>
             </button>
 
@@ -343,21 +437,21 @@ export default function ConfiguracoesPage() {
               onClick={() => setAiConfig((prev) => ({ ...prev, activeProvider: 'simulation' }))}
               className={`p-3 rounded-xl border text-left transition-all ${
                 aiConfig.activeProvider === 'simulation'
-                  ? 'bg-[#10201E] border-[#F1F9A1] shadow-sm'
+                  ? 'bg-evo-surface border-evo-accent shadow-sm'
                   : 'bg-[var(--evo-surface)] border-[var(--evo-border)] hover:border-[var(--evo-border-hover)]'
               }`}
             >
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2 font-heading font-semibold text-xs text-[var(--evo-text)]">
-                  <Zap className="w-4 h-4 text-[#8EB69B]" />
-                  Simulação Local (Offline)
+                  <Zap className="w-4 h-4 text-evo-support" />
+                  Simulação Local
                 </div>
                 {aiConfig.activeProvider === 'simulation' && (
-                  <span className="w-2 h-2 rounded-full bg-[#F1F9A1]" />
+                  <span className="w-2 h-2 rounded-full bg-evo-accent" />
                 )}
               </div>
               <p className="text-[10px] text-[var(--evo-muted)]">
-                Motor nativo baseado em regras e métricas locais do CRM sem custo de tokens.
+                Motor nativo. Sem custo de tokens.
               </p>
             </button>
           </div>
@@ -369,14 +463,14 @@ export default function ConfiguracoesPage() {
           <div className="p-4 rounded-xl bg-[var(--evo-surface)] border border-[var(--evo-border)] space-y-3">
             <div className="flex items-center justify-between border-b border-[var(--evo-border)] pb-2.5">
               <div className="flex items-center gap-2 font-heading font-semibold text-xs text-[var(--evo-text)]">
-                <Cpu className="w-4 h-4 text-[#8EB69B]" />
+                <Cpu className="w-4 h-4 text-evo-support" />
                 Google Gemini API
               </div>
               <a
                 href="https://aistudio.google.com/app/apikey"
                 target="_blank"
                 rel="noreferrer"
-                className="text-[10px] text-[#8EB69B] hover:underline flex items-center gap-1"
+                className="text-[10px] text-evo-support hover:underline flex items-center gap-1"
               >
                 Gerar Chave no AI Studio <ExternalLink className="w-2.5 h-2.5" />
               </a>
@@ -451,7 +545,7 @@ export default function ConfiguracoesPage() {
               {geminiResult && (
                 <span
                   className={`text-[11px] font-medium ${
-                    geminiResult.success ? 'text-[#8EB69B]' : 'text-amber-500'
+                    geminiResult.success ? 'text-evo-support' : 'text-amber-500'
                   }`}
                 >
                   {geminiResult.success ? '✓ Conexão Estabelecida' : '✕ Erro na Validação'}
@@ -463,7 +557,7 @@ export default function ConfiguracoesPage() {
               <div
                 className={`p-2.5 rounded-lg text-[10px] leading-relaxed border ${
                   geminiResult.success
-                    ? 'bg-[#10201E] text-[#DAF1DE] border-[#8EB69B]/30'
+                    ? 'bg-evo-surface text-[#DAF1DE] border-evo-support/30'
                     : 'bg-red-950/20 text-red-300 border-red-800/30'
                 }`}
               >
@@ -476,14 +570,14 @@ export default function ConfiguracoesPage() {
           <div className="p-4 rounded-xl bg-[var(--evo-surface)] border border-[var(--evo-border)] space-y-3">
             <div className="flex items-center justify-between border-b border-[var(--evo-border)] pb-2.5">
               <div className="flex items-center gap-2 font-heading font-semibold text-xs text-[var(--evo-text)]">
-                <Bot className="w-4 h-4 text-[#F1F9A1]" />
+                <Bot className="w-4 h-4 text-evo-accent" />
                 Anthropic Claude API
               </div>
               <a
                 href="https://console.anthropic.com/settings/keys"
                 target="_blank"
                 rel="noreferrer"
-                className="text-[10px] text-[#8EB69B] hover:underline flex items-center gap-1"
+                className="text-[10px] text-evo-support hover:underline flex items-center gap-1"
               >
                 Obter Chave no Console Anthropic <ExternalLink className="w-2.5 h-2.5" />
               </a>
@@ -555,7 +649,7 @@ export default function ConfiguracoesPage() {
               {claudeResult && (
                 <span
                   className={`text-[11px] font-medium ${
-                    claudeResult.success ? 'text-[#8EB69B]' : 'text-amber-500'
+                    claudeResult.success ? 'text-evo-support' : 'text-amber-500'
                   }`}
                 >
                   {claudeResult.success ? '✓ Conexão Estabelecida' : '✕ Erro na Validação'}
@@ -567,13 +661,125 @@ export default function ConfiguracoesPage() {
               <div
                 className={`p-2.5 rounded-lg text-[10px] leading-relaxed border ${
                   claudeResult.success
-                    ? 'bg-[#10201E] text-[#DAF1DE] border-[#8EB69B]/30'
+                    ? 'bg-evo-surface text-[#DAF1DE] border-evo-support/30'
                     : 'bg-red-950/20 text-red-300 border-red-800/30'
                 }`}
               >
                 <strong>Resposta:</strong> {claudeResult.message}
               </div>
             )}
+          </div>
+          {/* Card OpenAI */}
+          <div className="p-4 rounded-xl bg-[var(--evo-surface)] border border-[var(--evo-border)] space-y-3">
+            <div className="flex items-center justify-between border-b border-[var(--evo-border)] pb-2.5">
+              <div className="flex items-center gap-2 font-heading font-semibold text-xs text-[var(--evo-text)]">
+                <Terminal className="w-4 h-4 text-evo-support" />
+                OpenAI API
+              </div>
+              <a href="https://platform.openai.com/api-keys" target="_blank" rel="noreferrer" className="text-[10px] text-evo-support hover:underline flex items-center gap-1">
+                Obter Chave <ExternalLink className="w-2.5 h-2.5" />
+              </a>
+            </div>
+
+            <div>
+              <label className="block text-[11px] text-[var(--evo-muted)] mb-1 font-medium">OpenAI API Key</label>
+              <div className="relative">
+                <input
+                  type={showOpenAIKey ? 'text' : 'password'}
+                  placeholder="sk-proj-..."
+                  value={aiConfig.openai.apiKey}
+                  onChange={(e) => setAiConfig((prev) => ({ ...prev, openai: { ...prev.openai, apiKey: e.target.value } }))}
+                  className="w-full pl-3 pr-8 py-2 rounded-xl bg-[var(--evo-card)] border border-[var(--evo-border)] text-[var(--evo-text)] focus:outline-none font-mono text-[11px]"
+                />
+                <button type="button" onClick={() => setShowOpenAIKey(!showOpenAIKey)} className="absolute right-2.5 top-2.5 text-[var(--evo-muted)] hover:text-[var(--evo-text)]">
+                  {showOpenAIKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[11px] text-[var(--evo-muted)] mb-1 font-medium">Modelo da OpenAI</label>
+              <input
+                type="text"
+                list="openai-models"
+                value={aiConfig.openai.model}
+                onChange={(e) => setAiConfig((prev) => ({ ...prev, openai: { ...prev.openai, model: e.target.value } }))}
+                placeholder="Ex: gpt-4o"
+                className="w-full px-3 py-2 rounded-xl bg-[var(--evo-card)] border border-[var(--evo-border)] text-[var(--evo-text)] focus:outline-none text-xs"
+              />
+              <datalist id="openai-models">
+                <option value="gpt-4o">gpt-4o (Recomendado)</option>
+                <option value="gpt-4o-mini">gpt-4o-mini (Rápido/Barato)</option>
+                <option value="o1-preview">o1-preview (Raciocínio)</option>
+                <option value="o1-mini">o1-mini (Raciocínio Rápido)</option>
+              </datalist>
+            </div>
+
+            <div className="pt-2 flex items-center justify-between">
+              <Button variant="secondary" size="sm" className="text-xs gap-1.5" onClick={handleTestOpenAI} disabled={isTestingOpenAI || !aiConfig.openai.apiKey}>
+                <RefreshCw className={`w-3.5 h-3.5 ${isTestingOpenAI ? 'animate-spin' : ''}`} />
+                <span>Testar Conexão</span>
+              </Button>
+              {openAIResult && <span className={`text-[11px] font-medium ${openAIResult.success ? 'text-evo-support' : 'text-amber-500'}`}>{openAIResult.success ? '✓' : '✕'}</span>}
+            </div>
+            {openAIResult && <div className={`p-2.5 rounded-lg text-[10px] leading-relaxed border ${openAIResult.success ? 'bg-evo-surface text-[#DAF1DE] border-evo-support/30' : 'bg-red-950/20 text-red-300 border-red-800/30'}`}><strong>Resposta:</strong> {openAIResult.message}</div>}
+          </div>
+
+          {/* Card OpenRouter */}
+          <div className="p-4 rounded-xl bg-[var(--evo-surface)] border border-[var(--evo-border)] space-y-3">
+            <div className="flex items-center justify-between border-b border-[var(--evo-border)] pb-2.5">
+              <div className="flex items-center gap-2 font-heading font-semibold text-xs text-[var(--evo-text)]">
+                <Globe className="w-4 h-4 text-evo-support" />
+                OpenRouter API
+              </div>
+              <a href="https://openrouter.ai/keys" target="_blank" rel="noreferrer" className="text-[10px] text-evo-support hover:underline flex items-center gap-1">
+                Obter Chave <ExternalLink className="w-2.5 h-2.5" />
+              </a>
+            </div>
+
+            <div>
+              <label className="block text-[11px] text-[var(--evo-muted)] mb-1 font-medium">OpenRouter API Key</label>
+              <div className="relative">
+                <input
+                  type={showOpenRouterKey ? 'text' : 'password'}
+                  placeholder="sk-or-v1-..."
+                  value={aiConfig.openrouter.apiKey}
+                  onChange={(e) => setAiConfig((prev) => ({ ...prev, openrouter: { ...prev.openrouter, apiKey: e.target.value } }))}
+                  className="w-full pl-3 pr-8 py-2 rounded-xl bg-[var(--evo-card)] border border-[var(--evo-border)] text-[var(--evo-text)] focus:outline-none font-mono text-[11px]"
+                />
+                <button type="button" onClick={() => setShowOpenRouterKey(!showOpenRouterKey)} className="absolute right-2.5 top-2.5 text-[var(--evo-muted)] hover:text-[var(--evo-text)]">
+                  {showOpenRouterKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[11px] text-[var(--evo-muted)] mb-1 font-medium">Modelo do OpenRouter</label>
+              <input
+                type="text"
+                list="openrouter-models"
+                value={aiConfig.openrouter.model}
+                onChange={(e) => setAiConfig((prev) => ({ ...prev, openrouter: { ...prev.openrouter, model: e.target.value } }))}
+                placeholder="Ex: openai/gpt-4o"
+                className="w-full px-3 py-2 rounded-xl bg-[var(--evo-card)] border border-[var(--evo-border)] text-[var(--evo-text)] focus:outline-none text-xs"
+              />
+              <datalist id="openrouter-models">
+                <option value="openai/gpt-4o">openai/gpt-4o</option>
+                <option value="anthropic/claude-3-7-sonnet">anthropic/claude-3-7-sonnet</option>
+                <option value="google/gemini-pro-1.5">google/gemini-pro-1.5</option>
+                <option value="meta-llama/llama-3-70b-instruct">meta-llama/llama-3-70b-instruct</option>
+                <option value="mistralai/mixtral-8x7b-instruct">mistralai/mixtral-8x7b-instruct</option>
+              </datalist>
+            </div>
+
+            <div className="pt-2 flex items-center justify-between">
+              <Button variant="secondary" size="sm" className="text-xs gap-1.5" onClick={handleTestOpenRouter} disabled={isTestingOpenRouter || !aiConfig.openrouter.apiKey}>
+                <RefreshCw className={`w-3.5 h-3.5 ${isTestingOpenRouter ? 'animate-spin' : ''}`} />
+                <span>Testar Conexão</span>
+              </Button>
+              {openRouterResult && <span className={`text-[11px] font-medium ${openRouterResult.success ? 'text-evo-support' : 'text-amber-500'}`}>{openRouterResult.success ? '✓' : '✕'}</span>}
+            </div>
+            {openRouterResult && <div className={`p-2.5 rounded-lg text-[10px] leading-relaxed border ${openRouterResult.success ? 'bg-evo-surface text-[#DAF1DE] border-evo-support/30' : 'bg-red-950/20 text-red-300 border-red-800/30'}`}><strong>Resposta:</strong> {openRouterResult.message}</div>}
           </div>
         </div>
       </Card>
@@ -587,7 +793,7 @@ export default function ConfiguracoesPage() {
         <Card className="p-6 space-y-4 border border-[var(--evo-border)]">
           <div className="flex items-start justify-between border-b border-[var(--evo-border)] pb-4">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-[#10201E] border border-[var(--evo-border)] flex items-center justify-center text-[#8EB69B]">
+              <div className="w-9 h-9 rounded-xl bg-evo-surface border border-[var(--evo-border)] flex items-center justify-center text-evo-support">
                 <MessageSquare className="w-4 h-4" />
               </div>
               <div>
@@ -599,7 +805,7 @@ export default function ConfiguracoesPage() {
                 </span>
               </div>
             </div>
-            <span className="px-2 py-0.5 rounded text-[10px] bg-[#163832] text-[#8EB69B] font-mono">
+            <span className="px-2 py-0.5 rounded text-[10px] bg-evo-surface2 text-evo-support font-mono">
               Online
             </span>
           </div>
@@ -626,14 +832,14 @@ export default function ConfiguracoesPage() {
 
             <div className="pt-2 flex items-center justify-between border-t border-[var(--evo-border)]">
               <div className="flex items-center gap-2 text-xs text-[var(--evo-muted)]">
-                <QrCode className="w-4 h-4 text-[#8EB69B]" />
+                <QrCode className="w-4 h-4 text-evo-support" />
                 <span>Instância: <strong className="text-[var(--evo-text)] font-mono">evocrm-prod</strong></span>
               </div>
               <Button
                 variant="secondary"
                 size="sm"
                 className="text-xs h-7"
-                onClick={() => alert('Abrindo QR Code para sincronização com o WhatsApp da EvoPixel...')}
+                onClick={() => alert('Abrindo QR Code para sincronização com o WhatsApp da EVO PIXEL...')}
               >
                 Conectar via QR Code
               </Button>
@@ -645,7 +851,7 @@ export default function ConfiguracoesPage() {
         <Card className="p-6 space-y-4 border border-[var(--evo-border)]">
           <div className="flex items-start justify-between border-b border-[var(--evo-border)] pb-4">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-[#10201E] border border-[var(--evo-border)] flex items-center justify-center text-[#F1F9A1]">
+              <div className="w-9 h-9 rounded-xl bg-evo-surface border border-[var(--evo-border)] flex items-center justify-center text-evo-accent">
                 <Workflow className="w-4 h-4" />
               </div>
               <div>
@@ -657,7 +863,7 @@ export default function ConfiguracoesPage() {
                 </span>
               </div>
             </div>
-            <span className="px-2 py-0.5 rounded text-[10px] bg-[#163832] text-[#8EB69B] font-mono">
+            <span className="px-2 py-0.5 rounded text-[10px] bg-evo-surface2 text-evo-support font-mono">
               Pronto
             </span>
           </div>
@@ -674,7 +880,7 @@ export default function ConfiguracoesPage() {
             </div>
 
             <div className="p-3.5 rounded-xl bg-[var(--evo-surface)] border border-[var(--evo-border)] text-xs text-[var(--evo-muted)] leading-relaxed">
-              O EVOCRM emite payloads contendo o lead, nicho, etapa da sequência e texto pronto com variáveis resolvidas para execução automática no n8n.
+              O EVO PIXEL emite payloads contendo o lead, nicho, etapa da sequência e texto pronto com variáveis resolvidas para execução automática no n8n.
             </div>
 
             <div className="pt-2 flex justify-end">
@@ -697,7 +903,7 @@ export default function ConfiguracoesPage() {
       <Card className="p-6 space-y-4 border border-[var(--evo-border)]">
         <div className="flex items-start justify-between border-b border-[var(--evo-border)] pb-4">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#10201E] border border-[var(--evo-border)] flex items-center justify-center text-[#8EB69B]">
+            <div className="w-9 h-9 rounded-xl bg-evo-surface border border-[var(--evo-border)] flex items-center justify-center text-evo-support">
               <Layers className="w-4 h-4" />
             </div>
             <div>

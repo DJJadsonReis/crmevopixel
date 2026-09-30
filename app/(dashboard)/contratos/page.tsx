@@ -54,16 +54,16 @@ export default function ContratosPage() {
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* Cabeçalho */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[rgba(218,241,222,0.06)] pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-evo-border pb-5">
         <div>
-          <div className="flex items-center gap-2 text-xs font-mono text-[#8EB69B] uppercase tracking-wider mb-1">
+          <div className="flex items-center gap-2 text-xs font-mono text-evo-support uppercase tracking-wider mb-1">
             <FileCheck className="w-3.5 h-3.5" />
             Formalização & Assinatura Digital
           </div>
-          <h1 className="text-2xl lg:text-3xl font-semibold text-[#E7ECE8] font-heading">
+          <h1 className="text-2xl lg:text-3xl font-semibold text-evo-text font-heading">
             Gestão de Contratos
           </h1>
-          <p className="text-xs text-[#9BA6A0] mt-1">
+          <p className="text-xs text-evo-muted mt-1">
             Contratos gerados automaticamente a partir de propostas aceitas. Preparado para Clicksign / DocuSign.
           </p>
         </div>
@@ -79,16 +79,16 @@ export default function ContratosPage() {
         {contracts.map((contract) => (
           <div
             key={contract.id}
-            className="p-6 rounded-2xl bg-[#0C1A19] border border-[rgba(218,241,222,0.08)] hover:border-[rgba(218,241,222,0.18)] transition-all flex flex-col justify-between space-y-4"
+            className="p-6 rounded-2xl bg-evo-card border border-evo-border hover:border-evo-border-hover transition-all flex flex-col justify-between space-y-4"
           >
             <div>
               <div className="flex items-start justify-between">
                 <div>
-                  <span className="text-[10px] font-mono text-[#8EB69B]">{contract.code}</span>
-                  <h3 className="text-base font-semibold text-[#E7ECE8] font-heading mt-0.5">
+                  <span className="text-[10px] font-mono text-evo-support">{contract.code}</span>
+                  <h3 className="text-base font-semibold text-evo-text font-heading mt-0.5">
                     {contract.company_name}
                   </h3>
-                  <span className="text-xs text-[#9BA6A0]">{contract.client_name}</span>
+                  <span className="text-xs text-evo-muted">{contract.client_name}</span>
                 </div>
 
                 <Badge
@@ -99,20 +99,20 @@ export default function ContratosPage() {
                 </Badge>
               </div>
 
-              <p className="text-xs text-[#9BA6A0] mt-3 leading-relaxed">
-                Escopo: <strong className="text-[#E7ECE8]">{contract.services_summary}</strong>
+              <p className="text-xs text-evo-muted mt-3 leading-relaxed">
+                Escopo: <strong className="text-evo-text">{contract.services_summary}</strong>
               </p>
 
-              <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-[rgba(218,241,222,0.06)] text-xs">
+              <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-evo-border text-xs">
                 <div>
-                  <span className="text-[#65706A] text-[11px]">Valor Total</span>
-                  <div className="text-sm font-mono font-semibold text-[#F1F9A1] mt-0.5">
+                  <span className="text-evo-disabled text-[11px]">Valor Total</span>
+                  <div className="text-sm font-mono font-semibold text-evo-accent mt-0.5">
                     R$ {contract.total_amount.toLocaleString('pt-BR')}
                   </div>
                 </div>
                 <div>
-                  <span className="text-[#65706A] text-[11px]">Provedor de Assinatura</span>
-                  <div className="text-xs font-mono text-[#8EB69B] mt-0.5 flex items-center gap-1">
+                  <span className="text-evo-disabled text-[11px]">Provedor de Assinatura</span>
+                  <div className="text-xs font-mono text-evo-support mt-0.5 flex items-center gap-1">
                     <ShieldCheck className="w-3.5 h-3.5" />
                     <span>{contract.signature_provider || 'Eletrônica'}</span>
                   </div>
@@ -120,8 +120,8 @@ export default function ContratosPage() {
               </div>
             </div>
 
-            <div className="pt-3 border-t border-[rgba(218,241,222,0.06)] flex items-center justify-between text-xs">
-              <span className="text-[10px] text-[#65706A]">
+            <div className="pt-3 border-t border-evo-border flex items-center justify-between text-xs">
+              <span className="text-[10px] text-evo-disabled">
                 Início: {new Date(contract.start_date).toLocaleDateString('pt-BR')}
               </span>
               <Button variant="secondary" size="sm" className="h-7 text-xs px-2.5">
@@ -146,7 +146,7 @@ export default function ContratosPage() {
               value={cCompany}
               onChange={(e) => setCCompany(e.target.value)}
               placeholder="Ex: Clínica Vida"
-              className="w-full px-3 py-2 rounded-xl bg-[var(--evo-surface)] border border-[var(--evo-border)] text-[var(--evo-text)] focus:outline-none focus:border-[#8EB69B] text-xs"
+              className="w-full px-3 py-2 rounded-xl bg-[var(--evo-surface)] border border-[var(--evo-border)] text-[var(--evo-text)] focus:outline-none focus:border-evo-support text-xs"
             />
           </div>
           <div>
@@ -156,7 +156,7 @@ export default function ContratosPage() {
               value={cClient}
               onChange={(e) => setCClient(e.target.value)}
               placeholder="Ex: Dr. João Silva"
-              className="w-full px-3 py-2 rounded-xl bg-[var(--evo-surface)] border border-[var(--evo-border)] text-[var(--evo-text)] focus:outline-none focus:border-[#8EB69B] text-xs"
+              className="w-full px-3 py-2 rounded-xl bg-[var(--evo-surface)] border border-[var(--evo-border)] text-[var(--evo-text)] focus:outline-none focus:border-evo-support text-xs"
             />
           </div>
           <div>
@@ -165,7 +165,7 @@ export default function ContratosPage() {
               value={cServices}
               onChange={(e) => setCServices(e.target.value)}
               placeholder="Ex: Site Institucional + Automação de Agendamentos WhatsApp"
-              className="w-full px-3 py-2 rounded-xl bg-[var(--evo-surface)] border border-[var(--evo-border)] text-[var(--evo-text)] focus:outline-none focus:border-[#8EB69B] text-xs min-h-[80px]"
+              className="w-full px-3 py-2 rounded-xl bg-[var(--evo-surface)] border border-[var(--evo-border)] text-[var(--evo-text)] focus:outline-none focus:border-evo-support text-xs min-h-[80px]"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -176,7 +176,7 @@ export default function ContratosPage() {
                 value={cAmount}
                 onChange={(e) => setCAmount(e.target.value)}
                 placeholder="Ex: 5000"
-                className="w-full px-3 py-2 rounded-xl bg-[var(--evo-surface)] border border-[var(--evo-border)] text-[var(--evo-text)] focus:outline-none focus:border-[#8EB69B] text-xs"
+                className="w-full px-3 py-2 rounded-xl bg-[var(--evo-surface)] border border-[var(--evo-border)] text-[var(--evo-text)] focus:outline-none focus:border-evo-support text-xs"
               />
             </div>
             <div>
@@ -185,7 +185,7 @@ export default function ContratosPage() {
                 type="date"
                 value={cDate}
                 onChange={(e) => setCDate(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-[var(--evo-surface)] border border-[var(--evo-border)] text-[var(--evo-text)] focus:outline-none focus:border-[#8EB69B] text-xs"
+                className="w-full px-3 py-2 rounded-xl bg-[var(--evo-surface)] border border-[var(--evo-border)] text-[var(--evo-text)] focus:outline-none focus:border-evo-support text-xs"
               />
             </div>
           </div>

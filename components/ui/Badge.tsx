@@ -25,21 +25,21 @@ export function Badge({
 
   const variants = {
     default:
-      'bg-[#10201E] text-[#9BA6A0] border border-[rgba(218,241,222,0.08)]',
+      'bg-evo-surface text-evo-muted border border-evo-border',
     outline:
-      'bg-transparent text-[#9BA6A0] border border-[rgba(218,241,222,0.12)]',
+      'bg-transparent text-evo-muted border border-evo-border',
     quente:
-      'bg-[rgba(241,249,161,0.08)] text-[#F1F9A1] border border-[rgba(241,249,161,0.25)] font-medium',
+      'bg-evo-accent/10 text-evo-accent border border-evo-accent font-medium',
     morno:
-      'bg-[rgba(142,182,155,0.1)] text-[#8EB69B] border border-[rgba(142,182,155,0.2)] font-medium',
+      'bg-[rgba(142,182,155,0.1)] text-evo-support border border-[rgba(142,182,155,0.2)] font-medium',
     frio:
-      'bg-[rgba(101,112,106,0.15)] text-[#9BA6A0] border border-[rgba(101,112,106,0.25)]',
+      'bg-[rgba(101,112,106,0.15)] text-evo-muted border border-[rgba(101,112,106,0.25)]',
     desqualificado:
-      'bg-[rgba(35,83,71,0.15)] text-[#65706A] border border-[rgba(35,83,71,0.25)]',
+      'bg-[rgba(35,83,71,0.15)] text-evo-disabled border border-[rgba(35,83,71,0.25)]',
     accent:
-      'bg-[rgba(241,249,161,0.15)] text-[#F1F9A1] border border-[rgba(241,249,161,0.3)]',
+      'bg-[rgba(241,249,161,0.15)] text-evo-accent border border-[rgba(241,249,161,0.3)]',
     success:
-      'bg-[rgba(142,182,155,0.15)] text-[#8EB69B] border border-[rgba(142,182,155,0.3)]',
+      'bg-[rgba(142,182,155,0.15)] text-evo-support border border-[rgba(142,182,155,0.3)]',
   };
 
   return (

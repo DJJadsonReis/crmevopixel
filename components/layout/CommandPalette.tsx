@@ -131,29 +131,29 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 p-4">
       <div
-        className="fixed inset-0 bg-[#050706]/85 backdrop-blur-[4px] transition-opacity"
+        className="fixed inset-0 bg-evo-black/85 backdrop-blur-[4px] transition-opacity"
         onClick={onClose}
       />
 
-      <div className="relative w-full max-w-2xl bg-[#0C1A19] border border-[rgba(218,241,222,0.14)] rounded-2xl shadow-2xl overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-150">
+      <div className="relative w-full max-w-2xl bg-evo-card border border-evo-border rounded-2xl shadow-2xl overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-150">
         {/* Toast de Ação Executada */}
         {actionSuccess && (
-          <div className="p-3 bg-[#163832] border-b border-[#8EB69B]/30 text-xs text-[#E7ECE8] flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-[#F1F9A1]" />
+          <div className="p-3 bg-evo-surface2 border-b border-evo-support/30 text-xs text-evo-text flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-evo-accent" />
             <span>{actionSuccess}</span>
           </div>
         )}
 
         {/* Barra de Modos: BUSCA, AÇÃO */}
-        <div className="flex items-center justify-between px-4 py-2 bg-[#050706]/80 border-b border-[rgba(218,241,222,0.06)] text-[10px] font-mono">
+        <div className="flex items-center justify-between px-4 py-2 bg-evo-black/80 border-b border-evo-border text-[10px] font-mono">
           <div className="flex items-center gap-2">
-            <span className="text-[#65706A]">MODO:</span>
+            <span className="text-evo-disabled">MODO:</span>
             <button
               onClick={() => setActiveMode('BUSCA')}
               className={`px-2.5 py-0.5 rounded-md transition-colors ${
                 activeMode === 'BUSCA'
-                  ? 'bg-[#10201E] text-[#8EB69B] border border-[rgba(218,241,222,0.12)]'
-                  : 'text-[#65706A] hover:text-[#9BA6A0]'
+                  ? 'bg-evo-surface text-evo-support border border-evo-border'
+                  : 'text-evo-disabled hover:text-evo-muted'
               }`}
             >
               BUSCA
@@ -162,8 +162,8 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
               onClick={() => setActiveMode('AÇÃO')}
               className={`px-2.5 py-0.5 rounded-md transition-colors flex items-center gap-1 ${
                 activeMode === 'AÇÃO'
-                  ? 'bg-[#163832] text-[#F1F9A1] border border-[#8EB69B]/30'
-                  : 'text-[#65706A] hover:text-[#9BA6A0]'
+                  ? 'bg-evo-surface2 text-evo-accent border border-evo-support/30'
+                  : 'text-evo-disabled hover:text-evo-muted'
               }`}
             >
               <Zap className="w-2.5 h-2.5" />
@@ -171,15 +171,15 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
             </button>
           </div>
 
-          <span className="text-[#65706A] hidden sm:inline">Pressione ESC para fechar</span>
+          <span className="text-evo-disabled hidden sm:inline">Pressione ESC para fechar</span>
         </div>
 
         {/* Campo de Busca / Comando */}
-        <div className="flex items-center px-4 py-3.5 border-b border-[rgba(218,241,222,0.08)] bg-[#07100F]/70">
+        <div className="flex items-center px-4 py-3.5 border-b border-evo-border bg-evo-deep/70">
           {activeMode === 'AÇÃO' ? (
-            <Zap className="w-4 h-4 text-[#F1F9A1] shrink-0 mr-3" />
+            <Zap className="w-4 h-4 text-evo-accent shrink-0 mr-3" />
           ) : (
-            <Search className="w-4 h-4 text-[#8EB69B] shrink-0 mr-3" />
+            <Search className="w-4 h-4 text-evo-support shrink-0 mr-3" />
           )}
 
           <input
@@ -197,11 +197,11 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
               }
             }}
             autoFocus
-            className="w-full bg-transparent text-[#E7ECE8] placeholder-[#65706A] text-sm focus:outline-none font-sans"
+            className="w-full bg-transparent text-evo-text placeholder-[#65706A] text-sm focus:outline-none font-sans"
           />
           <button
             onClick={onClose}
-            className="text-[#65706A] hover:text-[#E7ECE8] p-1 rounded-lg"
+            className="text-evo-disabled hover:text-evo-text p-1 rounded-lg"
           >
             <X className="w-4 h-4" />
           </button>
@@ -212,21 +212,21 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
 
           {/* MODO AÇÃO */}
           {activeMode === 'AÇÃO' && (
-            <div className="p-4 rounded-xl bg-[#07100F] border border-[rgba(218,241,222,0.08)] space-y-3">
+            <div className="p-4 rounded-xl bg-evo-deep border border-evo-border space-y-3">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-heading text-xs font-semibold text-[#F1F9A1] flex items-center gap-1.5">
+                <span className="font-heading text-xs font-semibold text-evo-accent flex items-center gap-1.5">
                   <Zap className="w-3.5 h-3.5" />
                   Comando de Ação Identificado
                 </span>
-                <span className="text-[10px] font-mono text-[#8EB69B]">Permissão WRITE</span>
+                <span className="text-[10px] font-mono text-evo-support">Permissão WRITE</span>
               </div>
-              <p className="text-xs text-[#9BA6A0] leading-relaxed">
-                Comando: &quot;{query}&quot;. A ação será validada pela camada de inteligência e registrada em <code className="text-[#8EB69B]">ai_action_logs</code>.
+              <p className="text-xs text-evo-muted leading-relaxed">
+                Comando: &quot;{query}&quot;. A ação será validada pela camada de inteligência e registrada em <code className="text-evo-support">ai_action_logs</code>.
               </p>
               <div className="flex items-center gap-3 pt-1">
                 <button
                   onClick={handleExecuteActionInline}
-                  className="px-3 py-1.5 rounded-lg bg-[#163832] hover:bg-[#235347] border border-[#8EB69B]/30 text-xs font-heading text-[#F1F9A1] flex items-center gap-1.5 transition-colors"
+                  className="px-3 py-1.5 rounded-lg bg-evo-surface2 hover:bg-[#235347] border border-evo-support/30 text-xs font-heading text-evo-accent flex items-center gap-1.5 transition-colors"
                 >
                   <span>Executar Ação Agora</span>
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -241,8 +241,8 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
               {/* Prospects */}
               {filteredProspects.length > 0 && (
                 <div>
-                  <div className="text-[10px] font-heading font-semibold text-[#65706A] uppercase px-2 mb-1.5 flex items-center gap-1.5">
-                    <Target className="w-3 h-3 text-[#F1F9A1]" />
+                  <div className="text-[10px] font-heading font-semibold text-evo-disabled uppercase px-2 mb-1.5 flex items-center gap-1.5">
+                    <Target className="w-3 h-3 text-evo-accent" />
                     Prospects ({filteredProspects.length})
                   </div>
                   <div className="space-y-1">
@@ -250,17 +250,17 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
                       <div
                         key={prospect.id}
                         onClick={() => navigateTo('/prospects')}
-                        className="flex items-center justify-between p-2.5 rounded-xl hover:bg-[#10201E] cursor-pointer transition-colors border border-transparent hover:border-[rgba(218,241,222,0.06)]"
+                        className="flex items-center justify-between p-2.5 rounded-xl hover:bg-evo-surface cursor-pointer transition-colors border border-transparent hover:border-evo-border"
                       >
                         <div className="flex flex-col">
-                          <span className="text-xs font-medium text-[#E7ECE8] font-heading">
+                          <span className="text-xs font-medium text-evo-text font-heading">
                             {prospect.empresa}
                           </span>
-                          <span className="text-[11px] text-[#9BA6A0]">
+                          <span className="text-[11px] text-evo-muted">
                             {prospect.nome} • {prospect.cidade}/{prospect.estado}
                           </span>
                         </div>
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-[#10201E] text-[#F1F9A1] border border-[rgba(218,241,222,0.06)] font-mono">
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-evo-surface text-evo-accent border border-evo-border font-mono">
                           ICP {prospect.icp_score}/100
                         </span>
                       </div>
@@ -272,8 +272,8 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
               {/* Leads */}
               {filteredLeads.length > 0 && (
                 <div>
-                  <div className="text-[10px] font-heading font-semibold text-[#65706A] uppercase px-2 mb-1.5 flex items-center gap-1.5">
-                    <Users className="w-3 h-3 text-[#8EB69B]" />
+                  <div className="text-[10px] font-heading font-semibold text-evo-disabled uppercase px-2 mb-1.5 flex items-center gap-1.5">
+                    <Users className="w-3 h-3 text-evo-support" />
                     Leads ({filteredLeads.length})
                   </div>
                   <div className="space-y-1">
@@ -281,17 +281,17 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
                       <div
                         key={lead.id}
                         onClick={() => navigateTo(`/leads/${lead.id}`)}
-                        className="flex items-center justify-between p-2.5 rounded-xl hover:bg-[#10201E] cursor-pointer transition-colors border border-transparent hover:border-[rgba(218,241,222,0.06)]"
+                        className="flex items-center justify-between p-2.5 rounded-xl hover:bg-evo-surface cursor-pointer transition-colors border border-transparent hover:border-evo-border"
                       >
                         <div className="flex flex-col">
-                          <span className="text-xs font-medium text-[#E7ECE8] font-heading">
+                          <span className="text-xs font-medium text-evo-text font-heading">
                             {lead.company_name}
                           </span>
-                          <span className="text-[11px] text-[#9BA6A0]">
+                          <span className="text-[11px] text-evo-muted">
                             {lead.name} • Nicho: {lead.segment}
                           </span>
                         </div>
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-[#10201E] text-[#8EB69B] border border-[rgba(218,241,222,0.06)]">
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-evo-surface text-evo-support border border-evo-border">
                           Score {lead.score}
                         </span>
                       </div>
@@ -303,8 +303,8 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
               {/* Clientes */}
               {filteredClients.length > 0 && (
                 <div>
-                  <div className="text-[10px] font-heading font-semibold text-[#65706A] uppercase px-2 mb-1.5 flex items-center gap-1.5">
-                    <Building2 className="w-3 h-3 text-[#8EB69B]" />
+                  <div className="text-[10px] font-heading font-semibold text-evo-disabled uppercase px-2 mb-1.5 flex items-center gap-1.5">
+                    <Building2 className="w-3 h-3 text-evo-support" />
                     Clientes ({filteredClients.length})
                   </div>
                   <div className="space-y-1">
@@ -312,15 +312,15 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
                       <div
                         key={client.id}
                         onClick={() => navigateTo(`/clientes/${client.id}`)}
-                        className="flex items-center justify-between p-2.5 rounded-xl hover:bg-[#10201E] cursor-pointer transition-colors border border-transparent hover:border-[rgba(218,241,222,0.06)]"
+                        className="flex items-center justify-between p-2.5 rounded-xl hover:bg-evo-surface cursor-pointer transition-colors border border-transparent hover:border-evo-border"
                       >
                         <div className="flex flex-col">
-                          <span className="text-xs font-medium text-[#E7ECE8] font-heading">
+                          <span className="text-xs font-medium text-evo-text font-heading">
                             {client.company_name}
                           </span>
-                          <span className="text-[11px] text-[#9BA6A0]">{client.name}</span>
+                          <span className="text-[11px] text-evo-muted">{client.name}</span>
                         </div>
-                        <span className="text-[11px] font-mono text-[#F1F9A1]">
+                        <span className="text-[11px] font-mono text-evo-accent">
                           LTV R$ {client.lifetime_value.toLocaleString('pt-BR')}
                         </span>
                       </div>
@@ -332,8 +332,8 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
               {/* Oportunidades */}
               {filteredOpportunities.length > 0 && (
                 <div>
-                  <div className="text-[10px] font-heading font-semibold text-[#65706A] uppercase px-2 mb-1.5 flex items-center gap-1.5">
-                    <Target className="w-3 h-3 text-[#8EB69B]" />
+                  <div className="text-[10px] font-heading font-semibold text-evo-disabled uppercase px-2 mb-1.5 flex items-center gap-1.5">
+                    <Target className="w-3 h-3 text-evo-support" />
                     Oportunidades ({filteredOpportunities.length})
                   </div>
                   <div className="space-y-1">
@@ -341,17 +341,17 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
                       <div
                         key={opp.id}
                         onClick={() => navigateTo('/pipeline')}
-                        className="flex items-center justify-between p-2.5 rounded-xl hover:bg-[#10201E] cursor-pointer transition-colors"
+                        className="flex items-center justify-between p-2.5 rounded-xl hover:bg-evo-surface cursor-pointer transition-colors"
                       >
                         <div className="flex flex-col">
-                          <span className="text-xs font-medium text-[#E7ECE8]">
+                          <span className="text-xs font-medium text-evo-text">
                             {opp.company_name} — {opp.title}
                           </span>
-                          <span className="text-[11px] text-[#9BA6A0]">
+                          <span className="text-[11px] text-evo-muted">
                             Estágio: {opp.stage_slug.replace('_', ' ')}
                           </span>
                         </div>
-                        <span className="text-xs font-mono text-[#F1F9A1]">
+                        <span className="text-xs font-mono text-evo-accent">
                           R$ {opp.estimated_value.toLocaleString('pt-BR')}
                         </span>
                       </div>
@@ -363,8 +363,8 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
               {/* Serviços */}
               {filteredServices.length > 0 && (
                 <div>
-                  <div className="text-[10px] font-heading font-semibold text-[#65706A] uppercase px-2 mb-1.5 flex items-center gap-1.5">
-                    <Layers className="w-3 h-3 text-[#8EB69B]" />
+                  <div className="text-[10px] font-heading font-semibold text-evo-disabled uppercase px-2 mb-1.5 flex items-center gap-1.5">
+                    <Layers className="w-3 h-3 text-evo-support" />
                     Catálogo de Serviços
                   </div>
                   <div className="space-y-1">
@@ -372,10 +372,10 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
                       <div
                         key={service.id}
                         onClick={() => navigateTo('/servicos')}
-                        className="flex items-center justify-between p-2.5 rounded-xl hover:bg-[#10201E] cursor-pointer transition-colors"
+                        className="flex items-center justify-between p-2.5 rounded-xl hover:bg-evo-surface cursor-pointer transition-colors"
                       >
-                        <span className="text-xs text-[#E7ECE8]">{service.name}</span>
-                        <span className="text-[11px] font-mono text-[#8EB69B]">
+                        <span className="text-xs text-evo-text">{service.name}</span>
+                        <span className="text-[11px] font-mono text-evo-support">
                           R$ {service.base_price.toLocaleString('pt-BR')}
                         </span>
                       </div>
@@ -389,7 +389,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
                 filteredProspects.length === 0 &&
                 filteredProposals.length === 0 &&
                 filteredServices.length === 0 && (
-                  <div className="p-8 text-center text-xs text-[#65706A]">
+                  <div className="p-8 text-center text-xs text-evo-disabled">
                     Nenhum resultado encontrado para &quot;{query}&quot;. Tente uma pergunta (&quot;Como está nossa conversão?&quot;) ou ação (&quot;João pagou 2 mil&quot;).
                   </div>
                 )}

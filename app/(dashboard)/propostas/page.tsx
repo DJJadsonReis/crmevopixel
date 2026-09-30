@@ -155,7 +155,7 @@ export default function PropostasPage() {
       {/* Cabeçalho */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--evo-border)] pb-5">
         <div>
-          <div className="flex items-center gap-2 text-xs font-mono text-[#8EB69B] uppercase tracking-wider mb-1">
+          <div className="flex items-center gap-2 text-xs font-mono text-evo-support uppercase tracking-wider mb-1">
             <FileText className="w-3.5 h-3.5" />
             Comercial • Propostas Multisserviço
           </div>
@@ -195,19 +195,19 @@ export default function PropostasPage() {
                 onClick={() => setSelectedProposalId(prop.id)}
                 className={`p-4 rounded-2xl border cursor-pointer transition-all ${
                   isSelected
-                    ? 'bg-[#10201E] border-[#8EB69B] shadow-sm'
+                    ? 'bg-evo-surface border-evo-support shadow-sm'
                     : 'bg-[var(--evo-card)] border-[var(--evo-border)] hover:border-[var(--evo-border-hover)]'
                 }`}
               >
                 <div className="flex items-start justify-between">
                   <div>
-                    <span className="text-[10px] font-mono text-[#8EB69B] font-semibold">{prop.code}</span>
+                    <span className="text-[10px] font-mono text-evo-support font-semibold">{prop.code}</span>
                     <h4 className="text-xs font-semibold text-[var(--evo-text)] font-heading mt-0.5">
                       {prop.company_name}
                     </h4>
                     <span className="text-[11px] text-[var(--evo-muted)]">{prop.client_name}</span>
                   </div>
-                  <span className="text-xs font-mono font-semibold text-[#8EB69B]">
+                  <span className="text-xs font-mono font-semibold text-evo-support">
                     R$ {prop.total.toLocaleString('pt-BR')}
                   </span>
                 </div>
@@ -237,8 +237,8 @@ export default function PropostasPage() {
           <div className="lg:col-span-7 bg-[var(--evo-card)] border border-[var(--evo-border)] rounded-2xl p-6 md:p-8 space-y-6">
             <div className="flex items-start justify-between border-b border-[var(--evo-border)] pb-5">
               <div>
-                <span className="text-[10px] font-mono text-[#8EB69B] uppercase tracking-wider font-semibold">
-                  Proposta Formal • EvoPixel
+                <span className="text-[10px] font-mono text-evo-support uppercase tracking-wider font-semibold">
+                  Proposta Formal • EVO PIXEL
                 </span>
                 <h3 className="text-xl font-semibold text-[var(--evo-text)] font-heading mt-1">
                   {activeProposal.code}
@@ -287,7 +287,7 @@ export default function PropostasPage() {
                         R$ {item.price.toLocaleString('pt-BR')}
                       </div>
                       {item.discount > 0 && (
-                        <div className="text-[10px] font-mono text-[#8EB69B]">
+                        <div className="text-[10px] font-mono text-evo-support">
                           - R$ {item.discount.toLocaleString('pt-BR')} desc.
                         </div>
                       )}
@@ -304,14 +304,14 @@ export default function PropostasPage() {
                 <span className="font-mono text-[var(--evo-text)]">R$ {activeProposal.subtotal.toLocaleString('pt-BR')}</span>
               </div>
               {activeProposal.discount > 0 && (
-                <div className="flex justify-between text-[#8EB69B]">
+                <div className="flex justify-between text-evo-support">
                   <span>Desconto Comercial Concedido</span>
                   <span className="font-mono">- R$ {activeProposal.discount.toLocaleString('pt-BR')}</span>
                 </div>
               )}
               <div className="flex justify-between text-sm font-semibold text-[var(--evo-text)] pt-2 border-t border-[var(--evo-border)]">
                 <span>Valor Total do Investimento</span>
-                <span className="font-mono text-base font-bold text-[#8EB69B]">R$ {activeProposal.total.toLocaleString('pt-BR')}</span>
+                <span className="font-mono text-base font-bold text-evo-support">R$ {activeProposal.total.toLocaleString('pt-BR')}</span>
               </div>
               <div className="text-[11px] text-[var(--evo-muted)] pt-1">
                 Condições: <strong className="text-[var(--evo-text)]">{activeProposal.installments_description}</strong>
@@ -390,7 +390,7 @@ export default function PropostasPage() {
               <label className="font-medium text-[var(--evo-text)] font-heading">
                 Selecione os Serviços Inclusos no Escopo *
               </label>
-              <span className="text-[10px] text-[#8EB69B] font-mono">
+              <span className="text-[10px] text-evo-support font-mono">
                 {selectedServices.length} selecionado(s)
               </span>
             </div>
@@ -404,7 +404,7 @@ export default function PropostasPage() {
                     onClick={() => toggleService(srv)}
                     className={`p-2.5 rounded-lg border flex items-center justify-between cursor-pointer transition-all ${
                       isChecked
-                        ? 'bg-[#10201E] border-[#8EB69B]'
+                        ? 'bg-evo-surface border-evo-support'
                         : 'bg-[var(--evo-card)] border-[var(--evo-border)] hover:border-[var(--evo-border-hover)]'
                     }`}
                   >
@@ -412,7 +412,7 @@ export default function PropostasPage() {
                       <div
                         className={`w-4 h-4 rounded flex items-center justify-center border text-[10px] ${
                           isChecked
-                            ? 'bg-[#164E3D] border-[#8EB69B] text-white'
+                            ? 'bg-evo-structural border-evo-support text-white'
                             : 'border-[var(--evo-border)] bg-[var(--evo-surface)]'
                         }`}
                       >
@@ -482,12 +482,12 @@ export default function PropostasPage() {
             <div className="text-xs">
               <span className="text-[var(--evo-muted)]">Subtotal: R$ {calculateSubtotal().toLocaleString('pt-BR')}</span>
               {commercialDiscount > 0 && (
-                <span className="text-[#8EB69B] ml-2">(- R$ {commercialDiscount.toLocaleString('pt-BR')})</span>
+                <span className="text-evo-support ml-2">(- R$ {commercialDiscount.toLocaleString('pt-BR')})</span>
               )}
             </div>
             <div className="text-right">
               <span className="text-xs text-[var(--evo-muted)] mr-2">Total da Proposta:</span>
-              <span className="text-base font-mono font-bold text-[#8EB69B]">
+              <span className="text-base font-mono font-bold text-evo-support">
                 R$ {calculateTotal().toLocaleString('pt-BR')}
               </span>
             </div>
@@ -521,8 +521,8 @@ export default function PropostasPage() {
         maxWidth="md"
       >
         <div className="space-y-4 text-xs">
-          <div className="p-4 rounded-xl bg-[#10201E] border border-[#8EB69B]/30 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#164E3D] flex items-center justify-center text-white shrink-0">
+          <div className="p-4 rounded-xl bg-evo-surface border border-evo-support/30 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-evo-structural flex items-center justify-center text-white shrink-0">
               <FileCheck className="w-5 h-5" />
             </div>
             <div>
@@ -576,11 +576,11 @@ export default function PropostasPage() {
                   EVO<span className="text-[#164E3D]">CRM</span>
                 </div>
                 <div className="text-xs text-gray-500 font-mono tracking-wider uppercase">
-                  EvoPixel Tecnologias Digitais • Proposta Comercial
+                  EVO PIXEL Tecnologias Digitais • Proposta Comercial
                 </div>
               </div>
               <div className="text-right">
-                <span className="inline-block px-3 py-1 rounded bg-[#164E3D] text-white font-mono text-xs font-bold">
+                <span className="inline-block px-3 py-1 rounded bg-evo-structural text-white font-mono text-xs font-bold">
                   {activeProposal?.code}
                 </span>
                 <div className="text-xs text-gray-500 mt-1">
@@ -658,7 +658,7 @@ export default function PropostasPage() {
 
             {/* Rodapé Legal */}
             <div className="pt-6 border-t border-gray-200 text-[10px] text-gray-400 text-center leading-relaxed">
-              EvoPixel Tecnologias Digitais • Soluções em Alta Performance Comercial e Operacional • Este documento é confidencial e possui validade jurídica para contratação dos serviços acima descritos.
+              EVO PIXEL Tecnologias Digitais • Soluções em Alta Performance Comercial e Operacional • Este documento é confidencial e possui validade jurídica para contratação dos serviços acima descritos.
             </div>
           </div>
 

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Inter, DM_Sans } from 'next/font/google';
+import { Inter, Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 
@@ -9,15 +9,15 @@ const inter = Inter({
   display: 'swap',
 });
 
-const dmSans = DM_Sans({
+const plusJakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
-  variable: '--font-dm-sans',
+  variable: '--font-plus-jakarta',
   display: 'swap',
 });
 
 export const metadata: Metadata = {
-  title: 'EVOCRM — Sistema Operacional Comercial & Operacional da EvoPixel',
-  description: 'Plataforma proprietária de gestão comercial, prospecção por nicho, automação n8n e inteligência de vendas da EvoPixel.',
+  title: 'EVO PIXEL — Sistema Operacional Comercial & Operacional',
+  description: 'Plataforma proprietária de gestão comercial, prospecção por nicho, automação n8n e inteligência de vendas.',
   icons: {
     icon: '/logo-icon-dark.png',
   },
@@ -29,8 +29,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" className={`dark ${inter.variable} ${dmSans.variable}`}>
-      <body className="bg-[var(--evo-bg)] text-[var(--evo-text)] antialiased selection:bg-[#F1F9A1]/20 selection:text-[#F1F9A1] font-sans transition-colors duration-200">
+    <html lang="pt-BR" className={`light ${inter.variable} ${plusJakarta.variable}`}>
+      <body className="bg-evo-bg text-evo-text antialiased selection:bg-evo-accent/20 selection:text-evo-accent font-sans transition-colors duration-200">
         <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>

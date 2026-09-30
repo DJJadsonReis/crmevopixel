@@ -49,13 +49,13 @@ export function GenerateMessageModal({
       `Olá! Tudo bem? 😊\n\nMe chamo Oliveira e encontrei a *${company}* em ${city} durante uma pesquisa de mercado.\n\nNotei que a *${company}* ainda não possui um site próprio oficial. Hoje, ter um site profissional e bem posicionado é essencial para atrair novos clientes qualificados e transmitir credibilidade imediata.\n\nPosso ajudar a criar um site moderno, rápido e otimizado para o Google para destacar a *${company}* no topo da sua região.\n\nVocê teria 5 minutinhos essa semana para conversarmos sobre como atrair mais clientes?`,
 
       // Variação 2: Automação no WhatsApp & Velocidade de Resposta (n8n/IA)
-      `Olá${contact ? ` ${contact}` : ''}! Tudo bem? 😊\n\nAqui é o Oliveira da EvoPixel. Vi a atuação de destaque da *${company}* no nicho de ${niche}.\n\nA maioria das empresas em ${city} perde até 40% das oportunidades por demorar para responder orçamentos no WhatsApp ou não ter uma triagem automática 24 horas.\n\nDesenvolvemos automações inteligentes e chatbots comerciais no WhatsApp que qualificam o lead na hora e já direcionam pronto para fechar.\n\nFaria sentido conversarmos 5 minutos esta semana para ver como aplicar isso na *${company}*?`,
+      `Olá${contact ? ` ${contact}` : ''}! Tudo bem? 😊\n\nAqui é o Oliveira da EVO PIXEL. Vi a atuação de destaque da *${company}* no nicho de ${niche}.\n\nA maioria das empresas em ${city} perde até 40% das oportunidades por demorar para responder orçamentos no WhatsApp ou não ter uma triagem automática 24 horas.\n\nDesenvolvemos automações inteligentes e chatbots comerciais no WhatsApp que qualificam o lead na hora e já direcionam pronto para fechar.\n\nFaria sentido conversarmos 5 minutos esta semana para ver como aplicar isso na *${company}*?`,
 
       // Variação 3: Reputação, Google Meu Negócio & Avaliações
       `Olá${contact ? ` ${contact}` : ''}! Tudo bem? 😊\n\nEstava analisando empresas referências em ${niche} em ${city} e notei a presença da *${company}*.\n\nPercebi que a empresa tem potencial enorme para multiplicar contatos diários otimizando o perfil do Google e integrando com um fluxo direto de agendamento no WhatsApp.\n\nAjudamos empresas a estruturarem sua captação digital com ${service}.\n\nQual o melhor dia para trocarmos uma ideia rápida de 5 minutinhos?`,
 
       // Variação 4: Abordagem Direta & Consultiva
-      `Olá${contact ? ` ${contact}` : ''}, bom dia! Tudo bem?\n\nSou o Oliveira, especialista em tecnologia e captação digital na EvoPixel.\n\nIdentifiquei oportunidades práticas para a *${company}* aumentar o volume de clientes e profissionalizar seu atendimento comercial online.\n\nPreparei um diagnóstico breve e gostaria de compartilhar com você sem compromisso.\n\nVocê teria disponibilidade para um alinhamento rápido de 5 minutos esta semana?`
+      `Olá${contact ? ` ${contact}` : ''}, bom dia! Tudo bem?\n\nSou o Oliveira, especialista em tecnologia e captação digital na EVO PIXEL.\n\nIdentifiquei oportunidades práticas para a *${company}* aumentar o volume de clientes e profissionalizar seu atendimento comercial online.\n\nPreparei um diagnóstico breve e gostaria de compartilhar com você sem compromisso.\n\nVocê teria disponibilidade para um alinhamento rápido de 5 minutos esta semana?`
     ];
   };
 
@@ -109,25 +109,25 @@ export function GenerateMessageModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop com blur escuro elegante */}
       <div
-        className="fixed inset-0 bg-[#050706]/80 backdrop-blur-sm transition-opacity"
+        className="fixed inset-0 bg-evo-black/80 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
 
       {/* Caixa do Modal (Estilo fiel ao Anexo 1 adaptado ao design system) */}
-      <div className="relative w-full max-w-xl bg-[#0C1A19] border border-[rgba(218,241,222,0.14)] rounded-3xl shadow-2xl overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-xl bg-evo-card border border-evo-border rounded-3xl shadow-2xl overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-200">
         {/* Cabeçalho */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-[rgba(218,241,222,0.08)] bg-[#07100F]/60">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-evo-border bg-evo-deep/60">
           <div>
-            <h2 className="text-base font-semibold text-[#E7ECE8] font-heading flex items-center gap-2">
-              Mensagem para <span className="text-[#F1F9A1]">{target.company_name}</span>
+            <h2 className="text-base font-semibold text-evo-text font-heading flex items-center gap-2">
+              Mensagem para <span className="text-evo-accent">{target.company_name}</span>
             </h2>
-            <p className="text-xs text-[#9BA6A0] mt-0.5">
+            <p className="text-xs text-evo-muted mt-0.5">
               Personalize, edite livremente ou gere novas abordagens com 1 clique
             </p>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl text-[#9BA6A0] hover:text-[#E7ECE8] hover:bg-[#10201E] transition-colors"
+            className="p-1.5 rounded-xl text-evo-muted hover:text-evo-text hover:bg-evo-surface transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -136,28 +136,28 @@ export function GenerateMessageModal({
         {/* Corpo: Campo de Telefone & Textarea Editável */}
         <div className="p-6 space-y-4">
           {/* Status do Telefone do Lead */}
-          <div className="flex items-center justify-between text-xs px-3.5 py-2.5 rounded-xl bg-[#07100F] border border-[rgba(218,241,222,0.06)]">
+          <div className="flex items-center justify-between text-xs px-3.5 py-2.5 rounded-xl bg-evo-deep border border-evo-border">
             <div className="flex items-center gap-2">
               <WhatsAppIcon className="w-4 h-4 text-[#25D366] fill-current" />
-              <span className="text-[#9BA6A0]">Destinatário:</span>
+              <span className="text-evo-muted">Destinatário:</span>
               {isEditingPhone ? (
                 <input
                   type="text"
                   placeholder="(DDD) 99999-9999"
                   value={phoneInput}
                   onChange={(e) => setPhoneInput(e.target.value)}
-                  className="px-2 py-0.5 rounded bg-[#10201E] border border-[rgba(218,241,222,0.2)] text-[#E7ECE8] font-mono text-xs focus:outline-none focus:border-[#25D366]"
+                  className="px-2 py-0.5 rounded bg-evo-surface border border-[rgba(218,241,222,0.2)] text-evo-text font-mono text-xs focus:outline-none focus:border-[#25D366]"
                   autoFocus
                 />
               ) : (
-                <span className="font-mono text-[#E7ECE8] font-medium">
+                <span className="font-mono text-evo-text font-medium">
                   {phoneInput || 'Sem número informado'}
                 </span>
               )}
             </div>
             <button
               onClick={() => setIsEditingPhone(!isEditingPhone)}
-              className="text-[11px] text-[#8EB69B] hover:text-[#F1F9A1] underline"
+              className="text-[11px] text-evo-support hover:text-evo-accent underline"
             >
               {isEditingPhone ? 'Salvar' : 'Alterar número'}
             </button>
@@ -169,26 +169,26 @@ export function GenerateMessageModal({
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               rows={9}
-              className="w-full p-4 rounded-2xl bg-[#07100F] border border-[rgba(218,241,222,0.12)] focus:border-[#8EB69B] text-[#E7ECE8] text-xs leading-relaxed focus:outline-none resize-none font-sans transition-all selection:bg-[#25D366]/30"
+              className="w-full p-4 rounded-2xl bg-evo-deep border border-evo-border focus:border-evo-support text-evo-text text-xs leading-relaxed focus:outline-none resize-none font-sans transition-all selection:bg-[#25D366]/30"
               placeholder="Digite ou edite a mensagem de abordagem..."
             />
-            <div className="flex items-center justify-between text-[11px] text-[#65706A] px-1 pt-1">
+            <div className="flex items-center justify-between text-[11px] text-evo-disabled px-1 pt-1">
               <span>{message.length} caracteres • Pronto para WhatsApp</span>
-              <span className="font-mono text-[#8EB69B]">Variação {variationIndex + 1} de {templates.length}</span>
+              <span className="font-mono text-evo-support">Variação {variationIndex + 1} de {templates.length}</span>
             </div>
           </div>
         </div>
 
         {/* Rodapé com os 3 botões (Exatamente como no Anexo 1) */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-6 py-4 border-t border-[rgba(218,241,222,0.08)] bg-[#07100F]/60">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-6 py-4 border-t border-evo-border bg-evo-deep/60">
           <div className="flex items-center gap-2 w-full sm:w-auto">
             {/* Botão Gerar Nova */}
             <button
               onClick={handleNextVariation}
-              className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl bg-[#10201E] hover:bg-[#163832] border border-[rgba(218,241,222,0.12)] text-[#E7ECE8] hover:text-[#F1F9A1] text-xs font-heading font-medium flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95"
+              className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl bg-evo-surface hover:bg-evo-surface2 border border-evo-border text-evo-text hover:text-evo-accent text-xs font-heading font-medium flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95"
               title="Alternar para outra abordagem de mensagem"
             >
-              <RefreshCw className="w-3.5 h-3.5 text-[#8EB69B]" />
+              <RefreshCw className="w-3.5 h-3.5 text-evo-support" />
               <span>Gerar nova</span>
             </button>
 
@@ -197,8 +197,8 @@ export function GenerateMessageModal({
               onClick={handleCopy}
               className={`flex-1 sm:flex-initial px-3.5 py-2 rounded-xl border text-xs font-heading font-medium flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95 ${
                 copied
-                  ? 'bg-[#163832] border-[#25D366]/50 text-[#F1F9A1]'
-                  : 'bg-[#10201E] hover:bg-[#163832] border-[rgba(218,241,222,0.12)] text-[#E7ECE8] hover:text-[#F1F9A1]'
+                  ? 'bg-evo-surface2 border-[#25D366]/50 text-evo-accent'
+                  : 'bg-evo-surface hover:bg-evo-surface2 border-evo-border text-evo-text hover:text-evo-accent'
               }`}
               title="Copiar mensagem para a área de transferência"
             >
@@ -209,7 +209,7 @@ export function GenerateMessageModal({
                 </>
               ) : (
                 <>
-                  <Copy className="w-3.5 h-3.5 text-[#8EB69B]" />
+                  <Copy className="w-3.5 h-3.5 text-evo-support" />
                   <span>Copiar</span>
                 </>
               )}

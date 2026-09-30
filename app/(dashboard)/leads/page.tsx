@@ -356,16 +356,16 @@ export default function LeadsPage() {
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* Header Principal */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[rgba(218,241,222,0.06)] pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-evo-border pb-5">
         <div>
-          <div className="flex items-center gap-2 text-xs font-mono text-[#8EB69B] uppercase tracking-wider mb-1">
-            <Users className="w-3.5 h-3.5 text-[#F1F9A1]" />
+          <div className="flex items-center gap-2 text-xs font-mono text-evo-support uppercase tracking-wider mb-1">
+            <Users className="w-3.5 h-3.5 text-evo-accent" />
             Gestão Comercial
           </div>
-          <h1 className="text-2xl lg:text-3xl font-semibold text-[#E7ECE8] font-heading">
+          <h1 className="text-2xl lg:text-3xl font-semibold text-evo-text font-heading">
             Leads & Captação Ativa
           </h1>
-          <p className="text-xs text-[#9BA6A0] mt-1">
+          <p className="text-xs text-evo-muted mt-1">
             Qualificação com IA, captação via Apify, importação de planilhas, abordagem no WhatsApp e gestão de contatos.
           </p>
         </div>
@@ -384,7 +384,7 @@ export default function LeadsPage() {
           {/* Botão Importar Planilha */}
           <button
             onClick={() => setIsImportModalOpen(true)}
-            className="px-3.5 py-2 rounded-xl bg-[#10201E] hover:bg-[#163832] border border-[rgba(218,241,222,0.12)] text-[#8EB69B] hover:text-[#F1F9A1] text-xs font-heading font-medium flex items-center gap-1.5 transition-all active:scale-95"
+            className="px-3.5 py-2 rounded-xl bg-evo-surface hover:bg-evo-surface2 border border-evo-border text-evo-support hover:text-evo-accent text-xs font-heading font-medium flex items-center gap-1.5 transition-all active:scale-95"
             title="Importar lista de leads (CSV ou XLSX) com qualificação IA automática"
           >
             <Upload className="w-3.5 h-3.5" />
@@ -407,13 +407,13 @@ export default function LeadsPage() {
       {/* Barra de Filtros e Busca */}
       <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
         <div className="relative flex-1 max-w-md">
-          <Search className="w-3.5 h-3.5 text-[#8EB69B] absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <Search className="w-3.5 h-3.5 text-evo-support absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             placeholder="Buscar por lead, empresa, nicho, cidade, whatsapp, email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-xs rounded-xl bg-[#0C1A19] border border-[rgba(218,241,222,0.08)] text-[#E7ECE8] placeholder-[#65706A] focus:outline-none focus:border-[#8EB69B]"
+            className="w-full pl-9 pr-4 py-2 text-xs rounded-xl bg-evo-card border border-evo-border text-evo-text placeholder-[#65706A] focus:outline-none focus:border-evo-support"
           />
         </div>
 
@@ -431,7 +431,7 @@ export default function LeadsPage() {
           <select
             value={selectedTemperature}
             onChange={(e) => setSelectedTemperature(e.target.value)}
-            className="px-3 py-1.5 rounded-xl bg-[#0C1A19] border border-[rgba(218,241,222,0.08)] text-xs text-[#E7ECE8] focus:outline-none focus:border-[#8EB69B] appearance-none cursor-pointer"
+            className="px-3 py-1.5 rounded-xl bg-evo-card border border-evo-border text-xs text-evo-text focus:outline-none focus:border-evo-support appearance-none cursor-pointer"
           >
             <option value="todos">Todas Temperaturas</option>
             <option value="quente">🔥 Quente</option>
@@ -442,7 +442,7 @@ export default function LeadsPage() {
           <select
             value={selectedNiche}
             onChange={(e) => setSelectedNiche(e.target.value)}
-            className="px-3 py-1.5 rounded-xl bg-[#0C1A19] border border-[rgba(218,241,222,0.08)] text-xs text-[#E7ECE8] focus:outline-none focus:border-[#8EB69B] appearance-none cursor-pointer max-w-[200px]"
+            className="px-3 py-1.5 rounded-xl bg-evo-card border border-evo-border text-xs text-evo-text focus:outline-none focus:border-evo-support appearance-none cursor-pointer max-w-[200px]"
           >
             <option value="todos">Todos os Nichos</option>
             {niches.map((n) => (
@@ -457,15 +457,15 @@ export default function LeadsPage() {
       </div>
 
       {/* Tabela de Leads */}
-      <div className="bg-[#0C1A19] border border-[rgba(218,241,222,0.08)] rounded-2xl overflow-hidden shadow-sm">
+      <div className="bg-evo-card border border-evo-border rounded-2xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-[rgba(218,241,222,0.06)] bg-[#07100F] text-[11px] font-mono text-[#65706A] uppercase tracking-wider">
+              <tr className="border-b border-evo-border bg-evo-deep text-[11px] font-mono text-evo-disabled uppercase tracking-wider">
                 <th className="py-3 px-4 w-10 text-center">
                   <button
                     onClick={handleSelectAll}
-                    className="text-[#9BA6A0] hover:text-[#E7ECE8] transition-colors"
+                    className="text-evo-muted hover:text-evo-text transition-colors"
                     title={
                       selectedLeadIds.length === filteredLeads.length
                         ? 'Desmarcar todos'
@@ -474,9 +474,9 @@ export default function LeadsPage() {
                   >
                     {selectedLeadIds.length > 0 &&
                     selectedLeadIds.length === filteredLeads.length ? (
-                      <CheckSquare className="w-4 h-4 text-[#8EB69B]" />
+                      <CheckSquare className="w-4 h-4 text-evo-support" />
                     ) : (
-                      <Square className="w-4 h-4 text-[#65706A]" />
+                      <Square className="w-4 h-4 text-evo-disabled" />
                     )}
                   </button>
                 </th>
@@ -496,20 +496,20 @@ export default function LeadsPage() {
                 return (
                   <tr
                     key={lead.id}
-                    className={`hover:bg-[#10201E]/40 transition-colors group ${
-                      isSelected ? 'bg-[#10201E]/70' : ''
+                    className={`hover:bg-evo-surface/40 transition-colors group ${
+                      isSelected ? 'bg-evo-surface/70' : ''
                     }`}
                   >
                     {/* Checkbox de Seleção */}
                     <td className="py-3.5 px-4 text-center">
                       <button
                         onClick={() => toggleSelectLead(lead.id)}
-                        className="text-[#9BA6A0] hover:text-[#E7ECE8] transition-colors"
+                        className="text-evo-muted hover:text-evo-text transition-colors"
                       >
                         {isSelected ? (
-                          <CheckSquare className="w-4 h-4 text-[#8EB69B]" />
+                          <CheckSquare className="w-4 h-4 text-evo-support" />
                         ) : (
-                          <Square className="w-4 h-4 text-[#65706A]" />
+                          <Square className="w-4 h-4 text-evo-disabled" />
                         )}
                       </button>
                     </td>
@@ -518,26 +518,26 @@ export default function LeadsPage() {
                     <td className="py-3.5 px-4">
                       <Link
                         href={`/leads/${lead.id}`}
-                        className="font-medium text-[#E7ECE8] group-hover:text-[#F1F9A1] transition-colors flex items-center gap-1.5"
+                        className="font-medium text-evo-text group-hover:text-evo-accent transition-colors flex items-center gap-1.5"
                       >
                         <span>{lead.company_name}</span>
                         <ArrowUpRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                       </Link>
-                      <div className="text-[11px] text-[#9BA6A0] mt-0.5 flex items-center gap-1.5 flex-wrap">
+                      <div className="text-[11px] text-evo-muted mt-0.5 flex items-center gap-1.5 flex-wrap">
                         <span>{lead.name}</span>
                         <span>•</span>
                         <span>{lead.city}/{lead.state}</span>
                         {lead.whatsapp && (
                           <>
                             <span>•</span>
-                            <span className="font-mono text-[#8EB69B]">{lead.whatsapp}</span>
+                            <span className="font-mono text-evo-support">{lead.whatsapp}</span>
                           </>
                         )}
                         {lead.email && (
                           <>
                             <span>•</span>
-                            <span className="text-[#9BA6A0] flex items-center gap-0.5">
-                              <Mail className="w-3 h-3 text-[#65706A]" />
+                            <span className="text-evo-muted flex items-center gap-0.5">
+                              <Mail className="w-3 h-3 text-evo-disabled" />
                               {lead.email}
                             </span>
                           </>
@@ -545,8 +545,8 @@ export default function LeadsPage() {
                         {lead.instagram && (
                           <>
                             <span>•</span>
-                            <span className="text-[#F1F9A1] flex items-center gap-0.5">
-                              <Instagram className="w-3 h-3 text-[#F1F9A1]" />
+                            <span className="text-evo-accent flex items-center gap-0.5">
+                              <Instagram className="w-3 h-3 text-evo-accent" />
                               {lead.instagram}
                             </span>
                           </>
@@ -554,8 +554,8 @@ export default function LeadsPage() {
                         {lead.google_business && (
                           <>
                             <span>•</span>
-                            <span className="text-[#8EB69B] flex items-center gap-0.5">
-                              <MapPin className="w-3 h-3 text-[#8EB69B]" />
+                            <span className="text-evo-support flex items-center gap-0.5">
+                              <MapPin className="w-3 h-3 text-evo-support" />
                               Google Meu Negócio
                             </span>
                           </>
@@ -565,7 +565,7 @@ export default function LeadsPage() {
 
                     {/* Segmento */}
                     <td className="py-3.5 px-4">
-                      <span className="text-[11px] font-mono text-[#8EB69B] px-2 py-0.5 rounded bg-[#10201E] border border-[rgba(218,241,222,0.06)]">
+                      <span className="text-[11px] font-mono text-evo-support px-2 py-0.5 rounded bg-evo-surface border border-evo-border">
                         {lead.segment}
                       </span>
                     </td>
@@ -585,10 +585,10 @@ export default function LeadsPage() {
                       <span
                         className={`font-mono text-xs font-semibold px-2 py-0.5 rounded ${
                           lead.score >= 80
-                            ? 'text-[#F1F9A1] bg-[#F1F9A1]/10'
+                            ? 'text-evo-accent bg-evo-accent/10'
                             : lead.score >= 60
-                            ? 'text-[#8EB69B] bg-[#8EB69B]/10'
-                            : 'text-[#9BA6A0] bg-[#10201E]'
+                            ? 'text-evo-support bg-evo-support/10'
+                            : 'text-evo-muted bg-evo-surface'
                         }`}
                       >
                         {lead.score}
@@ -601,7 +601,7 @@ export default function LeadsPage() {
                         {lead.services.map((srv, idx) => (
                           <span
                             key={idx}
-                            className="px-2 py-0.5 rounded text-[10px] bg-[#10201E] text-[#9BA6A0] border border-[rgba(218,241,222,0.06)] truncate max-w-[160px]"
+                            className="px-2 py-0.5 rounded text-[10px] bg-evo-surface text-evo-muted border border-evo-border truncate max-w-[160px]"
                           >
                             {srv}
                           </span>
@@ -610,7 +610,7 @@ export default function LeadsPage() {
                     </td>
 
                     {/* Próxima Ação */}
-                    <td className="py-3.5 px-4 text-[11px] text-[#9BA6A0] max-w-xs">
+                    <td className="py-3.5 px-4 text-[11px] text-evo-muted max-w-xs">
                       <div className="truncate">{lead.next_action || 'Nenhuma ação pendente'}</div>
                     </td>
 
@@ -629,15 +629,15 @@ export default function LeadsPage() {
                         {/* Botão Gerar Mensagem (Anexo 1) */}
                         <button
                           onClick={() => handleOpenMessageModal(lead)}
-                          className="p-1.5 rounded-xl bg-[#10201E] hover:bg-[#163832] border border-[rgba(218,241,222,0.12)] text-[#8EB69B] hover:text-[#F1F9A1] transition-all active:scale-95 flex items-center justify-center"
+                          className="p-1.5 rounded-xl bg-evo-surface hover:bg-evo-surface2 border border-evo-border text-evo-support hover:text-evo-accent transition-all active:scale-95 flex items-center justify-center"
                           title="Gerar Mensagem para WhatsApp"
                         >
-                          <Sparkles className="w-3.5 h-3.5 text-[#F1F9A1]" />
+                          <Sparkles className="w-3.5 h-3.5 text-evo-accent" />
                         </button>
 
                         {/* Botão Olho: Ver Ficha do Lead */}
                         <Link href={`/leads/${lead.id}`} title="Abrir Perfil do Lead">
-                          <button className="p-1.5 rounded-xl bg-[#10201E] hover:bg-[#163832] border border-[rgba(218,241,222,0.12)] text-[#8EB69B] hover:text-[#F1F9A1] transition-all flex items-center justify-center active:scale-95">
+                          <button className="p-1.5 rounded-xl bg-evo-surface hover:bg-evo-surface2 border border-evo-border text-evo-support hover:text-evo-accent transition-all flex items-center justify-center active:scale-95">
                             <Eye className="w-3.5 h-3.5" />
                           </button>
                         </Link>
@@ -645,7 +645,7 @@ export default function LeadsPage() {
                         {/* Botão Excluir */}
                         <button
                           onClick={(e) => handleDeleteLead(lead.id, e)}
-                          className="p-1.5 rounded-xl bg-[#10201E] hover:bg-red-500/20 text-[#65706A] hover:text-red-400 transition-colors"
+                          className="p-1.5 rounded-xl bg-evo-surface hover:bg-red-500/20 text-evo-disabled hover:text-red-400 transition-colors"
                           title="Excluir lead"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -660,7 +660,7 @@ export default function LeadsPage() {
         </div>
 
         {filteredLeads.length === 0 && (
-          <div className="p-12 text-center text-xs text-[#9BA6A0]">
+          <div className="p-12 text-center text-xs text-evo-muted">
             Nenhum lead encontrado com os filtros atuais.
           </div>
         )}
@@ -676,36 +676,36 @@ export default function LeadsPage() {
       >
         <form onSubmit={handleCreateLead} className="space-y-4 text-xs">
           <div>
-            <label className="block text-[#9BA6A0] mb-1 font-medium">Nome do Contato *</label>
+            <label className="block text-evo-muted mb-1 font-medium">Nome do Contato *</label>
             <input
               type="text"
               required
               placeholder="Ex: Dr. Roberto Silva"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl bg-[#07100F] border border-[rgba(218,241,222,0.08)] text-[#E7ECE8] placeholder-[#65706A] focus:outline-none focus:border-[#8EB69B]"
+              className="w-full px-3 py-2 rounded-xl bg-evo-deep border border-evo-border text-evo-text placeholder-[#65706A] focus:outline-none focus:border-evo-support"
             />
           </div>
 
           <div>
-            <label className="block text-[#9BA6A0] mb-1 font-medium">Empresa / Razão Social *</label>
+            <label className="block text-evo-muted mb-1 font-medium">Empresa / Razão Social *</label>
             <input
               type="text"
               required
               placeholder="Ex: Silva Odontologia Integrada"
               value={newCompany}
               onChange={(e) => setNewCompany(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl bg-[#07100F] border border-[rgba(218,241,222,0.08)] text-[#E7ECE8] placeholder-[#65706A] focus:outline-none focus:border-[#8EB69B]"
+              className="w-full px-3 py-2 rounded-xl bg-evo-deep border border-evo-border text-evo-text placeholder-[#65706A] focus:outline-none focus:border-evo-support"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[#9BA6A0] mb-1 font-medium">Segmento / Nicho</label>
+              <label className="block text-evo-muted mb-1 font-medium">Segmento / Nicho</label>
               <select
                 value={newSegment}
                 onChange={(e) => setNewSegment(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-[#07100F] border border-[rgba(218,241,222,0.08)] text-[#E7ECE8] focus:outline-none focus:border-[#8EB69B] appearance-none"
+                className="w-full px-3 py-2 rounded-xl bg-evo-deep border border-evo-border text-evo-text focus:outline-none focus:border-evo-support appearance-none"
               >
                 {niches.map((n) => (
                   <option key={n.id} value={n.name}>
@@ -718,66 +718,66 @@ export default function LeadsPage() {
             </div>
 
             <div>
-              <label className="block text-[#9BA6A0] mb-1 font-medium">Cidade</label>
+              <label className="block text-evo-muted mb-1 font-medium">Cidade</label>
               <input
                 type="text"
                 placeholder="Ex: São Paulo"
                 value={newCity}
                 onChange={(e) => setNewCity(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-[#07100F] border border-[rgba(218,241,222,0.08)] text-[#E7ECE8] placeholder-[#65706A] focus:outline-none focus:border-[#8EB69B]"
+                className="w-full px-3 py-2 rounded-xl bg-evo-deep border border-evo-border text-evo-text placeholder-[#65706A] focus:outline-none focus:border-evo-support"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-[#9BA6A0] mb-1 font-medium">WhatsApp / Telefone</label>
+              <label className="block text-evo-muted mb-1 font-medium">WhatsApp / Telefone</label>
               <input
                 type="text"
                 placeholder="(11) 99999-9999"
                 value={newWhatsapp}
                 onChange={(e) => setNewWhatsapp(formatPhoneNumber(e.target.value))}
-                className="w-full px-3 py-2 rounded-xl bg-[#07100F] border border-[rgba(218,241,222,0.08)] text-[#E7ECE8] placeholder-[#65706A] focus:outline-none focus:border-[#8EB69B] font-mono text-xs"
+                className="w-full px-3 py-2 rounded-xl bg-evo-deep border border-evo-border text-evo-text placeholder-[#65706A] focus:outline-none focus:border-evo-support font-mono text-xs"
               />
             </div>
 
             <div>
-              <label className="block text-[#9BA6A0] mb-1 font-medium">E-mail (opcional)</label>
+              <label className="block text-evo-muted mb-1 font-medium">E-mail (opcional)</label>
               <input
                 type="email"
                 placeholder="contato@empresa.com.br"
                 value={newEmail}
                 onChange={(e) => setNewEmail(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-[#07100F] border border-[rgba(218,241,222,0.08)] text-[#E7ECE8] placeholder-[#65706A] focus:outline-none focus:border-[#8EB69B] text-xs"
+                className="w-full px-3 py-2 rounded-xl bg-evo-deep border border-evo-border text-evo-text placeholder-[#65706A] focus:outline-none focus:border-evo-support text-xs"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-[#9BA6A0] mb-1 font-medium">Instagram (opcional)</label>
+              <label className="block text-evo-muted mb-1 font-medium">Instagram (opcional)</label>
               <input
                 type="text"
                 placeholder="@empresa ou link"
                 value={newInstagram}
                 onChange={(e) => setNewInstagram(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-[#07100F] border border-[rgba(218,241,222,0.08)] text-[#E7ECE8] placeholder-[#65706A] focus:outline-none focus:border-[#8EB69B] text-xs"
+                className="w-full px-3 py-2 rounded-xl bg-evo-deep border border-evo-border text-evo-text placeholder-[#65706A] focus:outline-none focus:border-evo-support text-xs"
               />
             </div>
 
             <div>
-              <label className="block text-[#9BA6A0] mb-1 font-medium">Google Meu Negócio (opcional)</label>
+              <label className="block text-evo-muted mb-1 font-medium">Google Meu Negócio (opcional)</label>
               <input
                 type="text"
                 placeholder="Nome ou link no Google Maps"
                 value={newGoogleBusiness}
                 onChange={(e) => setNewGoogleBusiness(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-[#07100F] border border-[rgba(218,241,222,0.08)] text-[#E7ECE8] placeholder-[#65706A] focus:outline-none focus:border-[#8EB69B] text-xs"
+                className="w-full px-3 py-2 rounded-xl bg-evo-deep border border-evo-border text-evo-text placeholder-[#65706A] focus:outline-none focus:border-evo-support text-xs"
               />
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-[rgba(218,241,222,0.06)]">
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-evo-border">
             <Button
               type="button"
               variant="secondary"
@@ -804,12 +804,12 @@ export default function LeadsPage() {
         <div className="space-y-4 text-xs">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block font-mono text-[#9BA6A0] mb-1">Nicho Alvo</label>
+              <label className="block font-mono text-evo-muted mb-1">Nicho Alvo</label>
               <select
                 value={apifyNiche}
                 onChange={(e) => setApifyNiche(e.target.value)}
                 disabled={isExtracting}
-                className="w-full bg-[#0C1A19] border border-[rgba(218,241,222,0.12)] rounded-xl px-3 py-2 text-xs text-[#E7ECE8] focus:outline-none focus:border-[#8EB69B] appearance-none"
+                className="w-full bg-evo-card border border-evo-border rounded-xl px-3 py-2 text-xs text-evo-text focus:outline-none focus:border-evo-support appearance-none"
               >
                 <option value="Contabilidade">Contabilidade</option>
                 <option value="Clínicas / Odonto">Clínicas / Odonto</option>
@@ -822,20 +822,20 @@ export default function LeadsPage() {
             </div>
 
             <div>
-              <label className="block font-mono text-[#9BA6A0] mb-1">Cidade / Região</label>
+              <label className="block font-mono text-evo-muted mb-1">Cidade / Região</label>
               <input
                 type="text"
                 value={apifyCity}
                 onChange={(e) => setApifyCity(e.target.value)}
                 disabled={isExtracting}
                 placeholder="Ex: São Paulo, SP"
-                className="w-full bg-[#0C1A19] border border-[rgba(218,241,222,0.12)] rounded-xl px-3 py-2 text-xs text-[#E7ECE8] focus:outline-none focus:border-[#8EB69B]"
+                className="w-full bg-evo-card border border-evo-border rounded-xl px-3 py-2 text-xs text-evo-text focus:outline-none focus:border-evo-support"
               />
             </div>
           </div>
 
           <div>
-            <label className="block font-mono text-[#9BA6A0] mb-1">
+            <label className="block font-mono text-evo-muted mb-1">
               Apify API Token (Opcional)
             </label>
             <input
@@ -844,21 +844,21 @@ export default function LeadsPage() {
               onChange={(e) => setApifyToken(e.target.value)}
               disabled={isExtracting}
               placeholder="apify_api_... (deixe vazio para extração simulada)"
-              className="w-full bg-[#0C1A19] border border-[rgba(218,241,222,0.12)] rounded-xl px-3 py-2 text-xs text-[#E7ECE8] focus:outline-none focus:border-[#8EB69B]"
+              className="w-full bg-evo-card border border-evo-border rounded-xl px-3 py-2 text-xs text-evo-text focus:outline-none focus:border-evo-support"
             />
-            <p className="text-[11px] text-[#65706A] mt-1">
+            <p className="text-[11px] text-evo-disabled mt-1">
               Caso vazio, o sistema simula a extração de contatos reais do Google Meu Negócio nos bairros comerciais da cidade.
             </p>
           </div>
 
           {extractionLog && (
-            <div className="bg-[#10201E] border border-[rgba(218,241,222,0.08)] rounded-xl p-3 text-xs text-[#8EB69B] font-mono">
-              <span className="inline-block w-2 h-2 rounded-full bg-[#F1F9A1] animate-pulse mr-2"></span>
+            <div className="bg-evo-surface border border-evo-border rounded-xl p-3 text-xs text-evo-support font-mono">
+              <span className="inline-block w-2 h-2 rounded-full bg-evo-accent animate-pulse mr-2"></span>
               {extractionLog}
             </div>
           )}
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-[rgba(218,241,222,0.06)]">
+          <div className="flex justify-end gap-2 pt-3 border-t border-evo-border">
             <Button
               type="button"
               variant="secondary"
@@ -905,7 +905,7 @@ export default function LeadsPage() {
         <div className="space-y-4 text-xs">
           {!importStats ? (
             <div className="space-y-3">
-              <label className="relative p-8 border-2 border-dashed border-[rgba(218,241,222,0.12)] hover:border-[rgba(218,241,222,0.3)] rounded-2xl flex flex-col items-center justify-center text-center bg-[#10201E]/40 cursor-pointer overflow-hidden transition-all group">
+              <label className="relative p-8 border-2 border-dashed border-evo-border hover:border-[rgba(218,241,222,0.3)] rounded-2xl flex flex-col items-center justify-center text-center bg-evo-surface/40 cursor-pointer overflow-hidden transition-all group">
                 <input
                   type="file"
                   accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
@@ -913,13 +913,13 @@ export default function LeadsPage() {
                   onChange={handleSpreadsheetUpload}
                   disabled={isImporting}
                 />
-                <FileSpreadsheet className="w-9 h-9 text-[#8EB69B] group-hover:text-[#F1F9A1] transition-colors mb-3" />
-                <span className="text-xs font-medium text-[#E7ECE8] mb-1">
+                <FileSpreadsheet className="w-9 h-9 text-evo-support group-hover:text-evo-accent transition-colors mb-3" />
+                <span className="text-xs font-medium text-evo-text mb-1">
                   {isImporting
                     ? 'Processando e qualificando via IA...'
                     : 'Clique ou arraste sua planilha CSV / XLSX aqui'}
                 </span>
-                <span className="text-[11px] text-[#65706A]">
+                <span className="text-[11px] text-evo-disabled">
                   Reconhece colunas: Nome, Empresa, Telefone / WhatsApp, Cidade, Nicho, Email, Instagram e Google Meu Negócio
                 </span>
               </label>
@@ -936,12 +936,12 @@ export default function LeadsPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="p-4 rounded-xl bg-[#10201E] border border-[rgba(218,241,222,0.08)] space-y-2">
-                <div className="flex items-center gap-2 text-xs font-semibold text-[#8EB69B]">
+              <div className="p-4 rounded-xl bg-evo-surface border border-evo-border space-y-2">
+                <div className="flex items-center gap-2 text-xs font-semibold text-evo-support">
                   <CheckCircle2 className="w-4 h-4" />
                   <span>{importStats.count} leads importados e qualificados com sucesso!</span>
                 </div>
-                <p className="text-[11px] text-[#9BA6A0]">
+                <p className="text-[11px] text-evo-muted">
                   Foram lidas {importStats.total} linhas da planilha. A Inteligência Artificial avaliou os contatos, calculou scores de 0 a 100, determinou a temperatura (Quente/Morno/Frio) e mapeou as ofertas recomendadas.
                 </p>
               </div>

@@ -13,17 +13,17 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('dark');
+  const [theme, setThemeState] = useState<Theme>('light');
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     // Carregar tema salvo no localStorage ou preferência do sistema
-    const savedTheme = localStorage.getItem('evocrm_theme') as Theme | null;
+    const savedTheme = localStorage.getItem('evo_pixel_theme') as Theme | null;
     if (savedTheme === 'light' || savedTheme === 'dark') {
       setThemeState(savedTheme);
       applyTheme(savedTheme);
     } else {
-      applyTheme('dark');
+      applyTheme('light');
     }
     setMounted(true);
   }, []);
@@ -41,7 +41,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme);
-    localStorage.setItem('evocrm_theme', newTheme);
+    localStorage.setItem('evo_pixel_theme', newTheme);
     applyTheme(newTheme);
   };
 

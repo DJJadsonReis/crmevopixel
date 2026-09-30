@@ -30,16 +30,16 @@ export default function FollowUpsPage() {
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* Cabeçalho */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[rgba(218,241,222,0.06)] pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-evo-border pb-5">
         <div>
-          <div className="flex items-center gap-2 text-xs font-mono text-[#8EB69B] uppercase tracking-wider mb-1">
+          <div className="flex items-center gap-2 text-xs font-mono text-evo-support uppercase tracking-wider mb-1">
             <Clock className="w-3.5 h-3.5" />
             Central de Contatos & Reengajamento
           </div>
-          <h1 className="text-2xl lg:text-3xl font-semibold text-[#E7ECE8] font-heading">
+          <h1 className="text-2xl lg:text-3xl font-semibold text-evo-text font-heading">
             Central de Follow-ups
           </h1>
-          <p className="text-xs text-[#9BA6A0] mt-1">
+          <p className="text-xs text-evo-muted mt-1">
             Contatos manuais e réguas automáticas disparadas pelo n8n baseadas no prazo da etapa do nicho.
           </p>
         </div>
@@ -47,7 +47,7 @@ export default function FollowUpsPage() {
         <div className="flex items-center gap-2.5">
           <Link href="/prospeccao/mensagens">
             <Button variant="secondary" size="sm" className="gap-1.5">
-              <Zap className="w-3.5 h-3.5 text-[#8EB69B]" />
+              <Zap className="w-3.5 h-3.5 text-evo-support" />
               <span>Ver Réguas Automáticas</span>
             </Button>
           </Link>
@@ -71,17 +71,17 @@ export default function FollowUpsPage() {
         {filteredItems.map((item) => (
           <div
             key={item.id}
-            className="p-5 rounded-2xl bg-[#0C1A19] border border-[rgba(218,241,222,0.08)] hover:border-[rgba(218,241,222,0.16)] transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm"
+            className="p-5 rounded-2xl bg-evo-card border border-evo-border hover:border-evo-border-hover transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm"
           >
             <div className="space-y-1.5 flex-1">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-[#E7ECE8] font-heading">
+                <span className="text-xs font-semibold text-evo-text font-heading">
                   {item.company_name}
                 </span>
-                <span className="text-xs text-[#9BA6A0]">({item.target_name})</span>
+                <span className="text-xs text-evo-muted">({item.target_name})</span>
                 {item.is_automated && (
                   <Badge variant="accent" className="text-[10px] py-0 px-2">
-                    <Zap className="w-3 h-3 text-[#F1F9A1]" />
+                    <Zap className="w-3 h-3 text-evo-accent" />
                     IA / n8n
                   </Badge>
                 )}
@@ -92,11 +92,11 @@ export default function FollowUpsPage() {
                 )}
               </div>
 
-              <p className="text-xs text-[#9BA6A0] leading-relaxed">
-                Contexto: <span className="text-[#E7ECE8]">{item.context}</span>
+              <p className="text-xs text-evo-muted leading-relaxed">
+                Contexto: <span className="text-evo-text">{item.context}</span>
               </p>
 
-              <div className="flex items-center gap-2 text-[11px] text-[#65706A]">
+              <div className="flex items-center gap-2 text-[11px] text-evo-disabled">
                 <span>Prazo: {item.due_date}</span>
                 <span>•</span>
                 <span>Próxima ação: {item.next_action}</span>
@@ -108,7 +108,7 @@ export default function FollowUpsPage() {
                 <Button
                   variant="secondary"
                   size="sm"
-                  className="text-xs h-8 px-3 text-[#F1F9A1]"
+                  className="text-xs h-8 px-3 text-evo-accent"
                   onClick={() => alert('Automação pausada para intervenção manual!')}
                 >
                   Intervir Manualmente
@@ -128,7 +128,7 @@ export default function FollowUpsPage() {
         ))}
 
         {filteredItems.length === 0 && (
-          <div className="p-12 text-center text-xs text-[#9BA6A0] bg-[#0C1A19]/40 rounded-2xl border border-[rgba(218,241,222,0.06)]">
+          <div className="p-12 text-center text-xs text-evo-muted bg-evo-card/40 rounded-2xl border border-evo-border">
             Nenhum follow-up pendente nesta visualização.
           </div>
         )}

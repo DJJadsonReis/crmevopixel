@@ -139,16 +139,16 @@ export default function ClientesPage() {
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* Cabeçalho */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[rgba(218,241,222,0.06)] pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-evo-border pb-5">
         <div>
-          <div className="flex items-center gap-2 text-xs font-mono text-[#8EB69B] uppercase tracking-wider mb-1">
-            <Building2 className="w-3.5 h-3.5 text-[#F1F9A1]" />
+          <div className="flex items-center gap-2 text-xs font-mono text-evo-support uppercase tracking-wider mb-1">
+            <Building2 className="w-3.5 h-3.5 text-evo-accent" />
             Gestão de Carteira & Clientes
           </div>
-          <h1 className="text-2xl lg:text-3xl font-semibold text-[#E7ECE8] font-heading">
-            Clientes da EvoPixel
+          <h1 className="text-2xl lg:text-3xl font-semibold text-evo-text font-heading">
+            Clientes da EVO PIXEL
           </h1>
-          <p className="text-xs text-[#9BA6A0] mt-1">
+          <p className="text-xs text-evo-muted mt-1">
             Lista consolidada de clientes, Lifetime Value, histórico, contato direto via WhatsApp e perfil.
           </p>
         </div>
@@ -168,22 +168,22 @@ export default function ClientesPage() {
 
       {/* Busca */}
       <div className="relative max-w-md">
-        <Search className="w-3.5 h-3.5 text-[#8EB69B] absolute left-3.5 top-1/2 -translate-y-1/2" />
+        <Search className="w-3.5 h-3.5 text-evo-support absolute left-3.5 top-1/2 -translate-y-1/2" />
         <input
           type="text"
           placeholder="Buscar por cliente, empresa, segmento, telefone..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-9 pr-4 py-2 text-xs rounded-xl bg-[#0C1A19] border border-[rgba(218,241,222,0.08)] text-[#E7ECE8] placeholder-[#65706A] focus:outline-none focus:border-[#8EB69B]"
+          className="w-full pl-9 pr-4 py-2 text-xs rounded-xl bg-evo-card border border-evo-border text-evo-text placeholder-[#65706A] focus:outline-none focus:border-evo-support"
         />
       </div>
 
       {/* Lista / Tabela de Clientes */}
-      <div className="bg-[#0C1A19] border border-[rgba(218,241,222,0.08)] rounded-2xl overflow-hidden shadow-sm">
+      <div className="bg-evo-card border border-evo-border rounded-2xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-[rgba(218,241,222,0.06)] bg-[#07100F] text-[11px] font-mono text-[#65706A] uppercase tracking-wider">
+              <tr className="border-b border-evo-border bg-evo-deep text-[11px] font-mono text-evo-disabled uppercase tracking-wider">
                 <th className="py-3 px-4">Cliente / Empresa</th>
                 <th className="py-3 px-4">Segmento</th>
                 <th className="py-3 px-4">Telefone / WhatsApp</th>
@@ -195,23 +195,23 @@ export default function ClientesPage() {
               {filteredClients.map((client) => (
                 <tr
                   key={client.id}
-                  className="hover:bg-[#10201E]/40 transition-colors group"
+                  className="hover:bg-evo-surface/40 transition-colors group"
                 >
                   {/* Empresa e Contato */}
                   <td className="py-3.5 px-4">
                     <Link
                       href={`/clientes/${client.id}`}
-                      className="font-medium text-[#E7ECE8] group-hover:text-[#F1F9A1] transition-colors flex items-center gap-1.5"
+                      className="font-medium text-evo-text group-hover:text-evo-accent transition-colors flex items-center gap-1.5"
                     >
                       <span>{client.company_name}</span>
                       <ArrowUpRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </Link>
-                    <div className="text-[11px] text-[#9BA6A0] mt-0.5 flex items-center gap-2 flex-wrap">
+                    <div className="text-[11px] text-evo-muted mt-0.5 flex items-center gap-2 flex-wrap">
                       <span>{client.name}</span>
                       {client.email && (
                         <>
                           <span>•</span>
-                          <span className="flex items-center gap-1 text-[#65706A]">
+                          <span className="flex items-center gap-1 text-evo-disabled">
                             <Mail className="w-3 h-3" />
                             {client.email}
                           </span>
@@ -222,7 +222,7 @@ export default function ClientesPage() {
 
                   {/* Segmento */}
                   <td className="py-3.5 px-4">
-                    <span className="text-[11px] font-mono text-[#8EB69B] px-2 py-0.5 rounded bg-[#10201E] border border-[rgba(218,241,222,0.06)]">
+                    <span className="text-[11px] font-mono text-evo-support px-2 py-0.5 rounded bg-evo-surface border border-evo-border">
                       {client.segment}
                     </span>
                   </td>
@@ -230,14 +230,14 @@ export default function ClientesPage() {
                   {/* Telefone / WhatsApp */}
                   <td className="py-3.5 px-4 font-mono text-xs">
                     {client.phone ? (
-                      <span className="text-[#8EB69B]">{client.phone}</span>
+                      <span className="text-evo-support">{client.phone}</span>
                     ) : (
-                      <span className="text-[#65706A] italic">Não informado</span>
+                      <span className="text-evo-disabled italic">Não informado</span>
                     )}
                   </td>
 
                   {/* LTV */}
-                  <td className="py-3.5 px-4 text-right font-mono font-semibold text-[#F1F9A1]">
+                  <td className="py-3.5 px-4 text-right font-mono font-semibold text-evo-accent">
                     R$ {client.lifetime_value.toLocaleString('pt-BR')}
                   </td>
 
@@ -256,7 +256,7 @@ export default function ClientesPage() {
                       {/* Botão Gerar Mensagem WhatsApp */}
                       <button
                         onClick={() => handleOpenMessageModal(client)}
-                        className="p-1.5 rounded-xl bg-[#10201E] hover:bg-[#163832] border border-[rgba(218,241,222,0.12)] text-[#8EB69B] hover:text-[#F1F9A1] transition-all flex items-center justify-center active:scale-95"
+                        className="p-1.5 rounded-xl bg-evo-surface hover:bg-evo-surface2 border border-evo-border text-evo-support hover:text-evo-accent transition-all flex items-center justify-center active:scale-95"
                         title="Gerar Mensagem para WhatsApp"
                       >
                         <MessageSquare className="w-3.5 h-3.5" />
@@ -264,7 +264,7 @@ export default function ClientesPage() {
 
                       {/* Botão Olho: Ficha do Cliente */}
                       <Link href={`/clientes/${client.id}`} title="Abrir Ficha do Cliente">
-                        <button className="p-1.5 rounded-xl bg-[#10201E] hover:bg-[#163832] border border-[rgba(218,241,222,0.12)] text-[#8EB69B] hover:text-[#F1F9A1] transition-all flex items-center justify-center active:scale-95">
+                        <button className="p-1.5 rounded-xl bg-evo-surface hover:bg-evo-surface2 border border-evo-border text-evo-support hover:text-evo-accent transition-all flex items-center justify-center active:scale-95">
                           <Eye className="w-3.5 h-3.5" />
                         </button>
                       </Link>
@@ -272,7 +272,7 @@ export default function ClientesPage() {
                       {/* Botão Editar */}
                       <button
                         onClick={() => handleEdit(client)}
-                        className="p-1.5 rounded-xl bg-[#10201E] hover:bg-[#163832] text-[#8EB69B] hover:text-[#E7ECE8] transition-colors"
+                        className="p-1.5 rounded-xl bg-evo-surface hover:bg-evo-surface2 text-evo-support hover:text-evo-text transition-colors"
                         title="Editar cliente"
                       >
                         <Pencil className="w-3.5 h-3.5" />
@@ -281,7 +281,7 @@ export default function ClientesPage() {
                       {/* Botão Excluir */}
                       <button
                         onClick={() => handleDelete(client.id)}
-                        className="p-1.5 rounded-xl bg-[#10201E] hover:bg-red-500/20 text-[#65706A] hover:text-red-400 transition-colors"
+                        className="p-1.5 rounded-xl bg-evo-surface hover:bg-red-500/20 text-evo-disabled hover:text-red-400 transition-colors"
                         title="Excluir cliente"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -295,7 +295,7 @@ export default function ClientesPage() {
         </div>
 
         {filteredClients.length === 0 && (
-          <div className="p-12 text-center text-xs text-[#9BA6A0]">
+          <div className="p-12 text-center text-xs text-evo-muted">
             Nenhum cliente encontrado com os critérios de busca.
           </div>
         )}
@@ -323,7 +323,7 @@ export default function ClientesPage() {
               value={cName}
               onChange={(e) => setCName(e.target.value)}
               placeholder="Ex: Dra Dulce"
-              className="w-full px-3 py-2 rounded-xl bg-[var(--evo-surface)] border border-[var(--evo-border)] text-[var(--evo-text)] focus:outline-none focus:border-[#8EB69B] text-xs"
+              className="w-full px-3 py-2 rounded-xl bg-[var(--evo-surface)] border border-[var(--evo-border)] text-[var(--evo-text)] focus:outline-none focus:border-evo-support text-xs"
             />
           </div>
           <div>
@@ -335,7 +335,7 @@ export default function ClientesPage() {
               value={cCompany}
               onChange={(e) => setCCompany(e.target.value)}
               placeholder="Ex: Dulce Guerra Advocacia"
-              className="w-full px-3 py-2 rounded-xl bg-[var(--evo-surface)] border border-[var(--evo-border)] text-[var(--evo-text)] focus:outline-none focus:border-[#8EB69B] text-xs"
+              className="w-full px-3 py-2 rounded-xl bg-[var(--evo-surface)] border border-[var(--evo-border)] text-[var(--evo-text)] focus:outline-none focus:border-evo-support text-xs"
             />
           </div>
           <div>
@@ -345,7 +345,7 @@ export default function ClientesPage() {
             <select
               value={cSegment}
               onChange={(e) => setCSegment(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl bg-[var(--evo-surface)] border border-[var(--evo-border)] text-[var(--evo-text)] focus:outline-none focus:border-[#8EB69B] text-xs appearance-none"
+              className="w-full px-3 py-2 rounded-xl bg-[var(--evo-surface)] border border-[var(--evo-border)] text-[var(--evo-text)] focus:outline-none focus:border-evo-support text-xs appearance-none"
             >
               <option value="" disabled>
                 Selecione um Nicho
@@ -368,7 +368,7 @@ export default function ClientesPage() {
                 value={cEmail}
                 onChange={(e) => setCEmail(e.target.value)}
                 placeholder="contato@empresa.com"
-                className="w-full px-3 py-2 rounded-xl bg-[var(--evo-surface)] border border-[var(--evo-border)] text-[var(--evo-text)] focus:outline-none focus:border-[#8EB69B] text-xs"
+                className="w-full px-3 py-2 rounded-xl bg-[var(--evo-surface)] border border-[var(--evo-border)] text-[var(--evo-text)] focus:outline-none focus:border-evo-support text-xs"
               />
             </div>
             <div>
@@ -380,7 +380,7 @@ export default function ClientesPage() {
                 value={cPhone}
                 onChange={(e) => setCPhone(formatPhoneNumber(e.target.value))}
                 placeholder="(11) 99999-9999"
-                className="w-full px-3 py-2 rounded-xl bg-[var(--evo-surface)] border border-[var(--evo-border)] text-[var(--evo-text)] focus:outline-none focus:border-[#8EB69B] text-xs font-mono"
+                className="w-full px-3 py-2 rounded-xl bg-[var(--evo-surface)] border border-[var(--evo-border)] text-[var(--evo-text)] focus:outline-none focus:border-evo-support text-xs font-mono"
               />
             </div>
           </div>

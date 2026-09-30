@@ -224,7 +224,7 @@ class AssistantToolsRegistry {
           permissionLevel: 'READ',
           success: true,
           message: completion.text,
-          source: [completion.provider, `Modelo: ${completion.model}`, 'Contexto EVOCRM'],
+          source: [completion.provider, `Modelo: ${completion.model}`, 'Contexto EVO PIXEL'],
           data: {
             provider: completion.provider,
             model: completion.model,

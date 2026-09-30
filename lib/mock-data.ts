@@ -315,7 +315,7 @@ export const INITIAL_MONTHLY_CLIENTS: MonthlyClient[] = [];
 
 export const INITIAL_BUSINESS_CONTEXT: BusinessContext = {
   id: 'ctx-1',
-  nome_empresa: 'EvoPixel',
+  nome_empresa: 'EVO PIXEL',
   descricao: 'Estúdio boutique de desenvolvimento de software, automação inteligente e presença digital premium.',
   servicos: [
     'Site Institucional',

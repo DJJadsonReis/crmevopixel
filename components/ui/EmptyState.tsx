@@ -20,12 +20,12 @@ export function EmptyState({
   onAction,
 }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center p-12 text-center rounded-2xl bg-[#0C1A19]/50 border border-[rgba(218,241,222,0.06)] border-dashed">
-      <div className="w-12 h-12 rounded-xl bg-[#10201E] border border-[rgba(218,241,222,0.08)] flex items-center justify-center text-[#8EB69B] mb-4">
+    <div className="flex flex-col items-center justify-center p-12 text-center rounded-2xl bg-evo-card/50 border border-evo-border border-dashed">
+      <div className="w-12 h-12 rounded-xl bg-evo-surface border border-evo-border flex items-center justify-center text-evo-support mb-4">
         <Icon className="w-5 h-5" />
       </div>
-      <h4 className="text-base font-medium text-[#E7ECE8] font-heading mb-1">{title}</h4>
-      <p className="text-xs text-[#9BA6A0] max-w-sm leading-relaxed mb-5">{description}</p>
+      <h4 className="text-base font-medium text-evo-text font-heading mb-1">{title}</h4>
+      <p className="text-xs text-evo-muted max-w-sm leading-relaxed mb-5">{description}</p>
       {actionLabel && onAction && (
         <Button variant="secondary" size="sm" onClick={onAction}>
           {actionLabel}
