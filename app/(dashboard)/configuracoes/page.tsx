@@ -45,6 +45,31 @@ export default function ConfiguracoesPage() {
 
   const [n8nWebhookUrl, setN8nWebhookUrl] = useState('https://n8n.evopixel.com.br/webhook/crm-events');
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedEvoUrl = localStorage.getItem('EVO_evolutionUrl');
+      const savedEvoKey = localStorage.getItem('EVO_evolutionApiKey');
+      const savedEvoInst = localStorage.getItem('EVO_evolutionInstance');
+      const savedN8n = localStorage.getItem('EVO_n8nWebhookUrl');
+      
+      if (savedEvoUrl) setEvolutionUrl(savedEvoUrl);
+      if (savedEvoKey) setEvolutionApiKey(savedEvoKey);
+      if (savedEvoInst) setEvolutionInstance(savedEvoInst);
+      if (savedN8n) setN8nWebhookUrl(savedN8n);
+    }
+  }, []);
+
+  const handleSaveSettings = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('EVO_evolutionUrl', evolutionUrl);
+      localStorage.setItem('EVO_evolutionApiKey', evolutionApiKey);
+      localStorage.setItem('EVO_evolutionInstance', evolutionInstance);
+      localStorage.setItem('EVO_n8nWebhookUrl', n8nWebhookUrl);
+      alert('Integrações (Evolution & n8n) salvas localmente com sucesso!');
+    }
+  };
+
+
   const handleConnectEvolution = async () => {
     if (!evolutionUrl || !evolutionApiKey || !evolutionInstance) {
       setEvoStatusMsg('Preencha URL, API Key e Instância.');
@@ -984,7 +1009,7 @@ export default function ConfiguracoesPage() {
                 variant="primary"
                 size="sm"
                 className="text-xs"
-                onClick={() => alert('Configurações salvas com sucesso!')}
+                onClick={handleSaveSettings}
               >
                 Salvar Configurações
               </Button>
