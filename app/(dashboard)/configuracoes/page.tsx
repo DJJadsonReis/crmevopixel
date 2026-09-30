@@ -36,9 +36,67 @@ import { updateClientConfig } from '@/lib/supabase/client';
 import { crmService } from '@/lib/services/crm-service';
 
 export default function ConfiguracoesPage() {
-  const [evolutionUrl, setEvolutionUrl] = useState('https://evolution.evopixel.com.br');
-  const [evolutionApiKey, setEvolutionApiKey] = useState('••••••••••••••••••••••••••••••••');
+  const [evolutionUrl, setEvolutionUrl] = useState('https://api-evolution-api.1h7ium.easypanel.host');
+  const [evolutionApiKey, setEvolutionApiKey] = useState('');
+  const [evolutionInstance, setEvolutionInstance] = useState('evocrm-prod');
+  const [evoStatus, setEvoStatus] = useState<'idle' | 'loading' | 'online' | 'offline'>('idle');
+  const [evoQrCode, setEvoQrCode] = useState<string | null>(null);
+  const [evoStatusMsg, setEvoStatusMsg] = useState('');
+
   const [n8nWebhookUrl, setN8nWebhookUrl] = useState('https://n8n.evopixel.com.br/webhook/crm-events');
+
+  const handleConnectEvolution = async () => {
+    if (!evolutionUrl || !evolutionApiKey || !evolutionInstance) {
+      setEvoStatusMsg('Preencha URL, API Key e Instância.');
+      return;
+    }
+    setEvoStatus('loading');
+    setEvoQrCode(null);
+    setEvoStatusMsg('');
+
+    try {
+      const baseUrl = evolutionUrl.replace(/\/+$/, '');
+      const headers = { 'apikey': evolutionApiKey };
+
+      // Consultar estado da conexão
+      const stateRes = await fetch(`${baseUrl}/instance/connectionState/${evolutionInstance}`, { headers });
+      if (!stateRes.ok) {
+        if (stateRes.status === 404) {
+          setEvoStatus('offline');
+          setEvoStatusMsg('Instância não encontrada. Crie-a no painel da Evolution primeiro.');
+          return;
+        }
+        throw new Error('Erro ao consultar status da instância.');
+      }
+      
+      const stateData = await stateRes.json();
+      const state = stateData?.instance?.state || stateData?.state || stateData?.instance?.stateConnection;
+
+      if (state === 'open') {
+        setEvoStatus('online');
+        setEvoStatusMsg('WhatsApp Conectado e Online!');
+        return;
+      }
+
+      // Se não estiver conectado, puxar QR Code
+      const connectRes = await fetch(`${baseUrl}/instance/connect/${evolutionInstance}`, { headers });
+      if (!connectRes.ok) throw new Error('Erro ao gerar QR Code.');
+      
+      const connectData = await connectRes.json();
+      if (connectData.base64) {
+        setEvoStatus('offline');
+        setEvoQrCode(connectData.base64);
+        setEvoStatusMsg('Leia o QR Code com seu WhatsApp para conectar.');
+      } else {
+        setEvoStatus('offline');
+        setEvoStatusMsg('Falha ao obter QR Code da API.');
+      }
+
+    } catch (err: any) {
+      setEvoStatus('offline');
+      setEvoStatusMsg(err.message || 'Erro de conexão com a Evolution API.');
+    }
+  };
 
   // Nichos State
   const [niches, setNiches] = useState(() => crmService.getNiches());
@@ -809,9 +867,21 @@ export default function ConfiguracoesPage() {
                 </span>
               </div>
             </div>
-            <span className="px-2 py-0.5 rounded text-[10px] bg-evo-surface2 text-evo-support font-mono">
-              Online
-            </span>
+            {evoStatus === 'online' && (
+              <span className="px-2 py-0.5 rounded text-[10px] bg-[#DAF1DE] text-green-900 border border-green-800/20 font-mono">
+                Conectado
+              </span>
+            )}
+            {evoStatus === 'offline' && (
+              <span className="px-2 py-0.5 rounded text-[10px] bg-red-950/20 text-red-400 border border-red-900/30 font-mono">
+                Desconectado
+              </span>
+            )}
+            {evoStatus === 'idle' && (
+              <span className="px-2 py-0.5 rounded text-[10px] bg-evo-surface2 text-evo-support font-mono">
+                Offline
+              </span>
+            )}
           </div>
 
           <div className="space-y-3 text-xs">
@@ -821,6 +891,7 @@ export default function ConfiguracoesPage() {
                 type="text"
                 value={evolutionUrl}
                 onChange={(e) => setEvolutionUrl(e.target.value)}
+                placeholder="https://api-evolution..."
                 className="w-full px-3 py-2 rounded-xl bg-[var(--evo-surface)] border border-[var(--evo-border)] text-[var(--evo-text)] focus:outline-none font-mono text-[11px]"
               />
             </div>
@@ -830,23 +901,44 @@ export default function ConfiguracoesPage() {
                 type="password"
                 value={evolutionApiKey}
                 onChange={(e) => setEvolutionApiKey(e.target.value)}
+                placeholder="Colar API Key..."
+                className="w-full px-3 py-2 rounded-xl bg-[var(--evo-surface)] border border-[var(--evo-border)] text-[var(--evo-text)] focus:outline-none font-mono text-[11px]"
+              />
+            </div>
+            <div>
+              <label className="block text-[var(--evo-muted)] mb-1 font-medium">Nome da Instância</label>
+              <input
+                type="text"
+                value={evolutionInstance}
+                onChange={(e) => setEvolutionInstance(e.target.value)}
+                placeholder="Ex: evocrm-prod"
                 className="w-full px-3 py-2 rounded-xl bg-[var(--evo-surface)] border border-[var(--evo-border)] text-[var(--evo-text)] focus:outline-none font-mono text-[11px]"
               />
             </div>
 
-            <div className="pt-2 flex items-center justify-between border-t border-[var(--evo-border)]">
-              <div className="flex items-center gap-2 text-xs text-[var(--evo-muted)]">
-                <QrCode className="w-4 h-4 text-evo-support" />
-                <span>Instância: <strong className="text-[var(--evo-text)] font-mono">evocrm-prod</strong></span>
+            <div className="pt-2 flex flex-col gap-3 border-t border-[var(--evo-border)] mt-2">
+              <div className="flex items-center justify-between mt-2">
+                <div className="flex items-center gap-2 text-[10px] text-[var(--evo-muted)] flex-1">
+                  {evoStatusMsg && <span className={evoStatus === 'online' ? 'text-evo-support' : 'text-amber-500'}>{evoStatusMsg}</span>}
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="text-xs h-7 gap-1.5"
+                  onClick={handleConnectEvolution}
+                  disabled={evoStatus === 'loading'}
+                >
+                  {evoStatus === 'loading' ? <RefreshCw className="w-3 h-3 animate-spin" /> : <QrCode className="w-3 h-3" />}
+                  Testar / Conectar
+                </Button>
               </div>
-              <Button
-                variant="secondary"
-                size="sm"
-                className="text-xs h-7"
-                onClick={() => alert('Abrindo QR Code para sincronização com o WhatsApp da EVO PIXEL...')}
-              >
-                Conectar via QR Code
-              </Button>
+
+              {evoQrCode && evoStatus === 'offline' && (
+                <div className="flex flex-col items-center justify-center p-4 bg-white rounded-xl border-2 border-evo-support/30 mt-2">
+                  <img src={evoQrCode} alt="QR Code WhatsApp" className="w-48 h-48 object-contain rounded-lg" />
+                  <p className="text-gray-500 text-[10px] mt-2 font-medium">Abra o WhatsApp e leia o QR Code</p>
+                </div>
+              )}
             </div>
           </div>
         </Card>
