@@ -307,6 +307,10 @@ export default function ConfiguracoesPage() {
                     ? 'Google Gemini Ativo'
                     : aiConfig.activeProvider === 'claude'
                     ? 'Anthropic Claude Ativo'
+                    : aiConfig.activeProvider === 'openai'
+                    ? 'OpenAI Ativo'
+                    : aiConfig.activeProvider === 'openrouter'
+                    ? 'OpenRouter Ativo'
                     : 'Modo Simulação'}
                 </Badge>
               </div>
@@ -708,10 +712,10 @@ export default function ConfiguracoesPage() {
                 className="w-full px-3 py-2 rounded-xl bg-[var(--evo-card)] border border-[var(--evo-border)] text-[var(--evo-text)] focus:outline-none text-xs"
               />
               <datalist id="openai-models">
-                <option value="gpt-4o">gpt-4o (Recomendado)</option>
-                <option value="gpt-4o-mini">gpt-4o-mini (Rápido/Barato)</option>
-                <option value="o1-preview">o1-preview (Raciocínio)</option>
-                <option value="o1-mini">o1-mini (Raciocínio Rápido)</option>
+                <option value="gpt-4o">gpt-4o (Melhor / Mais Caro)</option>
+                <option value="gpt-4o-mini">gpt-4o-mini (Rápido / Mais Barato)</option>
+                <option value="o1">o1 (Raciocínio Complexo / Caro)</option>
+                <option value="o3-mini">o3-mini (Raciocínio Rápido / Bom Custo-Benefício)</option>
               </datalist>
             </div>
 
@@ -764,11 +768,11 @@ export default function ConfiguracoesPage() {
                 className="w-full px-3 py-2 rounded-xl bg-[var(--evo-card)] border border-[var(--evo-border)] text-[var(--evo-text)] focus:outline-none text-xs"
               />
               <datalist id="openrouter-models">
-                <option value="openai/gpt-4o">openai/gpt-4o</option>
-                <option value="anthropic/claude-3-7-sonnet">anthropic/claude-3-7-sonnet</option>
-                <option value="google/gemini-pro-1.5">google/gemini-pro-1.5</option>
-                <option value="meta-llama/llama-3-70b-instruct">meta-llama/llama-3-70b-instruct</option>
-                <option value="mistralai/mixtral-8x7b-instruct">mistralai/mixtral-8x7b-instruct</option>
+                <option value="openai/gpt-4o">openai/gpt-4o (Melhor / Mais Caro)</option>
+                <option value="anthropic/claude-3-7-sonnet">anthropic/claude-3-7-sonnet (Alta Precisão / Mais Caro)</option>
+                <option value="google/gemini-2.5-flash">google/gemini-2.5-flash (Rápido / Muito Barato)</option>
+                <option value="deepseek/deepseek-r1">deepseek/deepseek-r1 (Raciocínio Forte / Baixo Custo)</option>
+                <option value="meta-llama/llama-3.3-70b-instruct">meta-llama/llama-3.3-70b-instruct (Open Source / Bom Custo-Benefício)</option>
               </datalist>
             </div>
 
