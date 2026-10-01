@@ -6,12 +6,15 @@ import { Search, Bell, Sparkles, Activity, Database } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { isSupabaseConfigured } from '@/lib/supabase/client';
 
+import { useUser } from '@/lib/hooks/useUser';
+
 interface TopbarProps {
   onOpenSearch?: () => void;
 }
 
 export function Topbar({ onOpenSearch }: TopbarProps) {
   const [configured, setConfigured] = useState(false);
+  const userProfile = useUser();
 
   useEffect(() => {
     setConfigured(isSupabaseConfigured());
@@ -31,8 +34,6 @@ export function Topbar({ onOpenSearch }: TopbarProps) {
             ⌘K
           </kbd>
         </button>
-
-
       </div>
 
       {/* Ações & Perfil */}
@@ -40,22 +41,19 @@ export function Topbar({ onOpenSearch }: TopbarProps) {
         {/* Alternador de Tema Dark / Claro */}
         <ThemeToggle />
 
-
-
         <div className="h-4 w-[1px] bg-[var(--evo-border)] mx-1" />
 
-
-        {/* Identificação Oliveira / EVO PIXEL */}
+        {/* Identificação do Usuário Logado */}
         <div className="flex items-center gap-2.5 pl-1">
-          <div className="w-8 h-8 rounded-xl bg-evo-surface border border-evo-border flex items-center justify-center text-xs font-semibold text-evo-accent font-heading shadow-inner">
-            OL
+          <div className="w-8 h-8 rounded-xl bg-evo-accent/15 border border-evo-accent/30 flex items-center justify-center text-xs font-semibold text-evo-accent font-heading shadow-inner">
+            {userProfile.initials}
           </div>
           <div className="hidden sm:flex flex-col">
             <span className="text-xs font-medium text-evo-text font-heading leading-tight">
-              Oliveira
+              {userProfile.name}
             </span>
             <span className="text-[10px] text-evo-disabled leading-tight">
-              EVO PIXEL Commercial
+              {userProfile.role}
             </span>
           </div>
         </div>

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { X, RefreshCw, Copy, Check, ExternalLink } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon';
 import { openWhatsApp, cleanPhoneNumber } from '@/lib/utils/whatsapp';
+import { useUser } from '@/lib/hooks/useUser';
 
 export interface TargetEntity {
   id?: string;
@@ -30,6 +31,8 @@ export function GenerateMessageModal({
   onClose,
   target,
 }: GenerateMessageModalProps) {
+  const userProfile = useUser();
+  const senderName = userProfile.firstName || 'Rafael';
   const [message, setMessage] = useState('');
   const [variationIndex, setVariationIndex] = useState(0);
   const [copied, setCopied] = useState(false);
@@ -46,16 +49,16 @@ export function GenerateMessageModal({
 
     return [
       // Variação 1: Presença Digital, Site Profissional & Google (Idêntica ao estilo do Anexo 1)
-      `Olá! Tudo bem? 😊\n\nMe chamo Oliveira e encontrei a *${company}* em ${city} durante uma pesquisa de mercado.\n\nNotei que a *${company}* ainda não possui um site próprio oficial. Hoje, ter um site profissional e bem posicionado é essencial para atrair novos clientes qualificados e transmitir credibilidade imediata.\n\nPosso ajudar a criar um site moderno, rápido e otimizado para o Google para destacar a *${company}* no topo da sua região.\n\nVocê teria 5 minutinhos essa semana para conversarmos sobre como atrair mais clientes?`,
+      `Olá! Tudo bem? 😊\n\nMe chamo ${senderName} e encontrei a *${company}* em ${city} durante uma pesquisa de mercado.\n\nNotei que a *${company}* ainda não possui um site próprio oficial. Hoje, ter um site profissional e bem posicionado é essencial para atrair novos clientes qualificados e transmitir credibilidade imediata.\n\nPosso ajudar a criar um site moderno, rápido e otimizado para o Google para destacar a *${company}* no topo da sua região.\n\nVocê teria 5 minutinhos essa semana para conversarmos sobre como atrair mais clientes?`,
 
       // Variação 2: Automação no WhatsApp & Velocidade de Resposta (n8n/IA)
-      `Olá${contact ? ` ${contact}` : ''}! Tudo bem? 😊\n\nAqui é o Oliveira da EVO PIXEL. Vi a atuação de destaque da *${company}* no nicho de ${niche}.\n\nA maioria das empresas em ${city} perde até 40% das oportunidades por demorar para responder orçamentos no WhatsApp ou não ter uma triagem automática 24 horas.\n\nDesenvolvemos automações inteligentes e chatbots comerciais no WhatsApp que qualificam o lead na hora e já direcionam pronto para fechar.\n\nFaria sentido conversarmos 5 minutos esta semana para ver como aplicar isso na *${company}*?`,
+      `Olá${contact ? ` ${contact}` : ''}! Tudo bem? 😊\n\nAqui é o ${senderName} da EVO PIXEL. Vi a atuação de destaque da *${company}* no nicho de ${niche}.\n\nA maioria das empresas em ${city} perde até 40% das oportunidades por demorar para responder orçamentos no WhatsApp ou não ter uma triagem automática 24 horas.\n\nDesenvolvemos automações inteligentes e chatbots comerciais no WhatsApp que qualificam o lead na hora e já direcionam pronto para fechar.\n\nFaria sentido conversarmos 5 minutos esta semana para ver como aplicar isso na *${company}*?`,
 
       // Variação 3: Reputação, Google Meu Negócio & Avaliações
       `Olá${contact ? ` ${contact}` : ''}! Tudo bem? 😊\n\nEstava analisando empresas referências em ${niche} em ${city} e notei a presença da *${company}*.\n\nPercebi que a empresa tem potencial enorme para multiplicar contatos diários otimizando o perfil do Google e integrando com um fluxo direto de agendamento no WhatsApp.\n\nAjudamos empresas a estruturarem sua captação digital com ${service}.\n\nQual o melhor dia para trocarmos uma ideia rápida de 5 minutinhos?`,
 
       // Variação 4: Abordagem Direta & Consultiva
-      `Olá${contact ? ` ${contact}` : ''}, bom dia! Tudo bem?\n\nSou o Oliveira, especialista em tecnologia e captação digital na EVO PIXEL.\n\nIdentifiquei oportunidades práticas para a *${company}* aumentar o volume de clientes e profissionalizar seu atendimento comercial online.\n\nPreparei um diagnóstico breve e gostaria de compartilhar com você sem compromisso.\n\nVocê teria disponibilidade para um alinhamento rápido de 5 minutos esta semana?`
+      `Olá${contact ? ` ${contact}` : ''}, bom dia! Tudo bem?\n\nSou o ${senderName}, especialista em tecnologia e captação digital na EVO PIXEL.\n\nIdentifiquei oportunidades práticas para a *${company}* aumentar o volume de clientes e profissionalizar seu atendimento comercial online.\n\nPreparei um diagnóstico breve e gostaria de compartilhar com você sem compromisso.\n\nVocê teria disponibilidade para um alinhamento rápido de 5 minutos esta semana?`
     ];
   };
 

@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { aiProvider, AIProviderConfig } from '@/lib/ai/ai-provider';
 import { updateClientConfig } from '@/lib/supabase/client';
+import { createClient } from '@/utils/supabase/client';
 import { crmService } from '@/lib/services/crm-service';
 
 export default function ConfiguracoesPage() {
@@ -42,10 +43,49 @@ export default function ConfiguracoesPage() {
   const [evoStatus, setEvoStatus] = useState<'idle' | 'loading' | 'online' | 'offline'>('idle');
   const [evoQrCode, setEvoQrCode] = useState<string | null>(null);
   const [evoStatusMsg, setEvoStatusMsg] = useState('');
+  const [isSavingEvo, setIsSavingEvo] = useState(false);
+  const [evoSaveSuccess, setEvoSaveSuccess] = useState(false);
 
   const [n8nWebhookUrl, setN8nWebhookUrl] = useState('https://n8n.evopixel.com.br/webhook/crm-events');
 
+  // Salvar credenciais no localStorage E no banco Supabase
+  const saveEvolutionSettings = async (urlVal?: string, keyVal?: string, instVal?: string) => {
+    const finalUrl = urlVal !== undefined ? urlVal : evolutionUrl;
+    const finalKey = keyVal !== undefined ? keyVal : evolutionApiKey;
+    const finalInst = instVal !== undefined ? instVal : evolutionInstance;
+
+    setIsSavingEvo(true);
+
+    // 1. Salvar no localStorage para acesso imediato offline
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('EVO_evolutionUrl', finalUrl);
+      localStorage.setItem('EVO_evolutionApiKey', finalKey);
+      localStorage.setItem('EVO_evolutionInstance', finalInst);
+    }
+
+    // 2. Salvar no banco Supabase (tabela system_settings)
+    try {
+      const supabase = createClient();
+      await supabase.from('system_settings').upsert({
+        id: 'default',
+        evolution_url: finalUrl,
+        evolution_api_key: finalKey,
+        evolution_instance: finalInst,
+        updated_at: new Date().toISOString()
+      });
+    } catch (err) {
+      console.warn('Erro ao sincronizar com Supabase:', err);
+    }
+
+    setIsSavingEvo(false);
+    setEvoSaveSuccess(true);
+    setTimeout(() => setEvoSaveSuccess(false), 4000);
+  };
+
   useEffect(() => {
+    let mounted = true;
+
+    // 1. Carrega imediatamente do localStorage
     if (typeof window !== 'undefined') {
       const savedEvoUrl = localStorage.getItem('EVO_evolutionUrl');
       const savedEvoKey = localStorage.getItem('EVO_evolutionApiKey');
@@ -57,18 +97,55 @@ export default function ConfiguracoesPage() {
       if (savedEvoInst) setEvolutionInstance(savedEvoInst);
       if (savedN8n) setN8nWebhookUrl(savedN8n);
     }
+
+    // 2. Sincroniza do banco de dados Supabase
+    async function loadFromSupabase() {
+      try {
+        const supabase = createClient();
+        const { data } = await supabase.from('system_settings').select('*').eq('id', 'default').maybeSingle();
+        if (data && mounted) {
+          if (data.evolution_url) {
+            setEvolutionUrl(data.evolution_url);
+            localStorage.setItem('EVO_evolutionUrl', data.evolution_url);
+          }
+          if (data.evolution_api_key) {
+            setEvolutionApiKey(data.evolution_api_key);
+            localStorage.setItem('EVO_evolutionApiKey', data.evolution_api_key);
+          }
+          if (data.evolution_instance) {
+            setEvolutionInstance(data.evolution_instance);
+            localStorage.setItem('EVO_evolutionInstance', data.evolution_instance);
+          }
+          if (data.n8n_webhook_url) {
+            setN8nWebhookUrl(data.n8n_webhook_url);
+            localStorage.setItem('EVO_n8nWebhookUrl', data.n8n_webhook_url);
+          }
+        }
+      } catch (e) {}
+    }
+
+    loadFromSupabase();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  const handleSaveSettings = () => {
+  const handleSaveSettings = async () => {
+    await saveEvolutionSettings();
     if (typeof window !== 'undefined') {
-      localStorage.setItem('EVO_evolutionUrl', evolutionUrl);
-      localStorage.setItem('EVO_evolutionApiKey', evolutionApiKey);
-      localStorage.setItem('EVO_evolutionInstance', evolutionInstance);
       localStorage.setItem('EVO_n8nWebhookUrl', n8nWebhookUrl);
-      alert('Integrações (Evolution & n8n) salvas localmente com sucesso!');
     }
+    try {
+      const supabase = createClient();
+      await supabase.from('system_settings').upsert({
+        id: 'default',
+        n8n_webhook_url: n8nWebhookUrl,
+        updated_at: new Date().toISOString()
+      });
+    } catch (e) {}
+    alert('Configurações salvas com sucesso no banco e localmente!');
   };
-
 
   const handleConnectEvolution = async () => {
     if (!evolutionUrl || !evolutionApiKey || !evolutionInstance) {
@@ -99,7 +176,9 @@ export default function ConfiguracoesPage() {
 
       if (state === 'open') {
         setEvoStatus('online');
-        setEvoStatusMsg('WhatsApp Conectado e Online!');
+        setEvoStatusMsg('WhatsApp Conectado e Salvo com Sucesso!');
+        // AUTO-SAVE IMEDIATO DAS CREDENCIAIS NO BANCO E LOCALSTORAGE!
+        await saveEvolutionSettings(evolutionUrl, evolutionApiKey, evolutionInstance);
         return;
       }
 
@@ -112,6 +191,8 @@ export default function ConfiguracoesPage() {
         setEvoStatus('offline');
         setEvoQrCode(connectData.base64);
         setEvoStatusMsg('Leia o QR Code com seu WhatsApp para conectar.');
+        // Salva as credenciais mesmo offline para não perder a instância digitada
+        await saveEvolutionSettings(evolutionUrl, evolutionApiKey, evolutionInstance);
       } else {
         setEvoStatus('offline');
         setEvoStatusMsg('Falha ao obter QR Code da API.');
@@ -946,16 +1027,28 @@ export default function ConfiguracoesPage() {
                 <div className="flex items-center gap-2 text-[10px] text-[var(--evo-muted)] flex-1">
                   {evoStatusMsg && <span className={evoStatus === 'online' ? 'text-evo-support' : 'text-amber-500'}>{evoStatusMsg}</span>}
                 </div>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="text-xs h-7 gap-1.5"
-                  onClick={handleConnectEvolution}
-                  disabled={evoStatus === 'loading'}
-                >
-                  {evoStatus === 'loading' ? <RefreshCw className="w-3 h-3 animate-spin" /> : <QrCode className="w-3 h-3" />}
-                  Testar / Conectar
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="text-xs h-8 gap-1.5"
+                    onClick={handleConnectEvolution}
+                    disabled={evoStatus === 'loading'}
+                  >
+                    {evoStatus === 'loading' ? <RefreshCw className="w-3 h-3 animate-spin" /> : <QrCode className="w-3 h-3" />}
+                    Testar / Conectar
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    className="text-xs h-8 gap-1.5 bg-evo-accent text-black font-semibold hover:bg-evo-accent/90"
+                    onClick={() => saveEvolutionSettings()}
+                    disabled={isSavingEvo}
+                  >
+                    {evoSaveSuccess ? <Check className="w-3.5 h-3.5" /> : <Save className="w-3.5 h-3.5" />}
+                    {evoSaveSuccess ? 'Salvo!' : 'Salvar Conexão'}
+                  </Button>
+                </div>
               </div>
 
               {evoQrCode && evoStatus === 'offline' && (

@@ -27,8 +27,11 @@ import {
   CalendarCheck,
 } from 'lucide-react';
 
+import { useUser } from '@/lib/hooks/useUser';
+
 export default function DashboardPage() {
   useCrmSync();
+  const userProfile = useUser();
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('30d');
   const metrics = metricsService.getMetrics(selectedPeriod);
 
@@ -53,7 +56,7 @@ export default function DashboardPage() {
             Visão Geral & Inteligência da EVO PIXEL
           </div>
           <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-evo-text font-heading">
-            Olá, Oliveira.
+            Olá, {userProfile.firstName}.
           </h1>
           <p className="text-xs text-evo-muted mt-1 max-w-xl">
             Acompanhe a inteligência comercial, metas do ciclo, faturamento acumulado e as ações que exigem atenção imediata.
