@@ -40,19 +40,37 @@ export default function ConfiguracoesPage() {
   const [evolutionUrl, setEvolutionUrl] = useState('https://api-evolution-api.1h7ium.easypanel.host');
   const [evolutionApiKey, setEvolutionApiKey] = useState('');
   const [evolutionInstance, setEvolutionInstance] = useState('evocrm-prod');
-  const [evoStatus, setEvoStatus] = useState<'idle' | 'loading' | 'online' | 'offline'>('idle');
+  const [evoStatus, setEvoStatus] = useState<'idle' | 'loading' | 'online' | 'offline'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('EVO_evolutionStatus');
+      if (saved === 'online' || saved === 'offline') return saved as any;
+    }
+    return 'idle';
+  });
   const [evoQrCode, setEvoQrCode] = useState<string | null>(null);
-  const [evoStatusMsg, setEvoStatusMsg] = useState('');
+  const [evoStatusMsg, setEvoStatusMsg] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('EVO_evolutionStatus');
+      if (saved === 'online') return 'WhatsApp Conectado e Ativo.';
+    }
+    return '';
+  });
   const [isSavingEvo, setIsSavingEvo] = useState(false);
   const [evoSaveSuccess, setEvoSaveSuccess] = useState(false);
 
   const [n8nWebhookUrl, setN8nWebhookUrl] = useState('https://n8n.evopixel.com.br/webhook/crm-events');
 
   // Salvar credenciais no localStorage E no banco Supabase
-  const saveEvolutionSettings = async (urlVal?: string, keyVal?: string, instVal?: string) => {
+  const saveEvolutionSettings = async (
+    urlVal?: string,
+    keyVal?: string,
+    instVal?: string,
+    statusVal?: 'online' | 'offline'
+  ) => {
     const finalUrl = urlVal !== undefined ? urlVal : evolutionUrl;
     const finalKey = keyVal !== undefined ? keyVal : evolutionApiKey;
     const finalInst = instVal !== undefined ? instVal : evolutionInstance;
+    const finalStatus = statusVal !== undefined ? statusVal : evoStatus;
 
     setIsSavingEvo(true);
 
@@ -61,6 +79,9 @@ export default function ConfiguracoesPage() {
       localStorage.setItem('EVO_evolutionUrl', finalUrl);
       localStorage.setItem('EVO_evolutionApiKey', finalKey);
       localStorage.setItem('EVO_evolutionInstance', finalInst);
+      if (finalStatus === 'online' || finalStatus === 'offline') {
+        localStorage.setItem('EVO_evolutionStatus', finalStatus);
+      }
     }
 
     // 2. Salvar no banco Supabase (tabela system_settings)
@@ -71,7 +92,7 @@ export default function ConfiguracoesPage() {
         evolution_url: finalUrl,
         evolution_api_key: finalKey,
         evolution_instance: finalInst,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       });
     } catch (err) {
       console.warn('Erro ao sincronizar com Supabase:', err);
@@ -85,35 +106,47 @@ export default function ConfiguracoesPage() {
   useEffect(() => {
     let mounted = true;
 
-    // 1. Carrega imediatamente do localStorage
-    if (typeof window !== 'undefined') {
-      const savedEvoUrl = localStorage.getItem('EVO_evolutionUrl');
-      const savedEvoKey = localStorage.getItem('EVO_evolutionApiKey');
-      const savedEvoInst = localStorage.getItem('EVO_evolutionInstance');
-      const savedN8n = localStorage.getItem('EVO_n8nWebhookUrl');
-      
-      if (savedEvoUrl) setEvolutionUrl(savedEvoUrl);
-      if (savedEvoKey) setEvolutionApiKey(savedEvoKey);
-      if (savedEvoInst) setEvolutionInstance(savedEvoInst);
-      if (savedN8n) setN8nWebhookUrl(savedN8n);
-    }
+    async function loadDataAndVerify() {
+      let finalUrl = evolutionUrl;
+      let finalKey = evolutionApiKey;
+      let finalInst = evolutionInstance;
 
-    // 2. Sincroniza do banco de dados Supabase
-    async function loadFromSupabase() {
+      // 1. Carrega imediatamente do localStorage
+      if (typeof window !== 'undefined') {
+        const savedEvoUrl = localStorage.getItem('EVO_evolutionUrl');
+        const savedEvoKey = localStorage.getItem('EVO_evolutionApiKey');
+        const savedEvoInst = localStorage.getItem('EVO_evolutionInstance');
+        const savedN8n = localStorage.getItem('EVO_n8nWebhookUrl');
+        const savedStatus = localStorage.getItem('EVO_evolutionStatus');
+
+        if (savedEvoUrl) { setEvolutionUrl(savedEvoUrl); finalUrl = savedEvoUrl; }
+        if (savedEvoKey) { setEvolutionApiKey(savedEvoKey); finalKey = savedEvoKey; }
+        if (savedEvoInst) { setEvolutionInstance(savedEvoInst); finalInst = savedEvoInst; }
+        if (savedN8n) setN8nWebhookUrl(savedN8n);
+        if (savedStatus === 'online') {
+          setEvoStatus('online');
+          setEvoStatusMsg('WhatsApp Conectado e Ativo.');
+        }
+      }
+
+      // 2. Sincroniza do banco de dados Supabase
       try {
         const supabase = createClient();
         const { data } = await supabase.from('system_settings').select('*').eq('id', 'default').maybeSingle();
         if (data && mounted) {
           if (data.evolution_url) {
             setEvolutionUrl(data.evolution_url);
+            finalUrl = data.evolution_url;
             localStorage.setItem('EVO_evolutionUrl', data.evolution_url);
           }
           if (data.evolution_api_key) {
             setEvolutionApiKey(data.evolution_api_key);
+            finalKey = data.evolution_api_key;
             localStorage.setItem('EVO_evolutionApiKey', data.evolution_api_key);
           }
           if (data.evolution_instance) {
             setEvolutionInstance(data.evolution_instance);
+            finalInst = data.evolution_instance;
             localStorage.setItem('EVO_evolutionInstance', data.evolution_instance);
           }
           if (data.n8n_webhook_url) {
@@ -122,9 +155,34 @@ export default function ConfiguracoesPage() {
           }
         }
       } catch (e) {}
+
+      // 3. Validação em background da conexão real com Evolution API
+      if (finalUrl && finalKey && finalInst && mounted) {
+        try {
+          const baseUrl = finalUrl.replace(/\/+$/, '');
+          const stateRes = await fetch(`${baseUrl}/instance/connectionState/${finalInst}`, {
+            headers: { apikey: finalKey },
+          });
+          if (stateRes.ok && mounted) {
+            const stateData = await stateRes.json();
+            const state = stateData?.instance?.state || stateData?.state || stateData?.instance?.stateConnection;
+            if (state === 'open') {
+              setEvoStatus('online');
+              setEvoStatusMsg('WhatsApp Conectado e Ativo.');
+              if (typeof window !== 'undefined') localStorage.setItem('EVO_evolutionStatus', 'online');
+            } else {
+              setEvoStatus('offline');
+              setEvoStatusMsg(`Instância desconectada (${state || 'offline'}).`);
+              if (typeof window !== 'undefined') localStorage.setItem('EVO_evolutionStatus', 'offline');
+            }
+          }
+        } catch (e) {
+          // Ignora silenciosamente se for falha transitória de rede
+        }
+      }
     }
 
-    loadFromSupabase();
+    loadDataAndVerify();
 
     return () => {
       mounted = false;
@@ -176,9 +234,10 @@ export default function ConfiguracoesPage() {
 
       if (state === 'open') {
         setEvoStatus('online');
-        setEvoStatusMsg('WhatsApp Conectado e Salvo com Sucesso!');
-        // AUTO-SAVE IMEDIATO DAS CREDENCIAIS NO BANCO E LOCALSTORAGE!
-        await saveEvolutionSettings(evolutionUrl, evolutionApiKey, evolutionInstance);
+        setEvoQrCode(null);
+        setEvoStatusMsg('WhatsApp Conectado e Ativo! Instância pronta para envios.');
+        if (typeof window !== 'undefined') localStorage.setItem('EVO_evolutionStatus', 'online');
+        await saveEvolutionSettings(evolutionUrl, evolutionApiKey, evolutionInstance, 'online');
         return;
       }
 
@@ -191,16 +250,18 @@ export default function ConfiguracoesPage() {
         setEvoStatus('offline');
         setEvoQrCode(connectData.base64);
         setEvoStatusMsg('Leia o QR Code com seu WhatsApp para conectar.');
-        // Salva as credenciais mesmo offline para não perder a instância digitada
-        await saveEvolutionSettings(evolutionUrl, evolutionApiKey, evolutionInstance);
+        if (typeof window !== 'undefined') localStorage.setItem('EVO_evolutionStatus', 'offline');
+        await saveEvolutionSettings(evolutionUrl, evolutionApiKey, evolutionInstance, 'offline');
       } else {
         setEvoStatus('offline');
         setEvoStatusMsg('Falha ao obter QR Code da API.');
+        if (typeof window !== 'undefined') localStorage.setItem('EVO_evolutionStatus', 'offline');
       }
 
     } catch (err: any) {
       setEvoStatus('offline');
       setEvoStatusMsg(err.message || 'Erro de conexão com a Evolution API.');
+      if (typeof window !== 'undefined') localStorage.setItem('EVO_evolutionStatus', 'offline');
     }
   };
 
@@ -974,18 +1035,26 @@ export default function ConfiguracoesPage() {
               </div>
             </div>
             {evoStatus === 'online' && (
-              <span className="px-2 py-0.5 rounded text-[10px] bg-[#DAF1DE] text-green-900 border border-green-800/20 font-mono">
-                Conectado
+              <span className="px-2.5 py-1 rounded-full text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-mono font-medium flex items-center gap-1.5 shadow-sm">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Ativo / Conectado
               </span>
             )}
             {evoStatus === 'offline' && (
-              <span className="px-2 py-0.5 rounded text-[10px] bg-red-950/20 text-red-400 border border-red-900/30 font-mono">
+              <span className="px-2.5 py-1 rounded-full text-[10px] bg-red-500/15 text-red-400 border border-red-500/30 font-mono font-medium flex items-center gap-1.5 shadow-sm">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
                 Desconectado
               </span>
             )}
+            {evoStatus === 'loading' && (
+              <span className="px-2.5 py-1 rounded-full text-[10px] bg-amber-500/15 text-amber-400 border border-amber-500/30 font-mono font-medium flex items-center gap-1.5">
+                <RefreshCw className="w-2.5 h-2.5 animate-spin" />
+                Verificando...
+              </span>
+            )}
             {evoStatus === 'idle' && (
-              <span className="px-2 py-0.5 rounded text-[10px] bg-evo-surface2 text-evo-support font-mono">
-                Offline
+              <span className="px-2.5 py-1 rounded-full text-[10px] bg-evo-surface2 text-evo-support font-mono">
+                Aguardando Teste
               </span>
             )}
           </div>

@@ -11,9 +11,43 @@ export interface UserProfile {
   role: string;
 }
 
+const DEFAULT_PROFILE: UserProfile = {
+  name: 'Rafael',
+  firstName: 'Rafael',
+  email: '',
+  initials: 'RC',
+  role: 'EVO PIXEL Gestão',
+};
+
+function formatUserProfile(user: any, dbFullName?: string, dbRole?: string): UserProfile {
+  const fullName = dbFullName || user.user_metadata?.full_name || user.user_metadata?.name;
+  const rawName = fullName || user.email?.split('@')[0] || 'Usuário';
+  const nameParts = rawName.trim().split(/\s+/);
+  const firstName = nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1).toLowerCase();
+
+  let initials = 'EV';
+  if (nameParts.length > 1) {
+    initials = (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase();
+  } else if (rawName.length >= 2) {
+    initials = rawName.slice(0, 2).toUpperCase();
+  }
+
+  const role =
+    user.user_metadata?.role === 'admin' || dbRole === 'admin'
+      ? 'Administrador EVO PIXEL'
+      : 'EVO PIXEL Gestão';
+
+  return {
+    name: rawName,
+    firstName,
+    email: user.email || '',
+    initials,
+    role,
+  };
+}
+
 export function useUser() {
   const [profile, setProfile] = useState<UserProfile>(() => {
-    // Tenta carregar do localStorage imediatamente para evitar flash
     if (typeof window !== 'undefined') {
       const cached = localStorage.getItem('evo_user_profile');
       if (cached) {
@@ -22,76 +56,73 @@ export function useUser() {
         } catch (e) {}
       }
     }
-    return {
-      name: 'Rafael',
-      firstName: 'Rafael',
-      email: '',
-      initials: 'RC',
-      role: 'EVO PIXEL Gestão',
-    };
+    return DEFAULT_PROFILE;
   });
 
   useEffect(() => {
     let mounted = true;
+    const supabase = createClient();
 
-    async function loadUserData() {
+    async function applyUser(user: any) {
+      if (!user) return;
       try {
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
+        let dbFullName: string | undefined;
+        let dbRole: string | undefined;
 
-        if (user) {
-          let fullName = user.user_metadata?.full_name || user.user_metadata?.name;
+        if (!user.user_metadata?.full_name) {
+          const { data: dbUser } = await supabase
+            .from('users')
+            .select('full_name, role')
+            .eq('id', user.id)
+            .maybeSingle();
 
-          // Se não encontrou no metadata, tenta buscar na tabela public.users
-          if (!fullName) {
-            const { data: dbUser } = await supabase
-              .from('users')
-              .select('full_name, role')
-              .eq('id', user.id)
-              .maybeSingle();
+          if (dbUser) {
+            dbFullName = dbUser.full_name;
+            dbRole = dbUser.role;
+          }
+        }
 
-            if (dbUser?.full_name) {
-              fullName = dbUser.full_name;
+        const newProfile = formatUserProfile(user, dbFullName, dbRole);
+
+        if (mounted) {
+          setProfile((prev) => {
+            if (
+              prev.name === newProfile.name &&
+              prev.email === newProfile.email &&
+              prev.role === newProfile.role &&
+              prev.initials === newProfile.initials
+            ) {
+              return prev; // Evita re-render se os dados forem idênticos
             }
-          }
-
-          const rawName = fullName || user.email?.split('@')[0] || 'Usuário';
-          const nameParts = rawName.trim().split(/\s+/);
-          const firstName = nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1).toLowerCase();
-          
-          let initials = 'EV';
-          if (nameParts.length > 1) {
-            initials = (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase();
-          } else if (rawName.length >= 2) {
-            initials = rawName.slice(0, 2).toUpperCase();
-          }
-
-          const newProfile: UserProfile = {
-            name: rawName,
-            firstName,
-            email: user.email || '',
-            initials,
-            role: user.user_metadata?.role === 'admin' ? 'Administrador EVO PIXEL' : 'EVO PIXEL Gestão',
-          };
-
-          if (mounted) {
-            setProfile(newProfile);
             if (typeof window !== 'undefined') {
               localStorage.setItem('evo_user_profile', JSON.stringify(newProfile));
             }
-          }
+            return newProfile;
+          });
         }
       } catch (err) {
-        // Ignora silenciosamente se o Supabase não estiver acessível
+        // Ignora silenciosamente
       }
     }
 
-    loadUserData();
+    // 1. Carrega imediatamente da sessão existente (sem fazer network request extra)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user && mounted) {
+        applyUser(session.user);
+      }
+    });
 
-    // Listener para atualizações na sessão
-    const supabase = createClient();
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      loadUserData();
+    // 2. Escuta mudanças na autenticação passando o session.user diretamente (zero loops)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted) return;
+      if (event === 'SIGNED_OUT') {
+        setProfile(DEFAULT_PROFILE);
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('evo_user_profile');
+        }
+      } else if (session?.user) {
+        applyUser(session.user);
+      }
     });
 
     return () => {

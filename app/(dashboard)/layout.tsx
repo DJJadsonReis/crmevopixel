@@ -18,37 +18,30 @@ export default function DashboardLayout({
 
   useEffect(() => {
     let mounted = true;
+    const supabase = createClient();
 
-    async function checkAuth() {
-      try {
-        const supabase = createClient();
-        const { data } = await supabase.auth.getSession();
-
-        if (mounted) {
-          setSession(data.session);
-          setLoading(false);
-        }
-
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
-          if (mounted) {
-            setSession(currentSession);
-            setLoading(false);
-          }
-        });
-
-        return () => {
-          subscription.unsubscribe();
-        };
-      } catch (err) {
-        // Se houver erro de inicialização do Supabase, permite a visualização
-        if (mounted) setLoading(false);
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      if (mounted) {
+        setSession(currentSession);
+        setLoading(false);
       }
-    }
+    }).catch(() => {
+      if (mounted) setLoading(false);
+    });
 
-    checkAuth();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
+      if (mounted) {
+        setSession((prevSession: any) => {
+          if (prevSession?.access_token === currentSession?.access_token) return prevSession;
+          return currentSession;
+        });
+        setLoading(false);
+      }
+    });
 
     return () => {
       mounted = false;
+      subscription?.unsubscribe();
     };
   }, []);
 

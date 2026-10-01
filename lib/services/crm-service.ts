@@ -81,6 +81,7 @@ class CrmService {
   private aiActionLogs: AIActionLog[] = [...INITIAL_AI_ACTION_LOGS];
   private aiFeedbacks: AIFeedback[] = [];
   private initializedFromSupabase = false;
+  private syncPromise: Promise<void> | null = null;
   private listeners: Set<() => void> = new Set();
 
   constructor() {
@@ -145,69 +146,77 @@ class CrmService {
 
   public async initFromSupabase(force = false): Promise<void> {
     if (this.initializedFromSupabase && !force) return;
-    try {
-      const [
-        clients,
-        monthly,
-        leads,
-        prospects,
-        opps,
-        proposals,
-        contracts,
-        projects,
-        historical,
-        tasks,
-        transactions,
-      ] = await Promise.all([
-        dbService.getClients(),
-        dbService.getMonthlyClients(),
-        dbService.getLeads(),
-        dbService.getProspects(),
-        dbService.getOpportunities(),
-        dbService.getProposals(),
-        dbService.getContracts(),
-        dbService.getProjects(),
-        dbService.getHistoricalProjects(),
-        dbService.getTasks(),
-        dbService.getTransactions(),
-      ]);
+    if (this.syncPromise && !force) return this.syncPromise;
 
-      let changed = false;
-      if (clients && clients.length > 0) { 
-        this.clients = clients; 
-        this.saveToLocalStorage('clients', this.clients);
-        changed = true; 
-      }
-      if (monthly && monthly.length > 0) { this.monthlyClients = monthly; changed = true; }
-      if (leads && leads.length > 0) { 
-        const supabaseIds = new Set(leads.map(l => l.id));
-        const localUnsynced = this.leads.filter(l => !supabaseIds.has(l.id));
-        this.leads = [...leads, ...localUnsynced];
-        this.saveToLocalStorage('leads', this.leads);
-        changed = true; 
-      } else if (this.leads.length > 0) {
-        this.leads.forEach(l => dbService.insertLead(l));
-      }
-      if (prospects && prospects.length > 0) { this.prospects = prospects; changed = true; }
-      if (opps && opps.length > 0) { 
-        this.opportunities = opps; 
-        this.saveToLocalStorage('opps', this.opportunities);
-        changed = true; 
-      }
-      if (proposals && proposals.length > 0) { this.proposals = proposals; changed = true; }
-      if (contracts && contracts.length > 0) { this.contracts = contracts; changed = true; }
-      if (projects && projects.length > 0) { this.projects = projects; changed = true; }
-      if (historical && historical.length > 0) { this.historicalProjects = historical; changed = true; }
-      if (tasks && tasks.length > 0) { this.tasks = tasks; changed = true; }
-      if (transactions && transactions.length > 0) { this.transactions = transactions; changed = true; }
+    this.syncPromise = (async () => {
+      try {
+        const [
+          clients,
+          monthly,
+          leads,
+          prospects,
+          opps,
+          proposals,
+          contracts,
+          projects,
+          historical,
+          tasks,
+          transactions,
+        ] = await Promise.all([
+          dbService.getClients(),
+          dbService.getMonthlyClients(),
+          dbService.getLeads(),
+          dbService.getProspects(),
+          dbService.getOpportunities(),
+          dbService.getProposals(),
+          dbService.getContracts(),
+          dbService.getProjects(),
+          dbService.getHistoricalProjects(),
+          dbService.getTasks(),
+          dbService.getTransactions(),
+        ]);
 
-      this.initializedFromSupabase = true;
-      if (changed) {
-        this.notify();
+        let changed = false;
+        if (clients && clients.length > 0) { 
+          this.clients = clients; 
+          this.saveToLocalStorage('clients', this.clients);
+          changed = true; 
+        }
+        if (monthly && monthly.length > 0) { this.monthlyClients = monthly; changed = true; }
+        if (leads && leads.length > 0) { 
+          const supabaseIds = new Set(leads.map(l => l.id));
+          const localUnsynced = this.leads.filter(l => !supabaseIds.has(l.id));
+          this.leads = [...leads, ...localUnsynced];
+          this.saveToLocalStorage('leads', this.leads);
+          changed = true; 
+        } else if (this.leads.length > 0) {
+          this.leads.forEach(l => dbService.insertLead(l));
+        }
+        if (prospects && prospects.length > 0) { this.prospects = prospects; changed = true; }
+        if (opps && opps.length > 0) { 
+          this.opportunities = opps; 
+          this.saveToLocalStorage('opps', this.opportunities);
+          changed = true; 
+        }
+        if (proposals && proposals.length > 0) { this.proposals = proposals; changed = true; }
+        if (contracts && contracts.length > 0) { this.contracts = contracts; changed = true; }
+        if (projects && projects.length > 0) { this.projects = projects; changed = true; }
+        if (historical && historical.length > 0) { this.historicalProjects = historical; changed = true; }
+        if (tasks && tasks.length > 0) { this.tasks = tasks; changed = true; }
+        if (transactions && transactions.length > 0) { this.transactions = transactions; changed = true; }
+
+        this.initializedFromSupabase = true;
+        if (changed) {
+          this.notify();
+        }
+      } catch (err) {
+        console.warn('Carregamento inicial do Supabase ignorado ou sem conexão:', err);
       }
-    } catch (err) {
-      console.warn('Carregamento inicial do Supabase ignorado ou sem conexão:', err);
-    }
+    })().finally(() => {
+      this.syncPromise = null;
+    });
+
+    return this.syncPromise;
   }
 
   // Dashboard Aggregates — Cálculos Estritamente Dinâmicos

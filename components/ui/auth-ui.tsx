@@ -29,7 +29,7 @@ export function Typewriter({
   const [isDeleting, setIsDeleting] = useState(false);
   const [textArrayIndex, setTextArrayIndex] = useState(0);
 
-  const textArray = Array.isArray(text) ? text : [text];
+  const textArray = React.useMemo(() => (Array.isArray(text) ? text : [text]), [text]);
 
   useEffect(() => {
     let timeout: any;
