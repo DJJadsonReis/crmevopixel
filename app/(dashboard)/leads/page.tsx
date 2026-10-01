@@ -35,6 +35,7 @@ import { formatPhoneNumber } from '@/lib/utils';
 import { GenerateMessageModal, TargetEntity } from '@/components/modals/GenerateMessageModal';
 import { qualifyLeadWithAI } from '@/lib/ai/qualification';
 import { aiProvider } from '@/lib/ai/ai-provider';
+import { createClient } from '@/utils/supabase/client';
 
 export default function LeadsPage() {
   useCrmSync();
@@ -111,6 +112,32 @@ export default function LeadsPage() {
       if (savedBL) setBrowserlessToken(savedBL);
       const savedBLEndpoint = localStorage.getItem('EVO_browserlessEndpoint');
       if (savedBLEndpoint) setBrowserlessEndpoint(savedBLEndpoint);
+
+      (async () => {
+        try {
+          const supabase = createClient();
+          const { data } = await supabase
+            .from('system_settings')
+            .select('apify_token, browserless_token, browserless_endpoint')
+            .eq('id', 'default')
+            .maybeSingle();
+
+          if (data) {
+            if (data.apify_token) {
+              setApifyToken(data.apify_token);
+              localStorage.setItem('EVO_apifyToken', data.apify_token);
+            }
+            if (data.browserless_token) {
+              setBrowserlessToken(data.browserless_token);
+              localStorage.setItem('EVO_browserlessToken', data.browserless_token);
+            }
+            if (data.browserless_endpoint) {
+              setBrowserlessEndpoint(data.browserless_endpoint);
+              localStorage.setItem('EVO_browserlessEndpoint', data.browserless_endpoint);
+            }
+          }
+        } catch (e) {}
+      })();
     }
     return unsub;
   }, []);
@@ -205,7 +232,7 @@ export default function LeadsPage() {
             body: JSON.stringify({
               searchStringsArray: searchStrings,
               maxCrawledPlacesPerSearch: 10,
-              language: 'pt',
+              language: 'pt-BR',
               countryCode: 'br',
             }),
           }
@@ -325,31 +352,33 @@ export default function LeadsPage() {
             const query = `${browserlessNiche} em ${bairro}, ${browserlessCity}`;
             setBrowserlessExtractionLog(`Headless Chrome navegando na busca: "${query}"...`);
             
-            const targetSearchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
-            const res = await fetch(`${endpoint}/content?token=${token}`, {
+            const res = await fetch('/api/browserless/scrape', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ url: targetSearchUrl }),
+              body: JSON.stringify({
+                token,
+                endpoint,
+                query,
+              }),
             });
 
             if (res.ok) {
-              const html = await res.text();
-              const snippetRegex = /class="result__snippet"[^>]*>([^<]+)/g;
-              const titleRegex = /class="result__title"[^>]*>[\s\S]*?<a[^>]*>([^<]+)/g;
-              const titles = Array.from(html.matchAll(titleRegex)).map(m => m[1].trim());
+              const data = await res.json().catch(() => ({}));
+              const results: Array<{ title: string; snippet: string; url: string }> = data?.results || [];
 
-              if (titles.length > 0) {
-                titles.slice(0, 3).forEach((title, idx) => {
+              if (results.length > 0) {
+                results.slice(0, 3).forEach((item, idx) => {
                   const ddd = browserlessCity.toLowerCase().includes('santos') ? 13 : 11;
                   const rawPhone = `(${ddd}) 9` + Math.floor(10000000 + Math.random() * 90000000);
                   extractedLeads.push({
-                    nome: title.length > 35 ? title.slice(0, 35) : title,
-                    empresa: title,
+                    nome: item.title.length > 35 ? item.title.slice(0, 35) : item.title,
+                    empresa: item.title,
                     telefone: rawPhone,
                     email: `contato@${bairro.toLowerCase().replace(/[^a-z0-9]/g, '')}adv.com.br`,
                     cidade: browserlessCity,
                     segment: browserlessNiche,
-                    google_business: `${title} - ${bairro}`,
+                    site: item.url,
+                    google_business: `${item.title} - ${bairro}`,
                     instagram: `@${browserlessNiche.toLowerCase().replace(/[^a-z0-9]/g, '')}_${bairro.toLowerCase().replace(/[^a-z0-9]/g, '')}`,
                   });
                 });
@@ -1007,35 +1036,19 @@ export default function LeadsPage() {
             </div>
           </div>
 
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block font-mono text-evo-muted">
-                Apify API Token (Opcional)
-              </label>
-              {apifyToken ? (
-                <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
-                  ✓ Token Salvo Ativo
-                </span>
-              ) : (
-                <span className="text-[10px] text-evo-disabled font-mono">
-                  Opcional (Simulação disponível)
-                </span>
-              )}
+          <div className="flex items-center justify-between bg-evo-surface border border-evo-border rounded-xl px-3.5 py-2.5">
+            <div className="flex items-center gap-2">
+              <span className={`w-2 h-2 rounded-full ${apifyToken ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]' : 'bg-amber-400'}`}></span>
+              <span className="font-mono text-xs text-evo-text font-medium">
+                {apifyToken ? 'Integração Apify Conectada (Google Maps)' : 'Apify: Modo Simulação'}
+              </span>
             </div>
-            <input
-              type="password"
-              value={apifyToken}
-              onChange={(e) => {
-                setApifyToken(e.target.value);
-                if (typeof window !== 'undefined') localStorage.setItem('EVO_apifyToken', e.target.value);
-              }}
-              disabled={isExtracting}
-              placeholder="apify_api_... (salvo automaticamente)"
-              className="w-full bg-evo-card border border-evo-border rounded-xl px-3 py-2 text-xs text-evo-text focus:outline-none focus:border-evo-support"
-            />
-            <p className="text-[11px] text-evo-disabled mt-1">
-              O token salvo aqui permanece guardado para todas as próximas captações e sincroniza com Configurações.
-            </p>
+            <Link
+              href="/configuracoes"
+              className="text-[11px] text-evo-support hover:underline font-mono"
+            >
+              Configurações →
+            </Link>
           </div>
 
           {extractionLog && (
@@ -1123,31 +1136,19 @@ export default function LeadsPage() {
             </div>
           </div>
 
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block font-mono text-evo-muted">
-                Browserless API Token
-              </label>
-              {browserlessToken && (
-                <span className="text-[10px] text-purple-400 font-mono flex items-center gap-1">
-                  ✓ Token Ativo Configurado
-                </span>
-              )}
+          <div className="flex items-center justify-between bg-purple-950/20 border border-purple-500/20 rounded-xl px-3.5 py-2.5">
+            <div className="flex items-center gap-2">
+              <span className={`w-2 h-2 rounded-full ${browserlessToken ? 'bg-purple-400 shadow-[0_0_8px_rgba(192,132,252,0.5)]' : 'bg-amber-400'}`}></span>
+              <span className="font-mono text-xs text-purple-200 font-medium">
+                {browserlessToken ? 'Headless Chrome Cloud Conectado' : 'Token não configurado'}
+              </span>
             </div>
-            <input
-              type="password"
-              value={browserlessToken}
-              onChange={(e) => {
-                setBrowserlessToken(e.target.value);
-                if (typeof window !== 'undefined') localStorage.setItem('EVO_browserlessToken', e.target.value);
-              }}
-              disabled={isExtractingBrowserless}
-              placeholder="Token Browserless..."
-              className="w-full bg-evo-card border border-evo-border rounded-xl px-3 py-2 text-xs text-evo-text focus:outline-none focus:border-evo-support font-mono"
-            />
-            <p className="text-[11px] text-evo-disabled mt-1">
-              Conexão com a nuvem {browserlessEndpoint}. Executa instâncias Chromium dedicadas para raspagem de dados empresariais.
-            </p>
+            <Link
+              href="/configuracoes"
+              className="text-[11px] text-purple-300 hover:underline font-mono"
+            >
+              Configurações →
+            </Link>
           </div>
 
           {browserlessExtractionLog && (

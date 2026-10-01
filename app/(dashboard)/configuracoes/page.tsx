@@ -195,16 +195,20 @@ export default function ConfiguracoesPage() {
     setApifyStatusMsg('Consultando credencial na API da Apify...');
 
     try {
-      const res = await fetch(`https://api.apify.com/v2/users/me?token=${apifyToken.trim()}`);
-      if (res.ok) {
-        const data = await res.json();
-        const username = data?.data?.username || 'Apify User';
+      const res = await fetch('/api/apify/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: apifyToken.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        const username = data?.username || 'Apify User';
         setApifyStatus('online');
         setApifyStatusMsg(`Conexão estabelecida com sucesso! Usuário: ${username}`);
         await handleSaveApify(apifyToken, 'online');
       } else {
         setApifyStatus('offline');
-        setApifyStatusMsg(`Falha na autenticação (HTTP ${res.status}): Token inválido ou sem permissão.`);
+        setApifyStatusMsg(data.message || `Falha na autenticação (HTTP ${res.status}): Token inválido ou sem permissão.`);
         if (typeof window !== 'undefined') localStorage.setItem('EVO_apifyStatus', 'offline');
       }
     } catch (err: any) {
@@ -261,20 +265,24 @@ export default function ConfiguracoesPage() {
     setBrowserlessStatusMsg('Testando conexão com o Headless Chrome no endpoint...');
 
     try {
-      const baseUrl = (browserlessEndpoint || 'https://production-sfo.browserless.io').replace(/\/+$/, '');
-      const res = await fetch(`${baseUrl}/content?token=${browserlessToken.trim()}`, {
+      const res = await fetch('/api/browserless/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: 'https://example.com' }),
+        body: JSON.stringify({
+          token: browserlessToken.trim(),
+          endpoint: browserlessEndpoint.trim(),
+        }),
       });
 
-      if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && data.success) {
         setBrowserlessStatus('online');
-        setBrowserlessStatusMsg('Browserless Conectado e Operacional! Headless Chrome ativo.');
+        setBrowserlessStatusMsg(data.message || 'Browserless Conectado e Operacional! Headless Chrome ativo.');
         await handleSaveBrowserless(browserlessToken, browserlessEndpoint, 'online');
       } else {
         setBrowserlessStatus('offline');
-        setBrowserlessStatusMsg(`Falha no Browserless (HTTP ${res.status}): Verifique o token ou endpoint.`);
+        setBrowserlessStatusMsg(data.message || `Falha no Browserless (HTTP ${res.status}): Verifique o token ou endpoint.`);
         if (typeof window !== 'undefined') localStorage.setItem('EVO_browserlessStatus', 'offline');
       }
     } catch (err: any) {
