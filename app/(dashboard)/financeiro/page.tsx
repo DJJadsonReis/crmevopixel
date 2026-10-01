@@ -18,11 +18,18 @@ import {
   Plus,
   ArrowUpRight,
   Download,
+  Trash2,
 } from 'lucide-react';
 
 export default function FinanceiroPage() {
   const [transactions, setTransactions] = useState(() => crmService.getFinancialTransactions());
   const summary = crmService.getFinancialSummary();
+
+  useEffect(() => {
+    return crmService.subscribe(() => {
+      setTransactions([...crmService.getFinancialTransactions()]);
+    });
+  }, []);
 
   const [filterStatus, setFilterStatus] = useState<string>('todos');
 
@@ -33,6 +40,18 @@ export default function FinanceiroPage() {
   const [fCategory, setFCategory] = useState('');
   const [fAmount, setFAmount] = useState('');
   const [fDueDate, setFDueDate] = useState('');
+
+  const handleToggleStatus = (id: string) => {
+    crmService.toggleFinancialTransactionStatus(id);
+    setTransactions([...crmService.getFinancialTransactions()]);
+  };
+
+  const handleDeleteTx = (id: string) => {
+    if (confirm('Deseja realmente excluir este lançamento financeiro?')) {
+      crmService.deleteFinancialTransaction(id);
+      setTransactions([...crmService.getFinancialTransactions()]);
+    }
+  };
 
   const handleAddTx = () => {
     if (!fTitle || !fAmount || !fClient) {
@@ -183,7 +202,12 @@ export default function FinanceiroPage() {
             <p className="text-xs text-evo-muted max-w-sm mx-auto mt-1 mb-5">
               Suas movimentações e parcelas financeiras aparecerão aqui quando registradas.
             </p>
-            <Button variant="primary" size="sm" className="gap-1.5 text-xs mx-auto">
+            <Button 
+              variant="primary" 
+              size="sm" 
+              className="gap-1.5 text-xs mx-auto"
+              onClick={() => setIsModalOpen(true)}
+            >
               <Plus className="w-3.5 h-3.5 text-[#07100F]" />
               <span>Adicionar Primeiro Lançamento</span>
             </Button>
@@ -200,6 +224,7 @@ export default function FinanceiroPage() {
                   <th className="py-3 px-3">Recebido</th>
                   <th className="py-3 px-3">Pendente</th>
                   <th className="py-3 px-3 text-right">Status</th>
+                  <th className="py-3 px-3 text-right">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[rgba(218,241,222,0.04)]">
@@ -234,6 +259,26 @@ export default function FinanceiroPage() {
                       >
                         {item.status.replace('_', ' ')}
                       </span>
+                    </td>
+                    <td className="py-3 px-3 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleToggleStatus(item.id)}
+                          className="text-[11px] h-7 px-2 text-evo-support hover:text-evo-accent"
+                          title="Alternar entre Pago e Pendente"
+                        >
+                          {item.status === 'pago' ? 'Desmarcar' : 'Marcar Pago'}
+                        </Button>
+                        <button
+                          onClick={() => handleDeleteTx(item.id)}
+                          className="p-1.5 rounded-lg text-evo-disabled hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                          title="Excluir lançamento"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

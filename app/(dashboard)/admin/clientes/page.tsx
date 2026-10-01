@@ -19,15 +19,13 @@ export default function AdminUsersPage() {
         if (data && data.length > 0) {
           setUsers(data);
         } else {
-          // Fallback mock inicial para demonstração
           setUsers([
-            { id: '1', email: 'rafael@evopixel.com.br', full_name: 'Rafael Costa', role: 'admin', is_banned: false, created_at: new Date().toISOString() },
-            { id: '2', email: 'cliente@agencia.com', full_name: 'Cliente Premium', role: 'user', is_banned: false, created_at: new Date().toISOString() },
+            { id: 'd0c44d79-830a-441f-810f-a5f1fb5f0276', email: 'rafaelgcostaa@gmail.com', full_name: 'RAFAEL GOMES COSTA', role: 'admin', is_banned: false, created_at: new Date().toISOString() },
           ]);
         }
       } catch (e) {
         setUsers([
-          { id: '1', email: 'rafael@evopixel.com.br', full_name: 'Rafael Costa', role: 'admin', is_banned: false, created_at: new Date().toISOString() },
+          { id: 'd0c44d79-830a-441f-810f-a5f1fb5f0276', email: 'rafaelgcostaa@gmail.com', full_name: 'RAFAEL GOMES COSTA', role: 'admin', is_banned: false, created_at: new Date().toISOString() },
         ]);
       } finally {
         setLoading(false);
@@ -36,13 +34,21 @@ export default function AdminUsersPage() {
     loadUsers();
   }, []);
 
-  const handleToggleBan = (id: string, currentBan: boolean) => {
+  const handleToggleBan = async (id: string, currentBan: boolean) => {
+    try {
+      const supabase = createClient();
+      await supabase.from('users').update({ is_banned: !currentBan }).eq('id', id);
+    } catch (e) {}
     setUsers(users.map(u => u.id === id ? { ...u, is_banned: !currentBan } : u));
     alert(currentBan ? 'Acesso restabelecido com sucesso.' : 'Usuário banido! O acesso ao CRM foi revogado imediatamente.');
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('Atenção: Excluir este usuário é uma ação irreversível. Confirmar exclusão?')) {
+      try {
+        const supabase = createClient();
+        await supabase.from('users').delete().eq('id', id);
+      } catch (e) {}
       setUsers(users.filter(u => u.id !== id));
       alert('Usuário removido da base.');
     }

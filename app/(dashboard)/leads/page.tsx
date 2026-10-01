@@ -636,11 +636,9 @@ export default function LeadsPage() {
                         </button>
 
                         {/* Botão Olho: Ver Ficha do Lead */}
-                        <Link href={`/leads/${lead.id}`} title="Abrir Perfil do Lead">
-                          <button className="p-1.5 rounded-xl bg-evo-surface hover:bg-evo-surface2 border border-evo-border text-evo-support hover:text-evo-accent transition-all flex items-center justify-center active:scale-95">
+                        <Link href={`/leads/${lead.id}`} title="Abrir Perfil do Lead" className="p-1.5 rounded-xl bg-evo-surface hover:bg-evo-surface2 border border-evo-border text-evo-support hover:text-evo-accent transition-all flex items-center justify-center active:scale-95">
                             <Eye className="w-3.5 h-3.5" />
-                          </button>
-                        </Link>
+                          </Link>
 
                         {/* Botão Excluir */}
                         <button

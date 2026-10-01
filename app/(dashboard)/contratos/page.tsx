@@ -19,6 +19,7 @@ import { Modal } from '@/components/ui/Modal';
 
 export default function ContratosPage() {
   const [contracts, setContracts] = useState(() => crmService.getContracts());
+  const [selectedContract, setSelectedContract] = useState<any | null>(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [cCompany, setCCompany] = useState('');
@@ -124,13 +125,78 @@ export default function ContratosPage() {
               <span className="text-[10px] text-evo-disabled">
                 Início: {new Date(contract.start_date).toLocaleDateString('pt-BR')}
               </span>
-              <Button variant="secondary" size="sm" className="h-7 text-xs px-2.5">
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                className="h-7 text-xs px-2.5"
+                onClick={() => setSelectedContract(contract)}
+              >
                 Ver Documento
               </Button>
             </div>
           </div>
         ))}
       </div>
+
+      {/* Modal Visualizador do Contrato */}
+      <Modal
+        isOpen={!!selectedContract}
+        onClose={() => setSelectedContract(null)}
+        title={`Contrato: ${selectedContract?.code || ''}`}
+        subtitle={`Minuta de prestação de serviços para ${selectedContract?.company_name || ''}`}
+        maxWidth="lg"
+      >
+        {selectedContract && (
+          <div className="space-y-4 text-xs">
+            <div className="p-4 bg-white text-[#0A0A0A] rounded-xl border border-gray-200 font-sans space-y-3 leading-relaxed shadow-sm">
+              <div className="flex justify-between items-start border-b pb-2 border-gray-200">
+                <div>
+                  <h4 className="font-bold text-sm text-black">INSTRUMENTO PARTICULAR DE PRESTAÇÃO DE SERVIÇOS</h4>
+                  <span className="text-[10px] text-gray-500 font-mono">Código: {selectedContract.code}</span>
+                </div>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-gray-100 text-gray-800 border">
+                  Provedor: {selectedContract.signature_provider || 'Clicksign'}
+                </span>
+              </div>
+
+              <p>
+                <strong>CONTRATADA:</strong> EVO PIXEL TECNOLOGIA E PERFORMANCE EIRELI.
+              </p>
+              <p>
+                <strong>CONTRATANTE:</strong> {selectedContract.company_name}, representada por {selectedContract.client_name || selectedContract.company_name}.
+              </p>
+              <p>
+                <strong>OBJETO DO CONTRATO:</strong> {selectedContract.services_summary}.
+              </p>
+              <p>
+                <strong>VALOR TOTAL DO INSTRUMENTO:</strong> R$ {Number(selectedContract.total_amount || 0).toLocaleString('pt-BR')}.
+              </p>
+              <p className="text-[11px] text-gray-600">
+                As partes elegem os canais digitais e assinatura via {selectedContract.signature_provider || 'Clicksign'} para formalização com validade jurídica conforme MP 2.200-2/2001.
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-evo-border">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setSelectedContract(null)}
+              >
+                Fechar
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  window.print();
+                }}
+              >
+                Imprimir / PDF
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}

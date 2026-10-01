@@ -986,7 +986,34 @@ class CrmService {
       id: `fin-${Date.now()}`,
     };
     this.transactions.unshift(newTx);
+    this.saveToLocalStorage('transactions', this.transactions);
+    this.notify();
+    dbService.insertTransaction(newTx).catch(e => console.warn('Supabase sync error:', e));
     return newTx;
+  }
+
+  public toggleFinancialTransactionStatus(id: string): void {
+    const tx = this.transactions.find((t) => t.id === id);
+    if (!tx) return;
+    if (tx.status === 'pago') {
+      tx.status = 'pendente';
+      tx.amount_pending = tx.amount_contracted;
+      tx.amount_received = 0;
+    } else {
+      tx.status = 'pago';
+      tx.amount_received = tx.amount_contracted;
+      tx.amount_pending = 0;
+    }
+    this.saveToLocalStorage('transactions', this.transactions);
+    this.notify();
+    dbService.updateTransaction(id, tx).catch((e) => console.warn('Supabase sync error:', e));
+  }
+
+  public deleteFinancialTransaction(id: string): void {
+    this.transactions = this.transactions.filter((t) => t.id !== id);
+    this.saveToLocalStorage('transactions', this.transactions);
+    this.notify();
+    dbService.deleteTransaction(id).catch((e) => console.warn('Supabase sync error:', e));
   }
 
   public getFinancialSummary() {

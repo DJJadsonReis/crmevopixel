@@ -687,6 +687,28 @@ export class DatabaseService {
       return false;
     }
   }
+
+  public async updateTransaction(id: string, data: Partial<FinancialTransaction>): Promise<boolean> {
+    if (!isSupabaseConfigured()) return false;
+    try {
+      const supabase = getSupabase();
+      const { error } = await supabase.from('financial_transactions').update(data).eq('id', id);
+      return !error;
+    } catch {
+      return false;
+    }
+  }
+
+  public async deleteTransaction(id: string): Promise<boolean> {
+    if (!isSupabaseConfigured()) return false;
+    try {
+      const supabase = getSupabase();
+      const { error } = await supabase.from('financial_transactions').delete().eq('id', id);
+      return !error;
+    } catch {
+      return false;
+    }
+  }
 }
 
 export const dbService = new DatabaseService();

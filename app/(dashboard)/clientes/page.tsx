@@ -263,10 +263,8 @@ export default function ClientesPage() {
                       </button>
 
                       {/* Botão Olho: Ficha do Cliente */}
-                      <Link href={`/clientes/${client.id}`} title="Abrir Ficha do Cliente">
-                        <button className="p-1.5 rounded-xl bg-evo-surface hover:bg-evo-surface2 border border-evo-border text-evo-support hover:text-evo-accent transition-all flex items-center justify-center active:scale-95">
-                          <Eye className="w-3.5 h-3.5" />
-                        </button>
+                      <Link href={`/clientes/${client.id}`} title="Abrir Ficha do Cliente" className="p-1.5 rounded-xl bg-evo-surface hover:bg-evo-surface2 border border-evo-border text-evo-support hover:text-evo-accent transition-all flex items-center justify-center active:scale-95">
+                        <Eye className="w-3.5 h-3.5" />
                       </Link>
 
                       {/* Botão Editar */}

@@ -9,20 +9,37 @@ import { Badge } from '@/components/ui/Badge';
 import { Tabs } from '@/components/ui/Tabs';
 import {
   Clock,
-  AlertTriangle,
+  Sparkles,
   Zap,
-  CheckCircle2,
-  Calendar,
-  Send,
-  MessageSquare,
   ArrowRight,
+  UserCheck,
+  CheckCircle2,
+  Check,
+  Pause,
 } from 'lucide-react';
+import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon';
+import { openWhatsApp } from '@/lib/utils/whatsapp';
 
 export default function FollowUpsPage() {
-  const followUps = crmService.getFollowUps();
+  const [followUpsList, setFollowUpsList] = useState(() => crmService.getFollowUps());
   const [activeTab, setActiveTab] = useState<'hoje' | 'atrasado' | 'proximo' | 'automatico'>('hoje');
+  const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
 
-  const filteredItems = followUps.filter((item) => {
+  const handleIntervene = (id: string) => {
+    setFollowUpsList((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, is_automated: false } : f))
+    );
+    setFeedbackMsg('Automação pausada para intervenção manual!');
+    setTimeout(() => setFeedbackMsg(null), 3500);
+  };
+
+  const handleComplete = (id: string) => {
+    setFollowUpsList((prev) => prev.filter((f) => f.id !== id));
+    setFeedbackMsg('Follow-up marcado como concluído com sucesso!');
+    setTimeout(() => setFeedbackMsg(null), 3500);
+  };
+
+  const filteredItems = followUpsList.filter((item) => {
     if (activeTab === 'automatico') return item.is_automated;
     return item.type === activeTab;
   });
@@ -54,15 +71,22 @@ export default function FollowUpsPage() {
         </div>
       </div>
 
+      {feedbackMsg && (
+        <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-xl text-xs flex items-center gap-2 animate-in fade-in">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{feedbackMsg}</span>
+        </div>
+      )}
+
       {/* Abas da Central: Hoje, Atrasados, Próximos, Automáticos (IA/n8n) (Seção 36) */}
       <Tabs
         activeId={activeTab}
         onChange={(id) => setActiveTab(id as any)}
         items={[
-          { id: 'hoje', label: 'Hoje', count: followUps.filter((f) => f.type === 'hoje').length },
-          { id: 'atrasado', label: 'Atrasados', count: followUps.filter((f) => f.type === 'atrasado').length },
-          { id: 'proximo', label: 'Próximos', count: followUps.filter((f) => f.type === 'proximo').length },
-          { id: 'automatico', label: 'Automáticos (IA/n8n)', count: followUps.filter((f) => f.is_automated).length },
+          { id: 'hoje', label: 'Hoje', count: followUpsList.filter((f) => f.type === 'hoje').length },
+          { id: 'atrasado', label: 'Atrasados', count: followUpsList.filter((f) => f.type === 'atrasado').length },
+          { id: 'proximo', label: 'Próximos', count: followUpsList.filter((f) => f.type === 'proximo').length },
+          { id: 'automatico', label: 'Automáticos (IA/n8n)', count: followUpsList.filter((f) => f.is_automated).length },
         ]}
       />
 
@@ -71,23 +95,21 @@ export default function FollowUpsPage() {
         {filteredItems.map((item) => (
           <div
             key={item.id}
-            className="p-5 rounded-2xl bg-evo-card border border-evo-border hover:border-evo-border-hover transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm"
+            className="p-5 rounded-2xl bg-evo-card border border-evo-border hover:border-evo-border-hover transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
           >
             <div className="space-y-1.5 flex-1">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-evo-text font-heading">
+                <span className="text-sm font-semibold text-evo-text font-heading">
                   {item.company_name}
                 </span>
-                <span className="text-xs text-evo-muted">({item.target_name})</span>
-                {item.is_automated && (
-                  <Badge variant="accent" className="text-[10px] py-0 px-2">
-                    <Zap className="w-3 h-3 text-evo-accent" />
-                    IA / n8n
-                  </Badge>
-                )}
-                {item.type === 'atrasado' && (
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20">
-                    Atrasado
+                <span className="text-xs text-evo-muted">• {item.contact_name}</span>
+                {item.is_automated ? (
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-evo-accent/10 text-evo-accent border border-evo-accent/20">
+                    Regra n8n Ativa
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-evo-surface text-evo-support">
+                    Manual
                   </span>
                 )}
               </div>
@@ -103,24 +125,36 @@ export default function FollowUpsPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2.5 shrink-0">
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => openWhatsApp('11999999999', `Olá ${item.contact_name}! Estou fazendo o follow-up sobre ${item.context}.`)}
+                className="p-2 rounded-xl bg-[#25D366]/15 hover:bg-[#25D366]/25 border border-[#25D366]/30 text-[#25D366] transition-all"
+                title="Chamar no WhatsApp"
+              >
+                <WhatsAppIcon className="w-4 h-4 fill-current" />
+              </button>
+
               {item.is_automated ? (
                 <Button
                   variant="secondary"
                   size="sm"
-                  className="text-xs h-8 px-3 text-evo-accent"
-                  onClick={() => alert('Automação pausada para intervenção manual!')}
+                  className="text-xs h-8 px-3 text-evo-accent gap-1"
+                  onClick={() => handleIntervene(item.id)}
+                  title="Pausar régua automática e assumir manualmente"
                 >
-                  Intervir Manualmente
+                  <Pause className="w-3.5 h-3.5" />
+                  <span>Intervir Manualmente</span>
                 </Button>
               ) : (
                 <Button
                   variant="primary"
                   size="sm"
-                  className="text-xs h-8 px-3"
-                  onClick={() => alert('Follow-up marcado como concluído!')}
+                  className="text-xs h-8 px-3 gap-1"
+                  onClick={() => handleComplete(item.id)}
+                  title="Concluir follow-up"
                 >
-                  Marcar Feito
+                  <Check className="w-3.5 h-3.5 text-black" />
+                  <span>Marcar Feito</span>
                 </Button>
               )}
             </div>

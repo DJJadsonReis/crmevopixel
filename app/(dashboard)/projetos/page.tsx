@@ -34,6 +34,7 @@ export default function ProjetosPage() {
   const [hDate, setHDate] = useState(() => new Date().toISOString().split('T')[0]);
 
   // Form para novo projeto
+  const [selectedProject, setSelectedProject] = useState<any | null>(null);
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
   const [pCompany, setPCompany] = useState('');
   const [pClient, setPClient] = useState('');
@@ -209,7 +210,12 @@ export default function ProjetosPage() {
 
               <div className="pt-3 border-t border-evo-border flex items-center justify-between text-xs text-evo-muted">
                 <span>Prazo Final: {proj.deadline}</span>
-                <Button variant="secondary" size="sm" className="h-7 text-xs px-2.5">
+                <Button 
+                  variant="secondary" 
+                  size="sm" 
+                  className="h-7 text-xs px-2.5"
+                  onClick={() => setSelectedProject(proj)}
+                >
                   Ver Projeto
                 </Button>
               </div>
@@ -217,6 +223,78 @@ export default function ProjetosPage() {
           ))}
         </div>
       )}
+
+      {/* Modal Detalhes do Projeto */}
+      <Modal
+        isOpen={!!selectedProject}
+        onClose={() => setSelectedProject(null)}
+        title={selectedProject?.company_name || 'Detalhes do Projeto'}
+        subtitle={`Visão geral da entrega e status para ${selectedProject?.client_name || selectedProject?.company_name || ''}`}
+        maxWidth="lg"
+      >
+        {selectedProject && (
+          <div className="space-y-4 text-xs">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-3.5 rounded-xl bg-evo-surface border border-evo-border">
+              <div>
+                <span className="text-[10px] text-evo-muted block">Status Geral</span>
+                <span className="font-semibold text-evo-accent font-mono uppercase">
+                  {selectedProject.status?.replace('_', ' ')}
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] text-evo-muted block">Prazo Final</span>
+                <span className="font-semibold text-evo-text font-mono">
+                  {selectedProject.deadline}
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] text-evo-muted block">Serviços</span>
+                <span className="font-semibold text-evo-support">
+                  {selectedProject.services?.length || 0} módulos
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] text-evo-muted block">Contato</span>
+                <span className="font-semibold text-evo-text">
+                  {selectedProject.client_name || 'Diretoria'}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <h4 className="font-semibold text-sm text-evo-text">Entregáveis & Checklist Técnico</h4>
+              {selectedProject.services?.map((srv: any, sIdx: number) => (
+                <div key={sIdx} className="p-3 rounded-xl bg-evo-card border border-evo-border space-y-2">
+                  <div className="font-semibold text-xs text-evo-text flex justify-between items-center">
+                    <span>{srv.service_name}</span>
+                    <span className="text-[10px] font-mono text-evo-disabled">Módulo {sIdx + 1}</span>
+                  </div>
+                  <div className="space-y-1 pl-2">
+                    {srv.checklist?.map((chk: any, cIdx: number) => (
+                      <div key={cIdx} className="flex items-center gap-2 text-xs">
+                        <CheckCircle2 className={`w-3.5 h-3.5 ${chk.completed ? 'text-evo-support' : 'text-evo-disabled'}`} />
+                        <span className={chk.completed ? 'line-through text-evo-disabled' : 'text-evo-text'}>
+                          {chk.item}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-evo-border">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setSelectedProject(null)}
+              >
+                Fechar
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {/* Aba Históricos (Seção 29 & 30) */}
       {activeTab === 'historicos' && (
