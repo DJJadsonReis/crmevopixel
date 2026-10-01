@@ -87,6 +87,7 @@ export default function ServicosPage() {
         description: newServiceDesc || 'Serviço padrão da EVO PIXEL',
         base_price: Number(newServicePrice),
         delivery_time_days: Number(newServiceDays) || 7,
+        status: 'ativo',
         checklist: []
       });
     }

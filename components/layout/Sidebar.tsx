@@ -127,6 +127,7 @@ export function Sidebar() {
                 <Link
                   key={item.href}
                   href={item.href}
+                  prefetch={false}
                   className={clsx(
                     'group relative flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-heading transition-all duration-150',
                     isActive
@@ -175,6 +176,7 @@ export function Sidebar() {
       <div className="p-3 border-t border-evo-border bg-evo-black/40">
         <Link
           href="/configuracoes"
+          prefetch={false}
           className={clsx(
             'flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-heading text-evo-muted hover:text-evo-text hover:bg-evo-card transition-all',
             pathname === '/configuracoes' && 'bg-evo-surface text-evo-text border border-evo-border'

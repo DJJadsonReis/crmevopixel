@@ -189,8 +189,9 @@ class CrmService {
           this.leads = [...leads, ...localUnsynced];
           this.saveToLocalStorage('leads', this.leads);
           changed = true; 
-        } else if (this.leads.length > 0) {
-          this.leads.forEach(l => dbService.insertLead(l));
+        } else if (Array.isArray(leads) && leads.length === 0 && this.leads.length > 0) {
+          // Se a tabela no Supabase estiver vazia, sincroniza em background sem travar
+          Promise.all(this.leads.slice(0, 10).map(l => dbService.insertLead(l))).catch(() => {});
         }
         if (prospects && prospects.length > 0) { this.prospects = prospects; changed = true; }
         if (opps && opps.length > 0) { 
@@ -544,10 +545,6 @@ class CrmService {
   }
 
   // Nichos
-  public getNiches(): Niche[] {
-    return this.niches;
-  }
-
   public addNiche(nicheData: Omit<Niche, 'id'>): Niche {
     const newNiche: Niche = {
       ...nicheData,

@@ -18,6 +18,7 @@ export interface Service {
   base_price: number;
   delivery_time_days: number;
   status: 'ativo' | 'inativo';
+  checklist?: string[];
 }
 
 export interface Niche {
@@ -87,6 +88,9 @@ export interface Lead {
   whatsapp?: string;
   instagram?: string;
   website?: string;
+  google_business?: string;
+  company_id?: string;
+  source_id?: string;
   city: string;
   state: string;
   score: number;
@@ -233,6 +237,7 @@ export interface TaskItem {
 export interface FollowUpItem {
   id: string;
   target_name: string;
+  contact_name?: string;
   company_name: string;
   context: string;
   due_date: string;

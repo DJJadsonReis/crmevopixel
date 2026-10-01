@@ -28,6 +28,7 @@ export function isSupabaseConfigured(): boolean {
 }
 
 let activeClient: SupabaseClient | null = null;
+let placeholderClient: SupabaseClient | null = null;
 
 export function getSupabase(): SupabaseClient {
   const c = getInitialConfig();
@@ -44,10 +45,13 @@ export function getSupabase(): SupabaseClient {
     return activeClient;
   }
 
-  // Cliente inerte para evitar quebras se não configurado
-  return createClient('https://placeholder.supabase.co', 'placeholder-key', {
-    auth: { persistSession: false },
-  });
+  // Cliente inerte singleton para evitar quebras se não configurado
+  if (!placeholderClient) {
+    placeholderClient = createClient('https://placeholder.supabase.co', 'placeholder-key', {
+      auth: { persistSession: false },
+    });
+  }
+  return placeholderClient;
 }
 
 export function updateClientConfig(url: string, key: string) {
