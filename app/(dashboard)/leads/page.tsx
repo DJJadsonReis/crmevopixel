@@ -600,10 +600,10 @@ export default function LeadsPage() {
           {/* Botão Captar via Browserless + IA */}
           <button
             onClick={() => setIsBrowserlessModalOpen(true)}
-            className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-500/20 to-indigo-500/20 hover:from-purple-500/30 hover:to-indigo-500/30 border border-purple-400/30 text-purple-300 hover:text-white text-xs font-heading font-medium flex items-center gap-2 transition-all active:scale-95 shadow-sm"
+            className="px-3.5 py-2 rounded-xl bg-evo-surface hover:bg-evo-surface2 border border-evo-accent/40 text-evo-accent hover:text-white text-xs font-heading font-medium flex items-center gap-2 transition-all active:scale-95 shadow-sm"
             title="Extrair contatos e empresas com Headless Chrome (Browserless) e qualificar por IA"
           >
-            <Globe className="w-4 h-4 text-purple-400" />
+            <Globe className="w-4 h-4 text-evo-accent" />
             <span>Captar via Browserless + IA</span>
           </button>
 

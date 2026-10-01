@@ -122,7 +122,7 @@ export default function OportunidadesPage() {
           <span className="text-[11px] text-evo-muted font-heading uppercase tracking-wider">
             Fechamento Iminente / Alto Grau (≥70%)
           </span>
-          <div className="text-2xl font-bold font-mono text-purple-400 mt-1">
+          <div className="text-2xl font-bold font-mono text-amber-400 mt-1">
             {highProbabilityOpps.length}
           </div>
           <span className="text-[10px] text-evo-support">

@@ -1,250 +1,245 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import {
-  MessageSquare,
-  X,
-  ArrowRight,
-  Sparkles,
-  ChevronLeft,
-  ChevronRight,
-  Bell,
-  CheckCircle2,
-} from 'lucide-react';
-import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon';
+import Link from 'next/link';
 import { crmService } from '@/lib/services/crm-service';
-import { Lead, MessageLog } from '@/types/database';
+import { MessageLog, Lead } from '@/types/database';
+import { MessageSquare, X, ChevronLeft, Bell, ArrowRight, UserCheck } from 'lucide-react';
 
 export function IncomingReplyToaster() {
-  const router = useRouter();
-  const [repliedLeads, setRepliedLeads] = useState<
+  const [activeToast, setActiveToast] = useState<{
+    leadId: string;
+    leadName: string;
+    phone?: string;
+    messageText: string;
+    receivedAt: string;
+  } | null>(null);
+
+  const [queuedReplies, setQueuedReplies] = useState<
     Array<{
-      lead: Lead;
-      lastMessage: MessageLog;
-      unreadCount: number;
+      id: string;
+      leadId: string;
+      leadName: string;
+      phone?: string;
+      messageText: string;
+      receivedAt: string;
     }>
   >([]);
-  const [isHovered, setIsHovered] = useState(false);
-  const [dismissedIds, setDismissedIds] = useState<string[]>([]);
-  const lastKnownCountRef = useRef(0);
 
-  const checkReplies = () => {
-    const leads = crmService.getLeads();
-    const results: Array<{
-      lead: Lead;
-      lastMessage: MessageLog;
-      unreadCount: number;
-    }> = [];
+  const [isDrawerHovered, setIsDrawerHovered] = useState(false);
+  const knownMessageIds = useRef<Set<string>>(new Set());
 
-    leads.forEach((l) => {
-      const logs = crmService.getMessageLogs(l.id);
-      const incoming = logs.filter((m) => m.direction === 'recebida');
-      if (incoming.length > 0) {
-        // Pega a mensagem recebida mais recente
-        const latest = incoming[0];
-        results.push({
-          lead: l,
-          lastMessage: latest,
-          unreadCount: incoming.length,
-        });
-      }
-    });
-
-    // Toca som se houver novas mensagens recebidas
-    const totalIncoming = results.reduce((acc, r) => acc + r.unreadCount, 0);
-    if (totalIncoming > lastKnownCountRef.current && lastKnownCountRef.current > 0) {
-      playChime();
-    }
-    lastKnownCountRef.current = totalIncoming;
-
-    setRepliedLeads(results);
-  };
-
+  // Tocar sino suave de notificação via Web Audio API
   const playChime = () => {
     try {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioContextClass) return;
-      const ctx = new AudioContextClass();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
-      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15); // A5
-      gain.gain.setValueAtTime(0.12, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+      osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+      osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.15); // A5
+
+      gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(audioCtx.destination);
+
       osc.start();
-      osc.stop(ctx.currentTime + 0.35);
-    } catch (e) {}
+      osc.stop(audioCtx.currentTime + 0.4);
+    } catch {
+      // AudioContext bloqueado pelo navegador antes de interação
+    }
   };
 
   useEffect(() => {
-    checkReplies();
-    const unsub = crmService.subscribe(checkReplies);
-    const interval = setInterval(checkReplies, 15000);
-    return () => {
-      unsub();
-      clearInterval(interval);
-    };
+    // Carrega mensagens recebidas existentes
+    const logs = crmService.getMessageLogs();
+    const leads = crmService.getLeads();
+
+    const incoming = logs.filter((m) => m.direction === 'recebida');
+    incoming.forEach((m) => knownMessageIds.current.add(m.id));
+
+    // Inicializa a fila com as últimas mensagens recebidas
+    const initialQueue = incoming.slice(0, 5).map((m) => {
+      const lead = leads.find((l) => l.id === m.lead_id);
+      return {
+        id: m.id,
+        leadId: m.lead_id,
+        leadName: lead?.company_name || lead?.name || m.sender_name || 'Lead do WhatsApp',
+        phone: lead?.whatsapp || lead?.phone || m.phone,
+        messageText: m.sent_text,
+        receivedAt: m.sent_at,
+      };
+    });
+    setQueuedReplies(initialQueue);
+
+    // Escuta novas mensagens adicionadas ao CRM
+    const unsubscribe = crmService.subscribe(() => {
+      const currentLogs = crmService.getMessageLogs();
+      const currentLeads = crmService.getLeads();
+
+      const newIncoming = currentLogs.filter(
+        (m) => m.direction === 'recebida' && !knownMessageIds.current.has(m.id)
+      );
+
+      if (newIncoming.length > 0) {
+        newIncoming.forEach((m) => knownMessageIds.current.add(m.id));
+
+        const latest = newIncoming[0];
+        const lead = currentLeads.find((l) => l.id === latest.lead_id);
+        const leadName = lead?.company_name || lead?.name || latest.sender_name || 'Lead do WhatsApp';
+
+        const toastData = {
+          id: latest.id,
+          leadId: latest.lead_id,
+          leadName,
+          phone: lead?.whatsapp || lead?.phone || latest.phone,
+          messageText: latest.sent_text,
+          receivedAt: latest.sent_at,
+        };
+
+        setActiveToast(toastData);
+        setQueuedReplies((prev) => [toastData, ...prev.filter((p) => p.id !== toastData.id)].slice(0, 8));
+        playChime();
+
+        // Esconde o balão principal após 8 segundos
+        setTimeout(() => {
+          setActiveToast((curr) => (curr?.leadId === toastData.leadId ? null : curr));
+        }, 8000);
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  const activeReplies = repliedLeads.filter((r) => !dismissedIds.includes(r.lead.id));
-
-  if (activeReplies.length === 0) return null;
-
-  const totalCount = activeReplies.length;
-  const topReply = activeReplies[0];
-
   return (
-    <div
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      className="fixed right-4 bottom-6 z-50 transition-all duration-300 select-none"
-    >
-      {/* Visual Retraído / Pill Lateral quando não há hover */}
-      {!isHovered ? (
-        <div
-          onClick={() => setIsHovered(true)}
-          className="cursor-pointer group flex items-center gap-3 bg-[#111b21] hover:bg-[#202c33] border border-[#00a884]/40 hover:border-[#00a884] p-3 rounded-2xl shadow-2xl shadow-black/80 animate-in slide-in-from-right-4 duration-300 max-w-sm"
-        >
-          <div className="relative shrink-0">
-            <div className="w-10 h-10 rounded-full bg-[#00a884]/20 border border-[#00a884]/60 flex items-center justify-center text-[#00a884]">
-              <WhatsAppIcon className="w-5 h-5 fill-current animate-bounce" />
-            </div>
-            <span className="absolute -top-1 -right-1 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-[#00a884] text-[10px] font-bold text-[#111b21] font-mono shadow-md">
-              {totalCount}
-            </span>
-          </div>
-
-          <div className="min-w-0 pr-1">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-mono uppercase text-[#00a884] font-semibold">
-                Lead Respondeu
-              </span>
-              <span className="text-[9px] text-[#8696a0] font-mono">
-                {totalCount > 1 ? `+${totalCount - 1} outros` : 'agora'}
-              </span>
-            </div>
-            <h4 className="text-xs font-semibold text-[#e9edef] truncate">
-              {topReply.lead.company_name}
-            </h4>
-            <p className="text-[11px] text-[#8696a0] truncate mt-0.5 max-w-[200px]">
-              "{topReply.lastMessage.sent_text}"
-            </p>
-          </div>
-
-          <span className="text-[10px] font-mono text-[#8696a0] group-hover:text-white shrink-0 pl-1">
-            Passar mouse →
-          </span>
-        </div>
-      ) : (
-        /* Visual Expandido com a fila completa de todos os leads que responderam */
-        <div className="w-84 sm:w-96 rounded-2xl bg-[#111b21] border border-[#00a884]/60 shadow-2xl shadow-black/90 overflow-hidden animate-in zoom-in-95 duration-200">
-          {/* Header da Fila */}
-          <div className="p-3.5 bg-[#202c33] border-b border-[#2a3942] flex items-center justify-between">
+    <>
+      {/* 1. Balão Flutuante Superior/Direito de Notificação Instantânea */}
+      {activeToast && (
+        <div className="fixed top-5 right-5 z-[9999] max-w-sm w-full bg-evo-deep/95 backdrop-blur-md border border-evo-accent/40 rounded-2xl shadow-2xl p-4 text-xs animate-in slide-in-from-top-4 fade-in duration-300">
+          <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-[#00a884]/20 flex items-center justify-center text-[#00a884]">
-                <WhatsAppIcon className="w-4 h-4 fill-current" />
+              <div className="w-7 h-7 rounded-xl bg-evo-accent/15 border border-evo-accent/40 flex items-center justify-center text-evo-accent shrink-0">
+                <MessageSquare className="w-3.5 h-3.5" />
               </div>
               <div>
-                <h4 className="text-xs font-semibold text-[#e9edef] font-heading flex items-center gap-1.5">
-                  Respostas de Leads ({totalCount})
-                </h4>
-                <span className="text-[10px] text-[#8696a0]">
-                  Passe o mouse ou clique no balão para responder
+                <span className="text-[10px] font-mono text-evo-accent uppercase tracking-wider block">
+                  Nova Resposta no WhatsApp
                 </span>
+                <h4 className="font-semibold text-evo-text truncate max-w-[210px] font-heading">
+                  {activeToast.leadName}
+                </h4>
               </div>
             </div>
 
             <button
-              onClick={() => setDismissedIds(activeReplies.map((r) => r.lead.id))}
-              className="text-[10px] text-[#8696a0] hover:text-[#e9edef] font-mono hover:underline"
+              onClick={() => setActiveToast(null)}
+              className="text-evo-muted hover:text-evo-text p-1 transition-colors"
+              title="Fechar notificação"
             >
-              Dispensar todos
+              <X className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          {/* Fila Rolável de Balões */}
-          <div className="max-h-[360px] overflow-y-auto divide-y divide-[#202c33] p-1.5 space-y-1.5">
-            {activeReplies.map(({ lead, lastMessage, unreadCount }) => (
-              <div
-                key={lead.id}
-                onClick={() => {
-                  router.push(`/chat?leadId=${lead.id}`);
-                  setIsHovered(false);
-                }}
-                className="p-3 rounded-xl bg-[#202c33]/70 hover:bg-[#2a3942] border border-[#2a3942] hover:border-[#00a884]/60 transition-all cursor-pointer group flex flex-col gap-1.5"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="w-7 h-7 rounded-full bg-[#111b21] border border-[#2a3942] flex items-center justify-center font-bold text-[11px] text-[#00a884] shrink-0">
-                      {lead.company_name.substring(0, 2).toUpperCase()}
-                    </div>
-                    <div className="min-w-0">
-                      <h5 className="text-xs font-semibold text-[#e9edef] group-hover:text-[#00a884] transition-colors truncate">
-                        {lead.company_name}
-                      </h5>
-                      <span className="text-[10px] text-[#8696a0] truncate block">
-                        {lead.name} • {lead.city}
-                      </span>
-                    </div>
-                  </div>
+          <p className="mt-2 text-evo-text/90 line-clamp-2 bg-evo-surface/70 p-2 rounded-lg border border-[rgba(218,241,222,0.06)] italic text-[11px]">
+            &ldquo;{activeToast.messageText}&rdquo;
+          </p>
 
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <span className="px-1.5 py-0.2 rounded-full bg-[#00a884] text-[#111b21] text-[9px] font-mono font-bold">
-                      {unreadCount} {unreadCount === 1 ? 'msg' : 'msgs'}
-                    </span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDismissedIds((prev) => [...prev, lead.id]);
-                      }}
-                      className="text-[#8696a0] hover:text-white p-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                      title="Dispensar este alerta"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
+          <div className="mt-3 pt-2.5 border-t border-evo-border flex items-center justify-between">
+            <span className="text-[10px] font-mono text-evo-disabled">
+              Agora mesmo
+            </span>
 
-                {/* Balãozinho com o começo da resposta do cliente */}
-                <div className="p-2 rounded-lg bg-[#111b21] border border-[#2a3942] text-[11px] text-[#d1d7db] leading-relaxed line-clamp-2 italic">
-                  "{lastMessage.sent_text}"
-                </div>
-
-                {/* Rodapé com botão de responder */}
-                <div className="flex items-center justify-between pt-1">
-                  <span className="text-[9px] font-mono text-[#8696a0]">
-                    {new Date(lastMessage.sent_at).toLocaleTimeString('pt-BR', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </span>
-                  <div className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#00a884] group-hover:translate-x-0.5 transition-transform">
-                    <span>Responder no Chat</span>
-                    <ArrowRight className="w-3 h-3" />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Rodapé Geral */}
-          <div className="p-2.5 bg-[#202c33]/50 border-t border-[#2a3942] text-center">
-            <button
-              onClick={() => {
-                router.push('/chat');
-                setIsHovered(false);
-              }}
-              className="text-[11px] font-medium text-[#00a884] hover:underline"
+            <Link
+              href={`/chat?leadId=${activeToast.leadId}`}
+              onClick={() => setActiveToast(null)}
+              className="px-2.5 py-1 rounded-lg bg-evo-accent text-[#07100F] font-semibold text-[11px] flex items-center gap-1 hover:brightness-110 active:scale-95 transition-all shadow-sm"
             >
-              Abrir Painel Completo do Chat WhatsApp →
-            </button>
+              <span>Responder no Chat</span>
+              <ArrowRight className="w-3 h-3" />
+            </Link>
           </div>
         </div>
       )}
-    </div>
+
+      {/* 2. Pilha Lateral Retrátil com Expansão ao Passar o Mouse (Hover) */}
+      <div
+        className="fixed top-1/2 -translate-y-1/2 right-0 z-[9998] transition-all duration-300 ease-out"
+        onMouseEnter={() => setIsDrawerHovered(true)}
+        onMouseLeave={() => setIsDrawerHovered(false)}
+      >
+        {/* Aba Recolhida na Lateral */}
+        {!isDrawerHovered && queuedReplies.length > 0 && (
+          <div className="bg-evo-deep border-l border-y border-evo-accent/40 rounded-l-2xl py-3 px-2 flex flex-col items-center gap-2 cursor-pointer shadow-xl hover:bg-evo-surface2 transition-all">
+            <div className="relative">
+              <Bell className="w-4 h-4 text-evo-accent animate-pulse" />
+              <span className="absolute -top-1.5 -right-2 bg-evo-accent text-[#07100F] text-[9px] font-bold px-1 rounded-full">
+                {queuedReplies.length}
+              </span>
+            </div>
+            <span className="text-[9px] font-mono text-evo-support [writing-mode:vertical-rl] rotate-180 uppercase tracking-wider font-semibold">
+              Respostas
+            </span>
+          </div>
+        )}
+
+        {/* Gaveta Expandida no Hover */}
+        {isDrawerHovered && (
+          <div className="w-80 bg-evo-deep/95 backdrop-blur-md border-l border-y border-evo-accent/40 rounded-l-2xl shadow-2xl p-4 text-xs space-y-3 animate-in slide-in-from-right-4 duration-200">
+            <div className="flex items-center justify-between pb-2 border-b border-evo-border">
+              <div className="flex items-center gap-2">
+                <Bell className="w-4 h-4 text-evo-accent" />
+                <span className="font-semibold text-evo-text font-heading text-xs">
+                  Respostas Enfileiradas ({queuedReplies.length})
+                </span>
+              </div>
+              <span className="text-[10px] font-mono text-evo-support">
+                Passe o mouse
+              </span>
+            </div>
+
+            <div className="max-h-72 overflow-y-auto space-y-2 pr-1">
+              {queuedReplies.length === 0 ? (
+                <p className="text-center text-evo-muted text-xs py-4">
+                  Nenhuma resposta aguardando atendimento.
+                </p>
+              ) : (
+                queuedReplies.map((item) => (
+                  <Link
+                    key={item.id}
+                    href={`/chat?leadId=${item.leadId}`}
+                    className="block p-2.5 rounded-xl bg-evo-surface border border-evo-border hover:border-evo-accent/40 hover:bg-evo-surface2 transition-all group"
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-semibold text-evo-text truncate max-w-[170px] group-hover:text-evo-accent transition-colors">
+                        {item.leadName}
+                      </span>
+                      <span className="text-[9px] font-mono text-evo-disabled">
+                        {item.receivedAt ? new Date(item.receivedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'rec'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-evo-muted line-clamp-1 italic">
+                      &ldquo;{item.messageText}&rdquo;
+                    </p>
+                  </Link>
+                ))
+              )}
+            </div>
+
+            <div className="pt-2 border-t border-evo-border flex justify-end">
+              <Link
+                href="/chat"
+                className="text-[11px] font-mono text-evo-accent hover:underline flex items-center gap-1"
+              >
+                <span>Abrir Chat WhatsApp Completo</span>
+                <ArrowRight className="w-3 h-3" />
+              </Link>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
   );
 }
