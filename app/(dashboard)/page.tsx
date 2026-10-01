@@ -42,6 +42,10 @@ export default function DashboardPage() {
   const monthlyEvolution = crmService.getMonthlyEvolution();
   const monthlySummary = crmService.getMonthlySubscriptionsSummary();
   const maxMonthVal = Math.max(...monthlyEvolution.map((m) => m.value), 1);
+  const opportunities = crmService.getOpportunities();
+  const emNegociacaoVal = opportunities
+    .filter((o) => o.stage_slug === 'negociacao' || o.stage_slug === 'em_negociacao' || o.stage_slug === 'proposta_enviada')
+    .reduce((acc, o) => acc + (o.estimated_value || 0), 0);
 
   // Filtra prospects recomendados para hoje (ICP >= 80 e status priority)
   const prospectsToProspectToday = prospects.filter((p) => p.status === 'priority').slice(0, 3);
@@ -207,15 +211,15 @@ export default function DashboardPage() {
             label="Pipeline Ativo"
             value={`R$ ${metrics.oportunidadesAbertas.valorTotal.toLocaleString('pt-BR')}`}
             subtitle={`${metrics.oportunidadesAbertas.quantidade} oportunidades abertas`}
-            trend="R$ 8.4k em negociação"
-            trendPositive={true}
+            trend={`R$ ${emNegociacaoVal.toLocaleString('pt-BR')} em negociação`}
+            trendPositive={emNegociacaoVal > 0}
           />
           <MetricCard
             label="Ticket Médio"
             value={`R$ ${metrics.ticketMedio.toLocaleString('pt-BR')}`}
             subtitle="Por projeto fechado"
-            trend="+18% no período"
-            trendPositive={true}
+            trend={metrics.ticketMedio > 0 ? "Média de fechamentos" : "Aguardando contratos"}
+            trendPositive={metrics.ticketMedio > 0}
           />
           <MetricCard
             label="Resposta Prospecção"

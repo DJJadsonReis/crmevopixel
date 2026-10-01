@@ -19,6 +19,9 @@ export interface Service {
   delivery_time_days: number;
   status: 'ativo' | 'inativo';
   checklist?: string[];
+  deliverables?: string[]; // Entregáveis estruturados para propostas comerciais
+  technical_specs?: string[]; // Especificações técnicas do escopo
+  ideal_for?: string; // Perfil de cliente indicado
 }
 
 export interface Niche {
@@ -66,6 +69,8 @@ export interface LeadSequenceProgress {
 export interface MessageLog {
   id: string;
   lead_id: string;
+  phone?: string;
+  sender_name?: string;
   sequence_step_id?: string;
   step_name?: string;
   channel: string;
@@ -97,6 +102,7 @@ export interface Lead {
   temperature: Temperature;
   status: 'novo' | 'em_abordagem' | 'em_conversa' | 'qualificado' | 'desqualificado' | 'convertido';
   services: string[]; // Serviços identificados
+  tags?: string[]; // Etiquetas / Post-it de status (ex: Em Negociação, Fechado)
   last_contact_at?: string;
   next_action?: string;
   next_action_at?: string;
@@ -230,8 +236,14 @@ export interface TaskItem {
   title: string;
   related_to: string; // Ex: 'Clínica Vida' ou 'Projeto Website'
   due_date: string;
+  start_date?: string;
+  start_time?: string;
+  end_time?: string;
   status: 'pendente' | 'em_andamento' | 'concluida' | 'atrasada';
   priority: Priority;
+  assigned_to?: 'operador' | 'agente_ia' | 'ambos';
+  auto_execute?: boolean;
+  execution_notes?: string;
 }
 
 export interface FollowUpItem {

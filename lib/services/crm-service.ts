@@ -1,3 +1,5 @@
+import { getRecommendedServices } from '@/lib/ai/qualification';
+import { cleanPhoneNumber } from '@/lib/utils/whatsapp';
 import {
   INITIAL_CLIENTS,
   INITIAL_CONTRATOS,
@@ -124,6 +126,22 @@ class CrmService {
           this.clients = parsed;
         }
       }
+      const cachedLogs = localStorage.getItem('evocrm_messageLogs');
+      if (cachedLogs) {
+        const parsed = JSON.parse(cachedLogs);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          this.messageLogs = parsed;
+        }
+      }
+
+      // Garante serviços recomendados e tags nos leads
+      this.leads.forEach((l) => {
+        if (!l.services || !Array.isArray(l.services) || l.services.length === 0) {
+          l.services = getRecommendedServices(l.segment);
+        }
+        if (!l.tags) l.tags = [];
+      });
+
       const cachedNiches = localStorage.getItem('evocrm_niches');
       if (cachedNiches) {
         const parsed = JSON.parse(cachedNiches);
@@ -402,6 +420,7 @@ class CrmService {
     if (lead) {
       lead.status = status;
       this.saveToLocalStorage('leads', this.leads);
+      this.syncLeadToOpportunity(lead);
       dbService.updateLead(id, { status });
       this.notify();
     }
@@ -413,6 +432,7 @@ class CrmService {
     if (lead) {
       Object.assign(lead, data);
       this.saveToLocalStorage('leads', this.leads);
+      this.syncLeadToOpportunity(lead);
       dbService.updateLead(id, data);
       this.notify();
     }
@@ -561,6 +581,69 @@ class CrmService {
     dbService.deleteOpportunity(id);
     this.notify();
   }
+
+  // Sincronização automática Lead -> Pipeline Kanban / Oportunidades
+  public syncLeadToOpportunity(lead: Lead): Opportunity | undefined {
+    if (!lead) return undefined;
+    const tags = lead.tags || [];
+    const hasClosedTag = tags.some((t) => t.toLowerCase().includes('fechad') || t.toLowerCase().includes('ganho'));
+    const hasNegotiationTag = tags.some((t) => t.toLowerCase().includes('negocia') || t.toLowerCase().includes('reuni'));
+    const isClosed = lead.status === 'convertido' || hasClosedTag;
+    const isNegotiation = lead.status === 'em_conversa' || lead.status === 'qualificado' || hasNegotiationTag;
+    const isApproached = (lead.status as any) === 'em_abordagem' || tags.some((t) => t.toLowerCase().includes('atendimento') || t.toLowerCase().includes('prospec'));
+
+    // Sincroniza se tiver relevância no funil
+    if (!isClosed && !isNegotiation && !isApproached && (lead.score || 0) < 65) {
+      return undefined;
+    }
+
+    let targetStage = 'primeiro_contato';
+    let probability = 35;
+
+    if (isClosed) {
+      targetStage = 'fechado';
+      probability = 100;
+    } else if (isNegotiation) {
+      targetStage = 'negociacao';
+      probability = 75;
+    } else if (isApproached) {
+      targetStage = 'primeiro_contato';
+      probability = 45;
+    }
+
+    const existingOpp = this.opportunities.find((o) => o.lead_id === lead.id || o.company_name === lead.company_name);
+    if (existingOpp) {
+      existingOpp.stage_slug = targetStage;
+      existingOpp.probability = probability;
+      existingOpp.temperature = lead.temperature || existingOpp.temperature;
+      existingOpp.score = lead.score || existingOpp.score;
+      existingOpp.last_interaction = 'Sincronizado do Lead';
+      dbService.updateOpportunityStage(existingOpp.id, targetStage);
+      this.saveToLocalStorage('opportunities', this.opportunities);
+      return existingOpp;
+    } else {
+      const newOpp: Opportunity = {
+        id: `opp-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        lead_id: lead.id,
+        lead_name: lead.name || 'Contato Principal',
+        company_name: lead.company_name || 'Empresa',
+        stage_slug: targetStage,
+        title: `Projeto ${lead.services?.[0] || 'Site & Automação'} — ${lead.company_name}`,
+        estimated_value: 3500,
+        probability,
+        score: lead.score || 80,
+        temperature: lead.temperature || 'quente',
+        priority: 'alta',
+        services: lead.services && lead.services.length > 0 ? lead.services : ['Site Institucional Premium', 'Automação Comercial WhatsApp'],
+        last_interaction: 'Sincronizado automaticamente',
+      };
+      this.opportunities.unshift(newOpp);
+      this.saveToLocalStorage('opportunities', this.opportunities);
+      dbService.insertOpportunity(newOpp).catch(() => {});
+      return newOpp;
+    }
+  }
+
 
   // Nichos
   public addNiche(nicheData: Omit<Niche, 'id'>): Niche {
@@ -1104,21 +1187,56 @@ class CrmService {
     this.notify();
   }
 
-  // Logs & Insights
-  public getMessageLogs(leadId?: string): MessageLog[] {
-    if (leadId) {
-      return this.messageLogs.filter(m => m.lead_id === leadId);
-    }
-    return this.messageLogs;
+  // Logs & Mensagens com persistência garantida e matching flexível
+  public getMessageLogs(leadIdOrPhone?: string, optionalPhone?: string): MessageLog[] {
+    if (!leadIdOrPhone && !optionalPhone) return this.messageLogs;
+    const cleanTarget1 = leadIdOrPhone ? cleanPhoneNumber(leadIdOrPhone) : '';
+    const cleanTarget2 = optionalPhone ? cleanPhoneNumber(optionalPhone) : '';
+
+    return this.messageLogs.filter((m) => {
+      if (leadIdOrPhone && m.lead_id === leadIdOrPhone) return true;
+      if (optionalPhone && m.lead_id === optionalPhone) return true;
+      const mPhone = m.phone ? cleanPhoneNumber(m.phone) : '';
+      const mLeadIdClean = m.lead_id ? cleanPhoneNumber(m.lead_id) : '';
+
+      if (cleanTarget1 && (mPhone === cleanTarget1 || mLeadIdClean === cleanTarget1)) return true;
+      if (cleanTarget2 && (mPhone === cleanTarget2 || mLeadIdClean === cleanTarget2)) return true;
+      return false;
+    });
   }
 
   public addMessageLog(logData: Omit<MessageLog, 'id'>): MessageLog {
     const newLog: MessageLog = {
       ...logData,
-      id: `ml-${Date.now()}`,
+      id: `ml-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
     };
     this.messageLogs.unshift(newLog);
+    this.saveToLocalStorage('messageLogs', this.messageLogs);
+    this.notify();
     return newLog;
+  }
+
+  // Gestão de Tags nos Leads
+  public setLeadTags(id: string, tags: string[]): Lead | undefined {
+    const lead = this.leads.find((l) => l.id === id);
+    if (lead) {
+      lead.tags = tags;
+      this.saveToLocalStorage('leads', this.leads);
+      this.syncLeadToOpportunity(lead);
+      dbService.updateLead(id, { tags } as any);
+      this.notify();
+    }
+    return lead;
+  }
+
+  public toggleLeadTag(id: string, tag: string): Lead | undefined {
+    const lead = this.leads.find((l) => l.id === id);
+    if (lead) {
+      const current = lead.tags || [];
+      const updated = current.includes(tag) ? current.filter((t) => t !== tag) : [...current, tag];
+      return this.setLeadTags(id, updated);
+    }
+    return undefined;
   }
 
   public getInsights(): BusinessInsight[] {

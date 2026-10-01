@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Topbar } from '@/components/layout/Topbar';
 import { CommandPalette } from '@/components/layout/CommandPalette';
+import { IncomingReplyToaster } from '@/components/notifications/IncomingReplyToaster';
 import { createClient } from '@/utils/supabase/client';
 import { AuthUI } from '@/components/ui/auth-ui';
 
@@ -82,6 +83,9 @@ export default function DashboardLayout({
         isOpen={isCommandOpen}
         onClose={() => setIsCommandOpen(false)}
       />
+
+      {/* Toaster Flutuante com Fila Lateral de Respostas de Leads */}
+      <IncomingReplyToaster />
     </div>
   );
 }

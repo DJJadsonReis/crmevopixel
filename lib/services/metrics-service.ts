@@ -124,6 +124,17 @@ class MetricsService {
       ? Number(((faturamentoRealizado / metaFaturamento) * 100).toFixed(1))
       : 0;
 
+    // Taxa de resposta de prospecção dinâmica baseada em mensagens reais
+    const dispatchedLeads = leads.filter((l) => l.status === 'em_conversa' || (l.status as string) === 'em_abordagem' || (l.status as string) === 'contatado' || crmService.getMessageLogs(l.id).some((m) => m.direction === 'enviada'));
+    const repliedLeads = leads.filter((l) => crmService.getMessageLogs(l.id).some((m) => m.direction === 'recebida'));
+    const taxaGeral = dispatchedLeads.length > 0 ? Number(((repliedLeads.length / dispatchedLeads.length) * 100).toFixed(1)) : 0;
+
+    let melhorNichoNome = 'Geral';
+    const sortedNiches = Object.entries(nicheMap).sort((a, b) => b[1] - a[1]);
+    if (sortedNiches.length > 0) {
+      melhorNichoNome = sortedNiches[0][0];
+    }
+
     return {
       period,
       periodLabel: periodLabels[period],
@@ -144,11 +155,11 @@ class MetricsService {
         valorTotal: valorOppsAbertas,
       },
       taxaRespostaProspeccao: {
-        taxaGeral: 0,
+        taxaGeral: taxaGeral,
         melhorNicho: {
-          nome: '—',
-          taxa: 0,
-          etapaMaisEficaz: '—',
+          nome: melhorNichoNome,
+          taxa: taxaGeral,
+          etapaMaisEficaz: 'Abordagem Direta',
         },
       },
       receitaPorNicho,

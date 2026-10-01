@@ -24,6 +24,7 @@ function sanitizeLeadForSupabase(lead: Partial<Lead>): any {
   const metadata: any = {};
   if (lead.google_business) metadata.google_business = lead.google_business;
   if (Array.isArray(lead.services) && lead.services.length > 0) metadata.services = lead.services;
+  if (Array.isArray(lead.tags) && lead.tags.length > 0) metadata.tags = lead.tags;
   if (lead.sequence_progress) metadata.sequence_progress = lead.sequence_progress;
   if (lead.ai_analysis) metadata.ai_analysis = lead.ai_analysis;
 
@@ -65,6 +66,7 @@ function sanitizeLeadForSupabase(lead: Partial<Lead>): any {
 function parseLeadFromSupabase(row: any): Lead {
   let google_business = row.google_business || '';
   let services: string[] = Array.isArray(row.services) ? row.services : [];
+  let tags: string[] = Array.isArray(row.tags) ? row.tags : [];
   let sequence_progress = row.sequence_progress;
   let ai_analysis = row.ai_analysis;
   let notes = row.notes || '';
@@ -76,6 +78,7 @@ function parseLeadFromSupabase(row: any): Lead {
         const parsed = JSON.parse(match[1]);
         if (parsed.google_business && !google_business) google_business = parsed.google_business;
         if (Array.isArray(parsed.services) && services.length === 0) services = parsed.services;
+        if (Array.isArray(parsed.tags) && tags.length === 0) tags = parsed.tags;
         if (parsed.sequence_progress && !sequence_progress) sequence_progress = parsed.sequence_progress;
         if (parsed.ai_analysis && !ai_analysis) ai_analysis = parsed.ai_analysis;
         notes = notes.replace(/<!--METADATA:[\s\S]*?-->/, '').trim();
@@ -83,11 +86,17 @@ function parseLeadFromSupabase(row: any): Lead {
     }
   }
 
+  // Fallback garantido para serviços se vazio
+  if (!services || services.length === 0) {
+    services = ['Site Institucional Responsivo', 'Automação WhatsApp n8n'];
+  }
+
   return {
     ...row,
     notes,
     google_business,
     services,
+    tags,
     sequence_progress,
     ai_analysis,
   } as Lead;

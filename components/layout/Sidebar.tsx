@@ -23,6 +23,7 @@ import {
   CalendarCheck,
   ShieldCheck,
   TrendingUp,
+  MessageSquare,
   LogOut,
 } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
@@ -52,6 +53,7 @@ export function Sidebar() {
     {
       title: 'COMERCIAL',
       items: [
+        { label: 'Chat WhatsApp', href: '/chat', icon: MessageSquare, badge: 'LIVE' },
         { label: 'Leads', href: '/leads', icon: Users },
         { label: 'Pipeline', href: '/pipeline', icon: Kanban },
         { label: 'Funil & Copys', href: '/funil', icon: TrendingUp, badge: 'IA' },

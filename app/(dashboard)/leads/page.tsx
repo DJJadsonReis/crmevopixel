@@ -23,6 +23,8 @@ import {
   Upload,
   FileSpreadsheet,
   CheckCircle2,
+  Tag,
+  Check,
   CloudDownload,
   Instagram,
   Mail,
@@ -33,7 +35,7 @@ import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon';
 import { openWhatsApp, cleanPhoneNumber } from '@/lib/utils/whatsapp';
 import { formatPhoneNumber } from '@/lib/utils';
 import { GenerateMessageModal, TargetEntity } from '@/components/modals/GenerateMessageModal';
-import { qualifyLeadWithAI } from '@/lib/ai/qualification';
+import { qualifyLeadWithAI, getRecommendedServices } from '@/lib/ai/qualification';
 import { aiProvider } from '@/lib/ai/ai-provider';
 import { createClient } from '@/utils/supabase/client';
 import { WhatsAppInboxModal } from '@/components/inbox/WhatsAppInboxModal';
@@ -45,6 +47,7 @@ export default function LeadsPage() {
   const [selectedTemperature, setSelectedTemperature] = useState<string>('todos');
   const [selectedNiche, setSelectedNiche] = useState<string>('todos');
   const [inboxLead, setInboxLead] = useState<Lead | null>(null);
+  const [tagModalLead, setTagModalLead] = useState<Lead | null>(null);
   const [isNewLeadModalOpen, setIsNewLeadModalOpen] = useState(false);
 
   // Import states
@@ -714,11 +717,18 @@ export default function LeadsPage() {
             <tbody className="divide-y divide-[rgba(218,241,222,0.04)]">
               {filteredLeads.map((lead) => {
                 const isSelected = selectedLeadIds.includes(lead.id);
+                const logs = crmService.getMessageLogs(lead.id);
+                const isDispatched = logs.length > 0 || lead.status !== 'novo';
+                const receivedMessages = logs.filter((m) => m.direction === 'recebida');
+                const unreadRepliesCount = receivedMessages.length;
+                const displayServices = (lead.services && lead.services.length > 0)
+                  ? lead.services
+                  : getRecommendedServices(lead.segment);
 
                 return (
                   <tr
                     key={lead.id}
-                    className={`hover:bg-evo-surface/40 transition-colors group ${
+                    className={`border-b border-evo-border/70 hover:bg-evo-surface/50 transition-colors group ${
                       isSelected ? 'bg-evo-surface/70' : ''
                     }`}
                   >
@@ -736,15 +746,74 @@ export default function LeadsPage() {
                       </button>
                     </td>
 
-                    {/* Nome & Empresa */}
-                    <td className="py-3.5 px-4">
-                      <Link
-                        href={`/leads/${lead.id}`}
-                        className="font-medium text-evo-text group-hover:text-evo-accent transition-colors flex items-center gap-1.5"
-                      >
-                        <span>{lead.company_name}</span>
-                        <ArrowUpRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </Link>
+                    {/* Nome & Empresa com Check de Disparo, Balãozinho de Resposta e Tags */}
+                    <td className="py-4 px-4">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Link
+                          href={`/leads/${lead.id}`}
+                          className="font-semibold text-evo-text group-hover:text-evo-accent transition-colors flex items-center gap-1.5 text-sm"
+                        >
+                          <span>{lead.company_name}</span>
+                          <ArrowUpRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </Link>
+
+                        {/* Check de Mensagem Disparada */}
+                        {isDispatched ? (
+                          <span
+                            className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-semibold flex items-center gap-1 shrink-0"
+                            title="Mensagem de abordagem já disparada no WhatsApp"
+                          >
+                            <Check className="w-3 h-3 text-emerald-400" />
+                            Disparado
+                          </span>
+                        ) : (
+                          <span
+                            className="text-[10px] font-mono px-1.5 py-0.2 rounded-md bg-evo-surface text-evo-disabled border border-evo-border flex items-center gap-1 shrink-0"
+                            title="Ainda não foi disparada abordagem para este lead"
+                          >
+                            Aguardando Envio
+                          </span>
+                        )}
+
+                        {/* Balãozinho com Contador de Respostas do Lead */}
+                        {unreadRepliesCount > 0 && (
+                          <Link
+                            href={`/chat?leadId=${lead.id}`}
+                            className="px-2 py-0.5 rounded-full bg-[#00a884] hover:bg-[#008f6f] text-[#111b21] font-extrabold text-[10px] font-mono flex items-center gap-1 shadow-md animate-pulse hover:scale-105 transition-all shrink-0"
+                            title={`${unreadRepliesCount} resposta(s) recebida(s) no WhatsApp - Clique para responder no Chat`}
+                          >
+                            <WhatsAppIcon className="w-3 h-3 fill-current" />
+                            <span>💬 ${unreadRepliesCount}</span>
+                          </Link>
+                        )}
+                      </div>
+
+                      {/* Tags / Post-it do Lead */}
+                      <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                        {(lead.tags || []).map((tag, idx) => (
+                          <span
+                            key={idx}
+                            className={`text-[10px] px-2 py-0.5 rounded-md font-medium border shadow-xs flex items-center gap-1 ${
+                              tag.includes('Fechado')
+                                ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                                : tag.includes('Negociação')
+                                ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                                : 'bg-purple-500/15 text-purple-300 border-purple-500/30'
+                            }`}
+                          >
+                            🏷️ {tag}
+                          </span>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => setTagModalLead(lead)}
+                          className="text-[10px] px-1.5 py-0.5 rounded bg-evo-surface hover:bg-evo-surface2 text-evo-muted hover:text-evo-text border border-evo-border flex items-center gap-1 transition-colors"
+                          title="Adicionar ou alterar etiquetas do lead"
+                        >
+                          <Tag className="w-2.5 h-2.5" />
+                          <span>+ Tag</span>
+                        </button>
+                      </div>
                       <div className="text-[11px] text-evo-muted mt-0.5 flex items-center gap-1.5 flex-wrap">
                         <span>{lead.name}</span>
                         <span>•</span>
@@ -820,7 +889,7 @@ export default function LeadsPage() {
                     {/* Serviços Identificados */}
                     <td className="py-3.5 px-4">
                       <div className="flex flex-wrap gap-1 max-w-xs">
-                        {lead.services.map((srv, idx) => (
+                        {displayServices.map((srv: string, idx: number) => (
                           <span
                             key={idx}
                             className="px-2 py-0.5 rounded text-[10px] bg-evo-surface text-evo-muted border border-evo-border truncate max-w-[160px]"
@@ -1350,6 +1419,71 @@ export default function LeadsPage() {
         onClose={() => setMessageTarget(null)}
         target={messageTarget}
       />
+
+      {/* Modal Gerenciador de Tags / Post-it do Lead */}
+      {tagModalLead && (
+        <Modal
+          isOpen={Boolean(tagModalLead)}
+          onClose={() => setTagModalLead(null)}
+          title={`Etiquetas & Status: ${tagModalLead.company_name}`}
+          subtitle="Marque o lead com tags de negociação, fechamento ou acompanhamento para filtrar no CRM."
+        >
+          <div className="space-y-4 text-xs">
+            <div>
+              <span className="text-evo-muted text-[11px] block mb-2">
+                Clique nas tags para ativar ou desativar neste lead:
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { name: 'Em Negociação', color: 'bg-amber-500/20 text-amber-300 border-amber-500/40' },
+                  { name: 'Fechado 🚀', color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' },
+                  { name: 'Reunião Marcada', color: 'bg-blue-500/20 text-blue-300 border-blue-500/40' },
+                  { name: 'Proposta Enviada', color: 'bg-purple-500/20 text-purple-300 border-purple-500/40' },
+                  { name: 'Aguardando Resposta', color: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40' },
+                  { name: 'Sem Interesse', color: 'bg-rose-500/20 text-rose-300 border-rose-500/40' },
+                ].map((preset) => {
+                  const isActive = (tagModalLead.tags || []).includes(preset.name);
+                  return (
+                    <button
+                      key={preset.name}
+                      type="button"
+                      onClick={() => {
+                        const updated = crmService.toggleLeadTag(tagModalLead.id, preset.name);
+                        if (updated) {
+                          setTagModalLead({ ...updated });
+                          if (preset.name === 'Fechado 🚀' && !isActive) {
+                            crmService.updateLead(tagModalLead.id, { status: 'convertido' });
+                          } else if (preset.name === 'Em Negociação' && !isActive) {
+                            crmService.updateLead(tagModalLead.id, { status: 'em_conversa' });
+                          }
+                        }
+                      }}
+                      className={`px-3 py-1.5 rounded-xl border text-xs font-medium transition-all flex items-center gap-1.5 ${
+                        isActive
+                          ? `${preset.color} ring-2 ring-evo-support/50 font-semibold shadow-sm`
+                          : 'bg-evo-surface text-evo-muted border-evo-border hover:text-evo-text'
+                      }`}
+                    >
+                      {isActive && <Check className="w-3.5 h-3.5" />}
+                      <span>{preset.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-4 border-t border-evo-border">
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setTagModalLead(null)}
+              >
+                Concluir
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {/* Modal WhatsApp Inbox Oficial com Envio Direto e Termômetro IA */}
       {inboxLead && (

@@ -70,22 +70,25 @@ export function WhatsAppInboxModal({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioIntervalRef = useRef<any>(null);
 
-  // Carrega histórico de mensagens do lead
+  // Carrega histórico de mensagens do lead com sincronização em tempo real
   useEffect(() => {
-    if (lead && isOpen) {
-      const logs = crmService.getMessageLogs(lead.id);
-      
-      // Se o lead ainda não tem mensagens, cria a mensagem inicial sugerida no input
-      if (logs.length === 0 && initialMessage) {
-        setInputText(initialMessage);
-      } else if (initialMessage && !inputText) {
-        setInputText(initialMessage);
-      }
+    if (!lead || !isOpen) return;
 
+    const loadLogs = () => {
+      const logs = crmService.getMessageLogs(lead.id, lead.whatsapp || lead.phone);
       setMessages([...logs].reverse()); // Exibe cronológico
       const analysis = crmBrain.analyzeConversationSentiment(logs, lead);
       setSentiment(analysis);
+    };
+
+    loadLogs();
+
+    if (initialMessage && !inputText) {
+      setInputText(initialMessage);
     }
+
+    const unsubscribe = crmService.subscribe(loadLogs);
+    return () => unsubscribe();
   }, [lead, isOpen, initialMessage]);
 
   // Rola até o final das mensagens
@@ -112,7 +115,7 @@ export function WhatsAppInboxModal({
 
     try {
       // 1. Tenta enviar via rota da Evolution API
-      const res = await fetch('/api/whatsapp/send', {
+      await fetch('/api/whatsapp/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -125,9 +128,11 @@ export function WhatsAppInboxModal({
         }),
       });
 
-      // 2. Grava log no crmService
+      // 2. Grava log persistente no crmService
       const newLog: MessageLog = crmService.addMessageLog({
         lead_id: lead.id,
+        phone: lead.whatsapp || lead.phone,
+        sender_name: lead.name || lead.company_name,
         step_name: 'Mensagem WhatsApp Inbox',
         channel: 'WhatsApp (Evolution API)',
         sent_text: text,
@@ -148,9 +153,11 @@ export function WhatsAppInboxModal({
       setShowEmojiPicker(false);
     } catch (err) {
       console.error('Erro ao enviar mensagem:', err);
-      // Fallback local
+      // Fallback local garantido
       const newLog = crmService.addMessageLog({
         lead_id: lead.id,
+        phone: lead.whatsapp || lead.phone,
+        sender_name: lead.name || lead.company_name,
         step_name: 'Mensagem WhatsApp Inbox',
         channel: 'WhatsApp (Evolution API)',
         sent_text: text,
@@ -172,6 +179,8 @@ export function WhatsAppInboxModal({
   const handleSimulateClientReply = (replyText: string) => {
     const newLog: MessageLog = crmService.addMessageLog({
       lead_id: lead.id,
+      phone: lead.whatsapp || lead.phone,
+      sender_name: lead.name || lead.company_name,
       step_name: 'Resposta do Cliente',
       channel: 'WhatsApp (Evolution API)',
       sent_text: replyText,
@@ -202,6 +211,8 @@ export function WhatsAppInboxModal({
       // Registra mensagem de áudio no histórico
       const newLog: MessageLog = crmService.addMessageLog({
         lead_id: lead.id,
+        phone: lead.whatsapp || lead.phone,
+        sender_name: lead.name || lead.company_name,
         step_name: 'Mensagem de Áudio Gravada',
         channel: 'WhatsApp (Evolution API)',
         sent_text: `🎙️ Mensagem de Áudio (${secs || 1}s)`,
@@ -220,6 +231,8 @@ export function WhatsAppInboxModal({
   const handleSendImage = () => {
     const newLog: MessageLog = crmService.addMessageLog({
       lead_id: lead.id,
+      phone: lead.whatsapp || lead.phone,
+      sender_name: lead.name || lead.company_name,
       step_name: 'Imagem / Portfólio',
       channel: 'WhatsApp (Evolution API)',
       sent_text: `📷 [Imagem] Mockup de Site Institucional & Relatório de Oportunidades`,
