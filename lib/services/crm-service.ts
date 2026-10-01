@@ -124,6 +124,15 @@ class CrmService {
           this.clients = parsed;
         }
       }
+      const cachedNiches = localStorage.getItem('evocrm_niches');
+      if (cachedNiches) {
+        const parsed = JSON.parse(cachedNiches);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const cachedNames = new Set(parsed.map((n: any) => n.name));
+          const missingDefaults = INITIAL_NICHES.filter(iniche => !cachedNames.has(iniche.name));
+          this.niches = [...parsed, ...missingDefaults];
+        }
+      }
     } catch (e) {
       console.warn('Erro ao carregar do localStorage:', e);
     }
@@ -162,6 +171,7 @@ class CrmService {
           historical,
           tasks,
           transactions,
+          niches,
         ] = await Promise.all([
           dbService.getClients(),
           dbService.getMonthlyClients(),
@@ -174,6 +184,7 @@ class CrmService {
           dbService.getHistoricalProjects(),
           dbService.getTasks(),
           dbService.getTransactions(),
+          dbService.getNiches(),
         ]);
 
         let changed = false;
@@ -205,6 +216,13 @@ class CrmService {
         if (historical && historical.length > 0) { this.historicalProjects = historical; changed = true; }
         if (tasks && tasks.length > 0) { this.tasks = tasks; changed = true; }
         if (transactions && transactions.length > 0) { this.transactions = transactions; changed = true; }
+        if (niches && niches.length > 0) {
+          const supabaseNames = new Set(niches.map(n => n.name));
+          const localCustom = this.niches.filter(n => !supabaseNames.has(n.name));
+          this.niches = [...niches, ...localCustom];
+          this.saveToLocalStorage('niches', this.niches);
+          changed = true;
+        }
 
         this.initializedFromSupabase = true;
         if (changed) {
@@ -548,16 +566,20 @@ class CrmService {
   public addNiche(nicheData: Omit<Niche, 'id'>): Niche {
     const newNiche: Niche = {
       ...nicheData,
-      id: `niche-${Date.now()}`,
+      id: typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `niche-${Date.now()}`,
     };
     this.niches.push(newNiche);
+    this.saveToLocalStorage('niches', this.niches);
     this.notify();
+    dbService.insertNiche(newNiche).catch(() => {});
     return newNiche;
   }
 
   public deleteNiche(id: string): void {
     this.niches = this.niches.filter(n => n.id !== id);
+    this.saveToLocalStorage('niches', this.niches);
     this.notify();
+    dbService.deleteNiche(id).catch(() => {});
   }
 
   // Serviços

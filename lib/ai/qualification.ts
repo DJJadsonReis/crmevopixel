@@ -18,6 +18,9 @@ export interface QualifyInput {
 
 export function detectNiche(text: string): string {
   const lower = (text || '').toLowerCase();
+  if (lower.includes('aduaneir') || lower.includes('aduana') || lower.includes('comex') || lower.includes('exterior') || lower.includes('despachante')) {
+    return 'Advogado Aduaneiro';
+  }
   if (lower.includes('odonto') || lower.includes('dent') || lower.includes('clinic') || lower.includes('estetic') || lower.includes('saud') || lower.includes('medic')) {
     return 'Clínicas / Odonto / Estética';
   }
@@ -25,7 +28,7 @@ export function detectNiche(text: string): string {
     return 'Contabilidade';
   }
   if (lower.includes('advoc') || lower.includes('jurid') || lower.includes('direit') || lower.includes('oab')) {
-    return 'Advocacia / Jurídico';
+    return 'Advocacia';
   }
   if (lower.includes('marmor') || lower.includes('granit') || lower.includes('pedra') || lower.includes('rocha')) {
     return 'Marmorarias / Marmoristas';
@@ -41,6 +44,9 @@ export function detectNiche(text: string): string {
 
 export function getRecommendedServices(segment: string): string[] {
   const lower = (segment || '').toLowerCase();
+  if (lower.includes('aduaneir') || lower.includes('aduana') || lower.includes('comex')) {
+    return ['Portal Institucional Aduaneiro & Comex', 'Automação WhatsApp & Triagem de Importação'];
+  }
   if (lower.includes('clínica') || lower.includes('clinica') || lower.includes('odonto') || lower.includes('estética')) {
     return ['Landing Page de Alta Conversão', 'Automação WhatsApp & Agendamento'];
   }
@@ -60,7 +66,9 @@ export function getRecommendedServices(segment: string): string[] {
 }
 
 export function qualifyLeadWithAI(input: QualifyInput): Omit<Lead, 'id'> {
-  const segment = detectNiche(input.segment || input.company_name || '');
+  const segment = input.segment && input.segment.trim()
+    ? input.segment.trim()
+    : detectNiche(input.company_name || '');
   const rawPhone = input.whatsapp || input.phone || '';
   const cleanedPhone = cleanPhoneNumber(rawPhone);
   const formattedPhone = cleanedPhone ? formatPhoneNumber(cleanedPhone) : rawPhone;
@@ -121,7 +129,9 @@ export function qualifyLeadWithAI(input: QualifyInput): Omit<Lead, 'id'> {
 }
 
 export function qualifyProspectWithAI(input: QualifyInput): Omit<Prospect, 'id'> {
-  const segment = detectNiche(input.segment || input.company_name || '');
+  const segment = input.segment && input.segment.trim()
+    ? input.segment.trim()
+    : detectNiche(input.company_name || '');
   const rawPhone = input.whatsapp || input.phone || '';
   const cleanedPhone = cleanPhoneNumber(rawPhone);
   const formattedPhone = cleanedPhone ? formatPhoneNumber(cleanedPhone) : rawPhone;

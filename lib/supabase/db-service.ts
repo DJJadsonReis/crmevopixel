@@ -11,6 +11,7 @@ import {
   HistoricalProject,
   TaskItem,
   FinancialTransaction,
+  Niche,
 } from '@/types/database';
 
 function isValidUUID(str?: string | null): boolean {
@@ -704,6 +705,51 @@ export class DatabaseService {
     try {
       const supabase = getSupabase();
       const { error } = await supabase.from('financial_transactions').delete().eq('id', id);
+      return !error;
+    } catch {
+      return false;
+    }
+  }
+
+  // ============================================================================
+  // NICHOS
+  // ============================================================================
+  public async getNiches(): Promise<Niche[] | null> {
+    if (!isSupabaseConfigured()) return null;
+    try {
+      const supabase = getSupabase();
+      const { data, error } = await supabase.from('niches').select('*');
+      if (error || !data) return null;
+      return data as Niche[];
+    } catch {
+      return null;
+    }
+  }
+
+  public async insertNiche(niche: Niche): Promise<boolean> {
+    if (!isSupabaseConfigured()) return false;
+    try {
+      const supabase = getSupabase();
+      const toInsert: any = {
+        name: niche.name,
+        description: niche.description || null,
+        status: niche.status || 'ativo',
+      };
+      if (isValidUUID(niche.id)) {
+        toInsert.id = niche.id;
+      }
+      const { error } = await supabase.from('niches').upsert([toInsert]);
+      return !error;
+    } catch {
+      return false;
+    }
+  }
+
+  public async deleteNiche(id: string): Promise<boolean> {
+    if (!isSupabaseConfigured()) return false;
+    try {
+      const supabase = getSupabase();
+      const { error } = await supabase.from('niches').delete().eq('id', id);
       return !error;
     } catch {
       return false;

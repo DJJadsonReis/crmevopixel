@@ -686,3 +686,31 @@ BEGIN
     END IF;
 END $$;
 
+-- ------------------------------------------------------------------------------
+-- 17. CONFIGURAÇÕES DO SISTEMA & INTEGRAÇÕES
+-- ------------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS system_settings (
+    id TEXT PRIMARY KEY DEFAULT 'default',
+    evolution_url TEXT,
+    evolution_api_key TEXT,
+    evolution_instance TEXT,
+    n8n_webhook_url TEXT,
+    apify_token TEXT,
+    browserless_token TEXT,
+    browserless_endpoint TEXT,
+    settings JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE system_settings ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'authenticated_manage_system_settings') THEN
+        CREATE POLICY authenticated_manage_system_settings ON system_settings FOR ALL TO authenticated USING (true) WITH CHECK (true);
+    END IF;
+END $$;
+
+

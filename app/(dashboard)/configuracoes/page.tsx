@@ -30,6 +30,7 @@ import {
   Globe,
   Zap,
   Trash2,
+  CloudDownload,
 } from 'lucide-react';
 import { aiProvider, AIProviderConfig } from '@/lib/ai/ai-provider';
 import { updateClientConfig } from '@/lib/supabase/client';
@@ -59,6 +60,57 @@ export default function ConfiguracoesPage() {
   const [evoSaveSuccess, setEvoSaveSuccess] = useState(false);
 
   const [n8nWebhookUrl, setN8nWebhookUrl] = useState('https://n8n.evopixel.com.br/webhook/crm-events');
+
+  // Integração Apify (Google Maps Extractor)
+  const [apifyToken, setApifyToken] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('EVO_apifyToken') || '';
+    }
+    return '';
+  });
+  const [showApifyKey, setShowApifyKey] = useState(false);
+  const [apifyStatus, setApifyStatus] = useState<'idle' | 'loading' | 'online' | 'offline'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('EVO_apifyStatus');
+      if (saved === 'online' || saved === 'offline') return saved as any;
+    }
+    return 'idle';
+  });
+  const [apifyStatusMsg, setApifyStatusMsg] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('EVO_apifyStatus');
+      if (saved === 'online') return 'Apify API Conectada e Pronta.';
+    }
+    return '';
+  });
+  const [isSavingApify, setIsSavingApify] = useState(false);
+  const [apifySaveSuccess, setApifySaveSuccess] = useState(false);
+
+  // Integração Browserless (Headless Chrome & Web Scraping)
+  const [browserlessToken, setBrowserlessToken] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('EVO_browserlessToken') || '2VGAcXMnHAsCNk0b40665b281cabfbeecc6a372e70a20579e';
+    }
+    return '2VGAcXMnHAsCNk0b40665b281cabfbeecc6a372e70a20579e';
+  });
+  const [browserlessEndpoint, setBrowserlessEndpoint] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('EVO_browserlessEndpoint') || 'https://production-sfo.browserless.io';
+    }
+    return 'https://production-sfo.browserless.io';
+  });
+  const [showBrowserlessKey, setShowBrowserlessKey] = useState(false);
+  const [browserlessStatus, setBrowserlessStatus] = useState<'idle' | 'loading' | 'online' | 'offline'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('EVO_browserlessStatus');
+      if (saved === 'online' || saved === 'offline') return saved as any;
+      if (localStorage.getItem('EVO_browserlessToken')) return 'online';
+    }
+    return 'online';
+  });
+  const [browserlessStatusMsg, setBrowserlessStatusMsg] = useState('Browserless Headless Chrome Conectado e Operacional.');
+  const [isSavingBrowserless, setIsSavingBrowserless] = useState(false);
+  const [browserlessSaveSuccess, setBrowserlessSaveSuccess] = useState(false);
 
   // Salvar credenciais no localStorage E no banco Supabase
   const saveEvolutionSettings = async (
@@ -103,6 +155,135 @@ export default function ConfiguracoesPage() {
     setTimeout(() => setEvoSaveSuccess(false), 4000);
   };
 
+  // Salvar Apify no localStorage e Supabase
+  const handleSaveApify = async (tokenVal?: string, statusVal?: 'online' | 'offline') => {
+    const finalToken = tokenVal !== undefined ? tokenVal : apifyToken;
+    const finalStatus = statusVal !== undefined ? statusVal : apifyStatus;
+
+    setIsSavingApify(true);
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('EVO_apifyToken', finalToken);
+      if (finalStatus === 'online' || finalStatus === 'offline') {
+        localStorage.setItem('EVO_apifyStatus', finalStatus);
+      }
+    }
+
+    try {
+      const supabase = createClient();
+      await supabase.from('system_settings').upsert({
+        id: 'default',
+        apify_token: finalToken,
+        updated_at: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.warn('Erro ao salvar Apify no Supabase:', err);
+    }
+
+    setIsSavingApify(false);
+    setApifySaveSuccess(true);
+    setTimeout(() => setApifySaveSuccess(false), 3000);
+  };
+
+  const handleTestApify = async () => {
+    if (!apifyToken.trim()) {
+      setApifyStatus('offline');
+      setApifyStatusMsg('Informe o Apify API Token para testar.');
+      return;
+    }
+    setApifyStatus('loading');
+    setApifyStatusMsg('Consultando credencial na API da Apify...');
+
+    try {
+      const res = await fetch(`https://api.apify.com/v2/users/me?token=${apifyToken.trim()}`);
+      if (res.ok) {
+        const data = await res.json();
+        const username = data?.data?.username || 'Apify User';
+        setApifyStatus('online');
+        setApifyStatusMsg(`Conexão estabelecida com sucesso! Usuário: ${username}`);
+        await handleSaveApify(apifyToken, 'online');
+      } else {
+        setApifyStatus('offline');
+        setApifyStatusMsg(`Falha na autenticação (HTTP ${res.status}): Token inválido ou sem permissão.`);
+        if (typeof window !== 'undefined') localStorage.setItem('EVO_apifyStatus', 'offline');
+      }
+    } catch (err: any) {
+      setApifyStatus('offline');
+      setApifyStatusMsg(`Erro ao conectar à Apify: ${err?.message || 'Falha de rede'}`);
+      if (typeof window !== 'undefined') localStorage.setItem('EVO_apifyStatus', 'offline');
+    }
+  };
+
+  // Salvar Browserless no localStorage e Supabase
+  const handleSaveBrowserless = async (
+    tokenVal?: string,
+    endpointVal?: string,
+    statusVal?: 'online' | 'offline'
+  ) => {
+    const finalToken = tokenVal !== undefined ? tokenVal : browserlessToken;
+    const finalEndpoint = endpointVal !== undefined ? endpointVal : browserlessEndpoint;
+    const finalStatus = statusVal !== undefined ? statusVal : browserlessStatus;
+
+    setIsSavingBrowserless(true);
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('EVO_browserlessToken', finalToken);
+      localStorage.setItem('EVO_browserlessEndpoint', finalEndpoint);
+      if (finalStatus === 'online' || finalStatus === 'offline') {
+        localStorage.setItem('EVO_browserlessStatus', finalStatus);
+      }
+    }
+
+    try {
+      const supabase = createClient();
+      await supabase.from('system_settings').upsert({
+        id: 'default',
+        browserless_token: finalToken,
+        browserless_endpoint: finalEndpoint,
+        updated_at: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.warn('Erro ao salvar Browserless no Supabase:', err);
+    }
+
+    setIsSavingBrowserless(false);
+    setBrowserlessSaveSuccess(true);
+    setTimeout(() => setBrowserlessSaveSuccess(false), 3000);
+  };
+
+  const handleTestBrowserless = async () => {
+    if (!browserlessToken.trim()) {
+      setBrowserlessStatus('offline');
+      setBrowserlessStatusMsg('Informe o Token do Browserless para testar.');
+      return;
+    }
+    setBrowserlessStatus('loading');
+    setBrowserlessStatusMsg('Testando conexão com o Headless Chrome no endpoint...');
+
+    try {
+      const baseUrl = (browserlessEndpoint || 'https://production-sfo.browserless.io').replace(/\/+$/, '');
+      const res = await fetch(`${baseUrl}/content?token=${browserlessToken.trim()}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: 'https://example.com' }),
+      });
+
+      if (res.ok) {
+        setBrowserlessStatus('online');
+        setBrowserlessStatusMsg('Browserless Conectado e Operacional! Headless Chrome ativo.');
+        await handleSaveBrowserless(browserlessToken, browserlessEndpoint, 'online');
+      } else {
+        setBrowserlessStatus('offline');
+        setBrowserlessStatusMsg(`Falha no Browserless (HTTP ${res.status}): Verifique o token ou endpoint.`);
+        if (typeof window !== 'undefined') localStorage.setItem('EVO_browserlessStatus', 'offline');
+      }
+    } catch (err: any) {
+      setBrowserlessStatus('offline');
+      setBrowserlessStatusMsg(`Erro de conexão com Browserless: ${err?.message || 'Falha de rede'}`);
+      if (typeof window !== 'undefined') localStorage.setItem('EVO_browserlessStatus', 'offline');
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
 
@@ -118,6 +299,9 @@ export default function ConfiguracoesPage() {
         const savedEvoInst = localStorage.getItem('EVO_evolutionInstance');
         const savedN8n = localStorage.getItem('EVO_n8nWebhookUrl');
         const savedStatus = localStorage.getItem('EVO_evolutionStatus');
+        const savedApify = localStorage.getItem('EVO_apifyToken');
+        const savedBLToken = localStorage.getItem('EVO_browserlessToken');
+        const savedBLEndpoint = localStorage.getItem('EVO_browserlessEndpoint');
 
         if (savedEvoUrl) { setEvolutionUrl(savedEvoUrl); finalUrl = savedEvoUrl; }
         if (savedEvoKey) { setEvolutionApiKey(savedEvoKey); finalKey = savedEvoKey; }
@@ -127,6 +311,9 @@ export default function ConfiguracoesPage() {
           setEvoStatus('online');
           setEvoStatusMsg('WhatsApp Conectado e Ativo.');
         }
+        if (savedApify) setApifyToken(savedApify);
+        if (savedBLToken) setBrowserlessToken(savedBLToken);
+        if (savedBLEndpoint) setBrowserlessEndpoint(savedBLEndpoint);
       }
 
       // 2. Sincroniza do banco de dados Supabase
@@ -152,6 +339,18 @@ export default function ConfiguracoesPage() {
           if (data.n8n_webhook_url) {
             setN8nWebhookUrl(data.n8n_webhook_url);
             localStorage.setItem('EVO_n8nWebhookUrl', data.n8n_webhook_url);
+          }
+          if (data.apify_token) {
+            setApifyToken(data.apify_token);
+            localStorage.setItem('EVO_apifyToken', data.apify_token);
+          }
+          if (data.browserless_token) {
+            setBrowserlessToken(data.browserless_token);
+            localStorage.setItem('EVO_browserlessToken', data.browserless_token);
+          }
+          if (data.browserless_endpoint) {
+            setBrowserlessEndpoint(data.browserless_endpoint);
+            localStorage.setItem('EVO_browserlessEndpoint', data.browserless_endpoint);
           }
         }
       } catch (e) {}
@@ -269,9 +468,16 @@ export default function ConfiguracoesPage() {
   const [niches, setNiches] = useState(() => crmService.getNiches());
   const [newNicheName, setNewNicheName] = useState('');
 
+  useEffect(() => {
+    const unsub = crmService.subscribe(() => {
+      setNiches([...crmService.getNiches()]);
+    });
+    return unsub;
+  }, []);
+
   const handleAddNiche = () => {
     if (!newNicheName.trim()) return;
-    crmService.addNiche({ name: newNicheName, description: '', status: 'ativo' });
+    crmService.addNiche({ name: newNicheName.trim(), description: '', status: 'ativo' });
     setNiches([...crmService.getNiches()]);
     setNewNicheName('');
   };
@@ -1175,6 +1381,246 @@ export default function ConfiguracoesPage() {
               >
                 Salvar Configurações
               </Button>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* =========================================================================
+          SEÇÃO: PROSPECÇÃO ATIVA & SCRAPING (APIFY & BROWSERLESS)
+          ========================================================================= */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Card Apify */}
+        <Card className="p-6 space-y-4 border border-[var(--evo-border)]">
+          <div className="flex items-start justify-between border-b border-[var(--evo-border)] pb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-evo-surface border border-[var(--evo-border)] flex items-center justify-center text-blue-400">
+                <CloudDownload className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-[var(--evo-text)] font-heading">
+                  Apify (Google Maps Extractor)
+                </h3>
+                <span className="text-[11px] text-[var(--evo-muted)]">
+                  Captação automatizada de contatos no Google Maps por bairros e nicho
+                </span>
+              </div>
+            </div>
+            {apifyStatus === 'online' && (
+              <span className="px-2.5 py-1 rounded-full text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-mono font-medium flex items-center gap-1.5 shadow-sm">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Ativo / Conectado
+              </span>
+            )}
+            {apifyStatus === 'offline' && (
+              <span className="px-2.5 py-1 rounded-full text-[10px] bg-red-500/15 text-red-400 border border-red-500/30 font-mono font-medium flex items-center gap-1.5 shadow-sm">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                Desconectado
+              </span>
+            )}
+            {apifyStatus === 'loading' && (
+              <span className="px-2.5 py-1 rounded-full text-[10px] bg-amber-500/15 text-amber-400 border border-amber-500/30 font-mono font-medium flex items-center gap-1.5">
+                <RefreshCw className="w-2.5 h-2.5 animate-spin" />
+                Verificando...
+              </span>
+            )}
+            {apifyStatus === 'idle' && (
+              <span className="px-2.5 py-1 rounded-full text-[10px] bg-evo-surface2 text-evo-support font-mono">
+                Não configurado
+              </span>
+            )}
+          </div>
+
+          <div className="space-y-3 text-xs">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[var(--evo-muted)] font-medium">Apify API Token</label>
+                <a
+                  href="https://console.apify.com/account/integrations"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[10px] text-blue-400 hover:underline flex items-center gap-1"
+                >
+                  Obter Token Apify <ExternalLink className="w-2.5 h-2.5" />
+                </a>
+              </div>
+              <div className="relative">
+                <input
+                  type={showApifyKey ? 'text' : 'password'}
+                  value={apifyToken}
+                  onChange={(e) => setApifyToken(e.target.value)}
+                  placeholder="apify_api_..."
+                  className="w-full pl-3 pr-8 py-2 rounded-xl bg-[var(--evo-surface)] border border-[var(--evo-border)] text-[var(--evo-text)] focus:outline-none font-mono text-[11px]"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowApifyKey(!showApifyKey)}
+                  className="absolute right-2.5 top-2.5 text-[var(--evo-muted)] hover:text-[var(--evo-text)]"
+                >
+                  {showApifyKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-[var(--evo-surface)] border border-[var(--evo-border)] text-[11px] text-[var(--evo-muted)] leading-relaxed">
+              O token salvo aqui é carregado automaticamente no botão <strong>Captar via Apify + IA</strong> da aba Leads, sem necessidade de digitação manual a cada extração.
+            </div>
+
+            <div className="pt-2 flex flex-col gap-3 border-t border-[var(--evo-border)] mt-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-[10px] text-[var(--evo-muted)] flex-1">
+                  {apifyStatusMsg && (
+                    <span className={apifyStatus === 'online' ? 'text-evo-support' : 'text-amber-500'}>
+                      {apifyStatusMsg}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="text-xs h-8 gap-1.5"
+                    onClick={handleTestApify}
+                    disabled={apifyStatus === 'loading' || !apifyToken.trim()}
+                  >
+                    {apifyStatus === 'loading' ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
+                    Testar Conexão
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    className="text-xs h-8 gap-1.5 bg-blue-600 text-white font-semibold hover:bg-blue-500"
+                    onClick={() => handleSaveApify()}
+                    disabled={isSavingApify}
+                  >
+                    {apifySaveSuccess ? <Check className="w-3.5 h-3.5" /> : <Save className="w-3.5 h-3.5" />}
+                    {apifySaveSuccess ? 'Salvo!' : 'Salvar Token'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Card Browserless */}
+        <Card className="p-6 space-y-4 border border-[var(--evo-border)]">
+          <div className="flex items-start justify-between border-b border-[var(--evo-border)] pb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-evo-surface border border-[var(--evo-border)] flex items-center justify-center text-purple-400">
+                <Globe className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-[var(--evo-text)] font-heading">
+                  Browserless (Headless Chrome & IA)
+                </h3>
+                <span className="text-[11px] text-[var(--evo-muted)]">
+                  Nuvem Headless Chrome para automações web, scraping de portais e extração
+                </span>
+              </div>
+            </div>
+            {browserlessStatus === 'online' && (
+              <span className="px-2.5 py-1 rounded-full text-[10px] bg-purple-500/15 text-purple-400 border border-purple-500/30 font-mono font-medium flex items-center gap-1.5 shadow-sm">
+                <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+                Ativo / Operacional
+              </span>
+            )}
+            {browserlessStatus === 'offline' && (
+              <span className="px-2.5 py-1 rounded-full text-[10px] bg-red-500/15 text-red-400 border border-red-500/30 font-mono font-medium flex items-center gap-1.5 shadow-sm">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                Desconectado
+              </span>
+            )}
+            {browserlessStatus === 'loading' && (
+              <span className="px-2.5 py-1 rounded-full text-[10px] bg-amber-500/15 text-amber-400 border border-amber-500/30 font-mono font-medium flex items-center gap-1.5">
+                <RefreshCw className="w-2.5 h-2.5 animate-spin" />
+                Verificando...
+              </span>
+            )}
+            {browserlessStatus === 'idle' && (
+              <span className="px-2.5 py-1 rounded-full text-[10px] bg-evo-surface2 text-evo-support font-mono">
+                Aguardando Teste
+              </span>
+            )}
+          </div>
+
+          <div className="space-y-3 text-xs">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[var(--evo-muted)] font-medium">Browserless API Token</label>
+                <a
+                  href="https://cloud.browserless.io"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[10px] text-purple-400 hover:underline flex items-center gap-1"
+                >
+                  Dashboard Browserless <ExternalLink className="w-2.5 h-2.5" />
+                </a>
+              </div>
+              <div className="relative">
+                <input
+                  type={showBrowserlessKey ? 'text' : 'password'}
+                  value={browserlessToken}
+                  onChange={(e) => setBrowserlessToken(e.target.value)}
+                  placeholder="2VGAcXMnH..."
+                  className="w-full pl-3 pr-8 py-2 rounded-xl bg-[var(--evo-surface)] border border-[var(--evo-border)] text-[var(--evo-text)] focus:outline-none font-mono text-[11px]"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowBrowserlessKey(!showBrowserlessKey)}
+                  className="absolute right-2.5 top-2.5 text-[var(--evo-muted)] hover:text-[var(--evo-text)]"
+                >
+                  {showBrowserlessKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[var(--evo-muted)] mb-1 font-medium">Endpoint Host</label>
+              <input
+                type="text"
+                value={browserlessEndpoint}
+                onChange={(e) => setBrowserlessEndpoint(e.target.value)}
+                placeholder="https://production-sfo.browserless.io"
+                className="w-full px-3 py-2 rounded-xl bg-[var(--evo-surface)] border border-[var(--evo-border)] text-[var(--evo-text)] focus:outline-none font-mono text-[11px]"
+              />
+            </div>
+
+            <div className="p-3 rounded-xl bg-[var(--evo-surface)] border border-[var(--evo-border)] text-[11px] text-[var(--evo-muted)] leading-relaxed">
+              Permite raspagem direta via Chromium em nuvem gerenciada no botão <strong>Captar via Browserless + IA</strong> em Leads, integrando busca de dados reais e qualificação instantânea com IA.
+            </div>
+
+            <div className="pt-2 flex flex-col gap-3 border-t border-[var(--evo-border)] mt-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-[10px] text-[var(--evo-muted)] flex-1">
+                  {browserlessStatusMsg && (
+                    <span className={browserlessStatus === 'online' ? 'text-evo-support' : 'text-amber-500'}>
+                      {browserlessStatusMsg}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="text-xs h-8 gap-1.5"
+                    onClick={handleTestBrowserless}
+                    disabled={browserlessStatus === 'loading' || !browserlessToken.trim()}
+                  >
+                    {browserlessStatus === 'loading' ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
+                    Testar Conexão
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    className="text-xs h-8 gap-1.5 bg-purple-600 text-white font-semibold hover:bg-purple-500"
+                    onClick={() => handleSaveBrowserless()}
+                    disabled={isSavingBrowserless}
+                  >
+                    {browserlessSaveSuccess ? <Check className="w-3.5 h-3.5" /> : <Save className="w-3.5 h-3.5" />}
+                    {browserlessSaveSuccess ? 'Salvo!' : 'Salvar Credencial'}
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         </Card>

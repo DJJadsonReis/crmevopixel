@@ -175,6 +175,13 @@ export const INITIAL_NICHES: Niche[] = [
     status: 'ativo',
     sequences_count: 1,
   },
+  {
+    id: 'niche-6',
+    name: 'Advogado Aduaneiro',
+    description: 'Advocacia aduaneira, comércio exterior, tributação de importação e exportação.',
+    status: 'ativo',
+    sequences_count: 1,
+  },
 ];
 
 export const INITIAL_SEQUENCES: MessageSequence[] = [
