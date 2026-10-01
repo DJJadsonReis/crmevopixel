@@ -5,6 +5,7 @@ import { X, RefreshCw, Copy, Check, ExternalLink } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon';
 import { openWhatsApp, cleanPhoneNumber } from '@/lib/utils/whatsapp';
 import { useUser } from '@/lib/hooks/useUser';
+import { WhatsAppInboxModal } from '@/components/inbox/WhatsAppInboxModal';
 
 export interface TargetEntity {
   id?: string;
@@ -38,6 +39,7 @@ export function GenerateMessageModal({
   const [copied, setCopied] = useState(false);
   const [phoneInput, setPhoneInput] = useState('');
   const [isEditingPhone, setIsEditingPhone] = useState(false);
+  const [isInboxOpen, setIsInboxOpen] = useState(false);
 
   // Generate templates based on target
   const generateTemplates = (item: TargetEntity): string[] => {
@@ -70,6 +72,7 @@ export function GenerateMessageModal({
       setCopied(false);
       setPhoneInput(target.whatsapp || target.phone || '');
       setIsEditingPhone(!target.whatsapp && !target.phone);
+      setIsInboxOpen(false);
     }
   }, [target, isOpen]);
 
@@ -102,10 +105,8 @@ export function GenerateMessageModal({
       return;
     }
 
-    const opened = openWhatsApp(effectivePhone, message);
-    if (opened) {
-      onClose();
-    }
+    // Abre o WhatsApp Inbox oficial com a mensagem pronta
+    setIsInboxOpen(true);
   };
 
   return (
@@ -223,13 +224,41 @@ export function GenerateMessageModal({
           <button
             onClick={handleSendWhatsApp}
             className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#25D366] hover:bg-[#20ba5a] text-[#07100F] font-heading font-semibold text-xs flex items-center justify-center gap-2 transition-all shadow-lg shadow-[#25D366]/20 active:scale-95 hover:brightness-105"
-            title="Abrir no WhatsApp com a mensagem pronta"
+            title="Abrir Inbox e Enviar no WhatsApp"
           >
             <WhatsAppIcon className="w-4 h-4 fill-current text-[#07100F]" />
             <span>Enviar no WhatsApp</span>
           </button>
         </div>
       </div>
+
+      {/* Modal WhatsApp Inbox Oficial com Envio Direto e Termômetro IA */}
+      {isInboxOpen && (
+        <WhatsAppInboxModal
+          isOpen={isInboxOpen}
+          onClose={() => {
+            setIsInboxOpen(false);
+            onClose();
+          }}
+          lead={{
+            id: target.id || `lead-${Date.now()}`,
+            name: target.name || target.company_name,
+            company_name: target.company_name,
+            phone: phoneInput || target.phone || target.whatsapp || '',
+            whatsapp: phoneInput || target.whatsapp || target.phone || '',
+            segment: target.segment || 'Geral',
+            city: target.city || 'São Paulo',
+            state: target.state || 'SP',
+            temperature: 'quente',
+            score: 85,
+            status: 'novo',
+            source_id: 'prospeccao',
+            role: target.role || 'Decisor Comercial',
+            services: target.services || [],
+          }}
+          initialMessage={message}
+        />
+      )}
     </div>
   );
 }

@@ -36,6 +36,7 @@ import { GenerateMessageModal, TargetEntity } from '@/components/modals/Generate
 import { qualifyLeadWithAI } from '@/lib/ai/qualification';
 import { aiProvider } from '@/lib/ai/ai-provider';
 import { createClient } from '@/utils/supabase/client';
+import { WhatsAppInboxModal } from '@/components/inbox/WhatsAppInboxModal';
 
 export default function LeadsPage() {
   useCrmSync();
@@ -43,6 +44,7 @@ export default function LeadsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTemperature, setSelectedTemperature] = useState<string>('todos');
   const [selectedNiche, setSelectedNiche] = useState<string>('todos');
+  const [inboxLead, setInboxLead] = useState<Lead | null>(null);
   const [isNewLeadModalOpen, setIsNewLeadModalOpen] = useState(false);
 
   // Import states
@@ -522,12 +524,12 @@ export default function LeadsPage() {
     );
   };
 
-  const handleDirectWhatsApp = (whatsapp?: string, companyName?: string) => {
-    if (!whatsapp || !cleanPhoneNumber(whatsapp)) {
-      alert(`O lead "${companyName}" não possui número de WhatsApp válido cadastrado.`);
+  const handleDirectWhatsApp = (lead: Lead) => {
+    if (!lead.whatsapp && !lead.phone) {
+      alert(`O lead "${lead.company_name}" não possui número de WhatsApp cadastrado.`);
       return;
     }
-    openWhatsApp(whatsapp);
+    setInboxLead(lead);
   };
 
   const handleOpenMessageModal = (lead: Lead) => {
@@ -837,11 +839,11 @@ export default function LeadsPage() {
                     {/* Ações: WhatsApp, Gerar Mensagem, Olho & Excluir */}
                     <td className="py-3.5 px-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
-                        {/* Botão Chamar no WhatsApp (Só a logo) */}
+                        {/* Botão Chamar no WhatsApp (Abre Inbox Oficial com IA) */}
                         <button
-                          onClick={() => handleDirectWhatsApp(lead.whatsapp, lead.company_name)}
+                          onClick={() => handleDirectWhatsApp(lead)}
                           className="p-1.5 rounded-xl bg-[#25D366]/15 hover:bg-[#25D366]/25 border border-[#25D366]/30 text-[#25D366] transition-all active:scale-95 shadow-sm flex items-center justify-center"
-                          title={`Chamar ${lead.company_name} no WhatsApp`}
+                          title={`Abrir Inbox WhatsApp de ${lead.company_name}`}
                         >
                           <WhatsAppIcon className="w-4 h-4 fill-current" />
                         </button>
@@ -1348,6 +1350,15 @@ export default function LeadsPage() {
         onClose={() => setMessageTarget(null)}
         target={messageTarget}
       />
+
+      {/* Modal WhatsApp Inbox Oficial com Envio Direto e Termômetro IA */}
+      {inboxLead && (
+        <WhatsAppInboxModal
+          isOpen={Boolean(inboxLead)}
+          onClose={() => setInboxLead(null)}
+          lead={inboxLead}
+        />
+      )}
     </div>
   );
 }

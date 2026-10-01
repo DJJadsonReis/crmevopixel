@@ -39,6 +39,8 @@ import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon';
 import { openWhatsApp, cleanPhoneNumber } from '@/lib/utils/whatsapp';
 import { GenerateMessageModal, TargetEntity } from '@/components/modals/GenerateMessageModal';
 import { useCrmSync } from '@/lib/hooks/useCrmSync';
+import { WhatsAppInboxModal } from '@/components/inbox/WhatsAppInboxModal';
+import { crmBrain } from '@/lib/ai/crm-brain';
 
 export default function LeadProfilePage() {
   useCrmSync();
@@ -51,6 +53,7 @@ export default function LeadProfilePage() {
   const [sequenceStatus, setSequenceStatus] = useState(lead?.sequence_progress?.status || 'aguardando_envio');
   const [isApproachModalOpen, setIsApproachModalOpen] = useState(false);
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
+  const [isInboxOpen, setIsInboxOpen] = useState(false);
   const [approachMessage, setApproachMessage] = useState('');
 
   if (!lead) {
@@ -141,7 +144,7 @@ export default function LeadProfilePage() {
                   alert(`O lead "${lead.company_name}" não possui WhatsApp válido cadastrado.`);
                   return;
                 }
-                openWhatsApp(lead.whatsapp);
+                setIsInboxOpen(true);
               }}
               className="px-3.5 py-2 rounded-xl bg-[#25D366]/15 hover:bg-[#25D366]/25 border border-[#25D366]/30 text-[#25D366] text-xs font-heading font-medium flex items-center gap-1.5 transition-all active:scale-95 shadow-sm"
               title="Abrir WhatsApp Web / App"
@@ -441,28 +444,101 @@ export default function LeadProfilePage() {
       )}
 
       {activeTab === 'conversas' && (
-        <Card className="p-6 space-y-4">
-          <CardTitle>Histórico de Mensagens & Webhooks</CardTitle>
-          <div className="space-y-3">
-            {logs.map((log) => (
-              <div
-                key={log.id}
-                className="p-4 rounded-xl bg-evo-surface/70 border border-evo-border text-xs space-y-1.5"
+        <div className="space-y-4">
+          {/* Banner do Agente IA & Termômetro */}
+          {(() => {
+            const sentiment = crmBrain.analyzeConversationSentiment(logs, lead);
+            return (
+              <Card className="p-4 bg-gradient-to-r from-evo-card via-evo-surface to-evo-card border-evo-support/30">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-evo-support/20 text-evo-support font-semibold">
+                        Agente Copilot IA • Termômetro Ativo
+                      </span>
+                      <span className="text-xs font-semibold text-evo-text">
+                        Humor do Lead: {sentiment.temperatureEmoji} {sentiment.temperatureBadge}
+                      </span>
+                    </div>
+                    <p className="text-xs text-evo-muted">
+                      <strong className="text-evo-text">Orientação Estratégica:</strong> {sentiment.tacticalAdvice}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="w-32 text-right">
+                      <div className="text-[11px] font-mono font-bold text-evo-text">
+                        {sentiment.thermometerScore}% Interesse
+                      </div>
+                      <div className="h-2 w-full bg-evo-surface rounded-full overflow-hidden mt-1 border border-evo-border">
+                        <div
+                          className="h-full bg-gradient-to-r from-emerald-500 via-amber-400 to-rose-500 rounded-full transition-all"
+                          style={{ width: `${sentiment.thermometerScore}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
+                      onClick={() => setIsInboxOpen(true)}
+                    >
+                      <WhatsAppIcon className="w-4 h-4 fill-white" />
+                      Abrir WhatsApp Web
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            );
+          })()}
+
+          <Card className="p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <CardTitle>Histórico de Mensagens & Webhooks</CardTitle>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="text-xs"
+                onClick={() => setIsInboxOpen(true)}
               >
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="font-semibold text-evo-support">{log.channel}</span>
-                  <span className="text-evo-disabled font-mono">
-                    {new Date(log.sent_at).toLocaleString('pt-BR')} • {log.status}
-                  </span>
-                </div>
-                <p className="text-evo-text leading-relaxed">{log.sent_text}</p>
-                <div className="text-[10px] text-evo-disabled font-mono pt-1">
-                  Origem: {log.source} ({log.direction})
-                </div>
+                Abrir Chat Interativo
+              </Button>
+            </div>
+
+            {logs.length === 0 ? (
+              <div className="p-8 text-center text-xs text-evo-muted border border-dashed border-evo-border rounded-xl">
+                Nenhuma mensagem registrada ainda para este contato. Inicie a conversa pelo WhatsApp Inbox acima!
               </div>
-            ))}
-          </div>
-        </Card>
+            ) : (
+              <div className="space-y-3">
+                {logs.map((log) => (
+                  <div
+                    key={log.id}
+                    className={`p-4 rounded-xl border text-xs space-y-1.5 ${
+                      log.direction === 'recebida'
+                        ? 'bg-evo-card border-blue-500/20'
+                        : 'bg-evo-surface/70 border-evo-border'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className={`font-semibold ${log.direction === 'recebida' ? 'text-blue-400' : 'text-evo-support'}`}>
+                        {log.direction === 'recebida' ? `Recebida de ${lead.name}` : log.channel}
+                      </span>
+                      <span className="text-evo-disabled font-mono">
+                        {new Date(log.sent_at).toLocaleString('pt-BR')} • {log.status}
+                      </span>
+                    </div>
+                    <p className="text-evo-text leading-relaxed whitespace-pre-wrap">{log.sent_text}</p>
+                    <div className="text-[10px] text-evo-disabled font-mono pt-1">
+                      Origem: {log.source} ({log.direction})
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </div>
       )}
 
       {/* Modal Motor de Abordagem (Seção 21) */}
@@ -566,6 +642,17 @@ export default function LeadProfilePage() {
       </Modal>
 
       {/* Modal Gerador de Mensagens (Anexo 1) */}
+      {/* WhatsApp Web Inbox Modal */}
+      <WhatsAppInboxModal
+        isOpen={isInboxOpen}
+        onClose={() => {
+          setIsInboxOpen(false);
+          setLogs([...crmService.getMessageLogs(lead.id)]);
+        }}
+        lead={lead}
+        initialMessage={approachMessage || undefined}
+      />
+
       <GenerateMessageModal
         isOpen={isGenerateModalOpen}
         onClose={() => setIsGenerateModalOpen(false)}

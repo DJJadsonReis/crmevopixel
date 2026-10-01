@@ -7,6 +7,7 @@ import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { isSupabaseConfigured } from '@/lib/supabase/client';
 
 import { useUser } from '@/lib/hooks/useUser';
+import { AutonomousManagerBell } from './AutonomousManagerBell';
 
 interface TopbarProps {
   onOpenSearch?: () => void;
@@ -38,6 +39,9 @@ export function Topbar({ onOpenSearch }: TopbarProps) {
 
       {/* Ações & Perfil */}
       <div className="flex items-center gap-3">
+        {/* Gestor Autônomo IA (Notificações Proativas & Alertas) */}
+        <AutonomousManagerBell />
+
         {/* Alternador de Tema Dark / Claro */}
         <ThemeToggle />
 

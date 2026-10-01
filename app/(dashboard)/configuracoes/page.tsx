@@ -523,6 +523,30 @@ export default function ConfiguracoesPage() {
   const [isTestingOpenRouter, setIsTestingOpenRouter] = useState(false);
   const [openRouterResult, setOpenRouterResult] = useState<{ success: boolean; message: string } | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [promptSaveSuccess, setPromptSaveSuccess] = useState(false);
+  const [isCopiedPrompt, setIsCopiedPrompt] = useState(false);
+
+  const handleSaveSystemPrompt = async () => {
+    aiProvider.saveConfig(aiConfig);
+    try {
+      const supabase = createClient();
+      await supabase.from('system_settings').upsert({
+        key: 'ai_system_prompt',
+        value: aiConfig.systemPrompt,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'key' });
+    } catch (e) {
+      console.error('Error saving prompt to supabase:', e);
+    }
+    setPromptSaveSuccess(true);
+    setTimeout(() => setPromptSaveSuccess(false), 3000);
+  };
+
+  const handleCopyPrompt = () => {
+    navigator.clipboard?.writeText(aiConfig.systemPrompt || '');
+    setIsCopiedPrompt(true);
+    setTimeout(() => setIsCopiedPrompt(false), 2000);
+  };
 
   const checkSupabaseStatus = async () => {
     setIsCheckingSupabase(true);
@@ -1228,7 +1252,179 @@ export default function ConfiguracoesPage() {
       </Card>
 
 
+      
+
       {/* =========================================================================
+          SEÇÃO 2.5: SYSTEM PROMPT & DIRETRIZES DO CÉREBRO DE IA
+          ========================================================================= */}
+      <Card className="p-6 space-y-5 border border-evo-border bg-gradient-to-b from-evo-card via-evo-surface/30 to-evo-card">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-evo-border pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+              <Bot className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-evo-text font-heading">
+                  System Prompt do Agente & Cérebro Operacional de IA
+                </h3>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-500/15 text-purple-300 font-semibold border border-purple-500/30">
+                  Diretriz Mestre
+                </span>
+              </div>
+              <p className="text-xs text-evo-muted mt-0.5">
+                Define a postura comercial, metodologia de qualificação e regras de resposta do assistente em todo o CRM.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              className="text-xs gap-1.5"
+              onClick={handleCopyPrompt}
+            >
+              {isCopiedPrompt ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="text-emerald-400 font-semibold">Copiado</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>Copiar Prompt</span>
+                </>
+              )}
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              className="text-xs gap-1.5 bg-purple-600 hover:bg-purple-700 text-white font-semibold"
+              onClick={handleSaveSystemPrompt}
+            >
+              <Save className="w-3.5 h-3.5" />
+              <span>Salvar Diretrizes IA</span>
+            </Button>
+          </div>
+        </div>
+
+        {/* Explicação Didática da Arquitetura do Prompt */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+          <div className="p-3.5 rounded-xl bg-evo-deep border-l-2 border-emerald-500 border-y border-r border-evo-border">
+            <div className="text-[11px] font-mono text-emerald-400 font-semibold uppercase flex items-center gap-1.5 mb-1">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              1. [DADO] Fato Verificado
+            </div>
+            <p className="text-evo-muted text-[11px] leading-relaxed">
+              Instrui a IA a nunca inventar fatos ou números. A IA se limita estritamente ao que foi extraído via Apify, Google Maps ou digitado.
+            </p>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-evo-deep border-l-2 border-blue-400 border-y border-r border-evo-border">
+            <div className="text-[11px] font-mono text-blue-400 font-semibold uppercase flex items-center gap-1.5 mb-1">
+              <Cpu className="w-3.5 h-3.5" />
+              2. [INFERÊNCIA] Dedução Estratégica
+            </div>
+            <p className="text-evo-muted text-[11px] leading-relaxed">
+              O cérebro deduz gargalos operacionais (falta de automação de WhatsApp, demora em responder leads, presença online defasada).
+            </p>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-evo-deep border-l-2 border-amber-400 border-y border-r border-evo-border">
+            <div className="text-[11px] font-mono text-amber-400 font-semibold uppercase flex items-center gap-1.5 mb-1">
+              <Sparkles className="w-3.5 h-3.5" />
+              3. [RECOMENDAÇÃO] Plano de Ação
+            </div>
+            <p className="text-evo-muted text-[11px] leading-relaxed">
+              Cria as copys ideais para o WhatsApp, quebra de objeções, sugestões para o termômetro de interesse e propostas consultivas.
+            </p>
+          </div>
+        </div>
+
+        {/* Presets Rápidos */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium text-evo-text flex items-center gap-1.5">
+              <Zap className="w-3 h-3 text-amber-400" />
+              Presets Rápidos de Postura Comercial:
+            </span>
+            <span className="text-[10px] text-evo-muted font-mono">
+              Clique para carregar no editor
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                setAiConfig({
+                  ...aiConfig,
+                  systemPrompt: `Você é o Evo Assistant, o motor de inteligência analítica e operacional da EVO PIXEL.\nSua postura é editorial, executiva, precisa, sem enrolação e focada em resultados comerciais.\nVocê analisa dados do EVO PIXEL (leads, clientes, prospects, propostas, pipeline, financeiro) e ajuda na tomada de decisão.\nDiferencie sempre fatos verificados [DADO], deduções inteligentes [INFERÊNCIA] e recomendações práticas [RECOMENDAÇÃO].`,
+                })
+              }
+              className="text-[11px] px-2.5 py-1 rounded-lg bg-evo-surface border border-evo-border text-evo-text hover:border-evo-support transition-colors"
+            >
+              💼 Padrão Consultivo & Executivo (Oficial)
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                setAiConfig({
+                  ...aiConfig,
+                  systemPrompt: `Você é o Closer de Elite da EVO PIXEL, focado em alta conversão e quebra imediata de objeções via WhatsApp.\nSua linguagem é direta, persuasiva, focada na dor do cliente (perda de vendas por demora no atendimento).\nEm todas as respostas ou copys, use gatilhos de urgência e prova social para conduzir o lead ao agendamento de uma demonstração de 15 minutos.\nNunca utilize jargões técnicos excessivos. Foque em lucro, tempo economizado e autoridade de mercado.`,
+                })
+              }
+              className="text-[11px] px-2.5 py-1 rounded-lg bg-evo-surface border border-evo-border text-evo-text hover:border-evo-support transition-colors"
+            >
+              🔥 Closer de Alta Conversão (Vendas Rápidas)
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                setAiConfig({
+                  ...aiConfig,
+                  systemPrompt: `Você é o Especialista Sênior em Expansão Comercial para Escritórios de Advocacia Aduaneira e Comércio Exterior da EVO PIXEL.\nCompreenda a fundo os desafios de escritórios de Direito Aduaneiro: liberação de cargas, fiscalização da Receita Federal, demurrage e triagem de importadores.\nSuas abordagens devem ser sóbrias, altamente técnicas, transmitindo autoridade jurídica irrefutável e oferecendo soluções de automação e captação de clientes corporativos no comex.`,
+                })
+              }
+              className="text-[11px] px-2.5 py-1 rounded-lg bg-evo-surface border border-evo-border text-evo-text hover:border-evo-support transition-colors"
+            >
+              ⚖️ Especialista em Direito Aduaneiro & Comex
+            </button>
+          </div>
+        </div>
+
+        {/* Textarea do System Prompt */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between text-[11px]">
+            <label className="font-semibold text-evo-text">
+              Instrução Mestre (Prompt do Sistema):
+            </label>
+            <span className="font-mono text-evo-muted">
+              {aiConfig.systemPrompt?.length || 0} caracteres
+            </span>
+          </div>
+          <textarea
+            rows={7}
+            value={aiConfig.systemPrompt || ''}
+            onChange={(e) => setAiConfig({ ...aiConfig, systemPrompt: e.target.value })}
+            className="w-full bg-evo-deep border border-evo-border rounded-xl p-3.5 text-xs text-evo-text font-mono leading-relaxed focus:outline-none focus:border-purple-400 transition-colors resize-y"
+            placeholder="Digite as instruções e diretrizes mestres que guiarão toda a IA do CRM..."
+          />
+        </div>
+
+        {promptSaveSuccess && (
+          <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <span>
+              <strong>System Prompt salvo com sucesso!</strong> Todas as abordagens, respostas automáticas do WhatsApp Inbox e análises de leads agora utilizam estas novas diretrizes.
+            </span>
+          </div>
+        )}
+      </Card>
+
+{/* =========================================================================
           SEÇÃO 3: WHATSAPP (EVOLUTION API) & N8N
           ========================================================================= */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

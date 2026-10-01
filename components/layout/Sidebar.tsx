@@ -22,6 +22,7 @@ import {
   Crosshair,
   CalendarCheck,
   ShieldCheck,
+  TrendingUp,
   LogOut,
 } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
@@ -53,6 +54,7 @@ export function Sidebar() {
       items: [
         { label: 'Leads', href: '/leads', icon: Users },
         { label: 'Pipeline', href: '/pipeline', icon: Kanban },
+        { label: 'Funil & Copys', href: '/funil', icon: TrendingUp, badge: 'IA' },
         { label: 'Oportunidades', href: '/oportunidades', icon: Crosshair },
       ],
     },
