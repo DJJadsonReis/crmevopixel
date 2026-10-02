@@ -30,6 +30,11 @@ import {
   Mail,
   MapPin,
   Globe,
+  Layers,
+  Award,
+  AlertTriangle,
+  Edit,
+  FileText,
 } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon';
 import { openWhatsApp, cleanPhoneNumber } from '@/lib/utils/whatsapp';
@@ -39,6 +44,7 @@ import { qualifyLeadWithAI, getRecommendedServices } from '@/lib/ai/qualificatio
 import { aiProvider } from '@/lib/ai/ai-provider';
 import { createClient } from '@/utils/supabase/client';
 import { WhatsAppInboxModal } from '@/components/inbox/WhatsAppInboxModal';
+import { ScoreBreakdownModal } from '@/components/leads/ScoreBreakdownModal';
 
 export default function LeadsPage() {
   useCrmSync();
@@ -47,10 +53,31 @@ export default function LeadsPage() {
   const [selectedTemperature, setSelectedTemperature] = useState<string>('todos');
   const [selectedNiche, setSelectedNiche] = useState<string>('todos');
   const [selectedEnrichmentStatus, setSelectedEnrichmentStatus] = useState<string>('todos');
+  const [selectedWebsiteStatus, setSelectedWebsiteStatus] = useState<
+    'todos' | 'com_site' | 'sem_site' | 'com_problemas'
+  >('todos');
+  const [scoreModalLead, setScoreModalLead] = useState<Lead | null>(null);
+  const [isNicheModalOpen, setIsNicheModalOpen] = useState(false);
+  const [newNicheName, setNewNicheName] = useState('');
+  const [newNicheDesc, setNewNicheDesc] = useState('');
+  const [editingNicheId, setEditingNicheId] = useState<string | null>(null);
+  const [newWebsite, setNewWebsite] = useState('');
   const [enrichingIds, setEnrichingIds] = useState<Set<string>>(new Set());
   const [inboxLead, setInboxLead] = useState<Lead | null>(null);
   const [tagModalLead, setTagModalLead] = useState<Lead | null>(null);
   const [isNewLeadModalOpen, setIsNewLeadModalOpen] = useState(false);
+
+  const getProspectedInfo = (nicheName: string, cityName: string) => {
+    if (!nicheName || !cityName) return { prospected: false, count: 0 };
+    const n = nicheName.toLowerCase().trim();
+    const c = cityName.toLowerCase().trim();
+    const count = leads.filter(
+      (l) =>
+        (l.segment || '').toLowerCase().includes(n) &&
+        (l.city || '').toLowerCase().includes(c)
+    ).length;
+    return { prospected: count > 0, count };
+  };
 
   const handleQuickEnrich = async (leadId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -206,6 +233,7 @@ export default function LeadsPage() {
           const email = row['Email'] || row['E-mail'] || row['email'] || '';
           const city = row['Cidade'] || row['City'] || row['cidade'] || 'São Paulo';
           const role = row['Cargo'] || row['Função'] || row['role'] || 'Decisor Comercial';
+          const website = row['Site'] || row['Website'] || row['URL'] || row['site'] || row['website'] || row['url'] || '';
           const instagram = row['Instagram'] || row['instagram'] || row['Insta'] || '';
           const google_business = row['Google Meu Negócio'] || row['GMB'] || row['Google Maps'] || row['google_business'] || '';
 
@@ -217,6 +245,7 @@ export default function LeadsPage() {
               whatsapp: phone,
               segment,
               city,
+              website,
               email,
               role,
               instagram,
@@ -342,6 +371,7 @@ export default function LeadsPage() {
           whatsapp: leadItem.telefone,
           segment: leadItem.segment || apifyNiche,
           city: leadItem.cidade || apifyCity,
+          website: leadItem.site,
           email: leadItem.email,
           instagram: leadItem.instagram,
           google_business: leadItem.google_business,
@@ -476,6 +506,7 @@ export default function LeadsPage() {
           whatsapp: leadItem.telefone,
           segment: browserlessNiche,
           city: leadItem.cidade || browserlessCity,
+          website: leadItem.site,
           email: leadItem.email,
           instagram: leadItem.instagram,
           google_business: leadItem.google_business,
@@ -510,6 +541,7 @@ export default function LeadsPage() {
       company_name: newCompany.trim(),
       segment: newSegment,
       city: newCity.trim(),
+      website: newWebsite.trim(),
       whatsapp: newWhatsapp.trim(),
       phone: newWhatsapp.trim(),
       email: newEmail.trim(),
@@ -524,6 +556,7 @@ export default function LeadsPage() {
     setNewCompany('');
     setNewWhatsapp('');
     setNewCity('');
+    setNewWebsite('');
     setNewEmail('');
     setNewInstagram('');
     setNewGoogleBusiness('');
@@ -604,7 +637,24 @@ export default function LeadsPage() {
       (selectedEnrichmentStatus === 'not_analyzed' && (!lead.enrichment_status || lead.enrichment_status === 'not_analyzed')) ||
       lead.enrichment_status === selectedEnrichmentStatus;
 
-    return matchesSearch && matchesTemp && matchesNiche && matchesEnrichment;
+    const hasWebsite = Boolean(lead.website && lead.website.trim().length > 0);
+    const hasIssues =
+      lead.technical_audit?.site_health_status === 'PARTIALLY_BROKEN' ||
+      lead.technical_audit?.site_health_status === 'OFFLINE' ||
+      lead.technical_audit?.site_health_status === 'ONLINE_WITH_ISSUES' ||
+      lead.site_health_status === 'PARTIALLY_BROKEN' ||
+      lead.site_health_status === 'OFFLINE' ||
+      (lead.pagespeed_report?.mobile?.scores?.performance !== null &&
+        lead.pagespeed_report?.mobile?.scores?.performance !== undefined &&
+        lead.pagespeed_report.mobile.scores.performance < 50);
+
+    const matchesWebsite =
+      selectedWebsiteStatus === 'todos' ||
+      (selectedWebsiteStatus === 'com_site' && hasWebsite) ||
+      (selectedWebsiteStatus === 'sem_site' && !hasWebsite) ||
+      (selectedWebsiteStatus === 'com_problemas' && hasIssues);
+
+    return matchesSearch && matchesTemp && matchesNiche && matchesEnrichment && matchesWebsite;
   });
 
   return (
@@ -653,6 +703,16 @@ export default function LeadsPage() {
           >
             <Upload className="w-3.5 h-3.5" />
             <span>Importar Planilha</span>
+          </button>
+
+          {/* Botão Gerenciar Nichos */}
+          <button
+            onClick={() => setIsNicheModalOpen(true)}
+            className="px-3.5 py-2 rounded-xl bg-evo-surface hover:bg-evo-surface2 border border-evo-border text-evo-support hover:text-evo-accent text-xs font-heading font-medium flex items-center gap-1.5 transition-all active:scale-95"
+            title="Adicionar ou gerenciar nichos de mercado para prospecção"
+          >
+            <Layers className="w-3.5 h-3.5 text-evo-accent" />
+            <span>Gerenciar Nichos</span>
           </button>
 
           {/* Botão Novo Lead */}
@@ -715,6 +775,17 @@ export default function LeadsPage() {
               </option>
             ))}
             {!niches.some(n => n.name === 'Geral') && <option value="Geral">Outro / Geral</option>}
+          </select>
+
+          <select
+            value={selectedWebsiteStatus}
+            onChange={(e) => setSelectedWebsiteStatus(e.target.value as any)}
+            className="px-3 py-1.5 rounded-xl bg-evo-card border border-evo-border text-xs text-evo-text focus:outline-none focus:border-evo-support appearance-none cursor-pointer"
+          >
+            <option value="todos">Presença Web (Todos)</option>
+            <option value="com_site">🌐 Com Website</option>
+            <option value="sem_site">🚫 Sem Website (Oportunidade)</option>
+            <option value="com_problemas">⚠️ Site com Problemas Técnicos</option>
           </select>
 
           <select
@@ -950,17 +1021,24 @@ export default function LeadsPage() {
 
                     {/* Score */}
                     <td className="py-3.5 px-4 text-center">
-                      <span
-                        className={`font-mono text-xs font-semibold px-2 py-0.5 rounded ${
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setScoreModalLead(lead);
+                        }}
+                        className={`font-mono text-xs font-semibold px-2 py-0.5 rounded cursor-pointer hover:scale-105 transition-transform inline-flex items-center gap-1 ${
                           lead.score >= 80
-                            ? 'text-evo-accent bg-evo-accent/10'
+                            ? 'text-evo-accent bg-evo-accent/10 border border-evo-accent/30'
                             : lead.score >= 60
-                            ? 'text-evo-support bg-evo-support/10'
-                            : 'text-evo-muted bg-evo-surface'
+                            ? 'text-evo-support bg-evo-support/10 border border-evo-support/30'
+                            : 'text-evo-muted bg-evo-surface border border-evo-border'
                         }`}
+                        title="Ver auditoria e explicação do score pelos 5 pilares"
                       >
-                        {lead.score}
-                      </span>
+                        <Award className="w-3 h-3 text-evo-accent" />
+                        <span>{lead.score}</span>
+                      </button>
                     </td>
 
                     {/* Serviços Identificados */}
@@ -1151,6 +1229,17 @@ export default function LeadsPage() {
                 className="w-full px-3 py-2 rounded-xl bg-evo-deep border border-evo-border text-evo-text placeholder-[#65706A] focus:outline-none focus:border-evo-support text-xs"
               />
             </div>
+
+            <div className="sm:col-span-2">
+              <label className="block text-evo-muted mb-1 font-medium">Website / URL (opcional)</label>
+              <input
+                type="text"
+                placeholder="https://empresa.com.br"
+                value={newWebsite}
+                onChange={(e) => setNewWebsite(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl bg-evo-deep border border-evo-border text-evo-text placeholder-[#65706A] focus:outline-none focus:border-evo-support text-xs font-mono"
+              />
+            </div>
           </div>
 
           <div className="flex items-center justify-end gap-2 pt-2 border-t border-evo-border">
@@ -1221,6 +1310,24 @@ export default function LeadsPage() {
               />
             </div>
           </div>
+
+          {/* Status de Prospecção Prévia */}
+          {(() => {
+            const info = getProspectedInfo(apifyNiche, apifyCity);
+            return info.prospected ? (
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center gap-2.5 text-xs text-amber-300 animate-in fade-in">
+                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>
+                  <strong>{apifyNiche}</strong> em <strong>{apifyCity}</strong> — <strong>Já prospectado</strong> ({info.count} {info.count === 1 ? 'lead cadastrado' : 'leads cadastrados'} no CRM).
+                </span>
+              </div>
+            ) : (
+              <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-2 text-xs text-emerald-300 animate-in fade-in">
+                <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>Nicho virgem nesta cidade (0 leads cadastrados). Excelente oportunidade de prospecção!</span>
+              </div>
+            );
+          })()}
 
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-[10px] font-mono text-evo-muted">Quantidade rápida:</span>
@@ -1354,6 +1461,24 @@ export default function LeadsPage() {
               />
             </div>
           </div>
+
+          {/* Status de Prospecção Prévia */}
+          {(() => {
+            const info = getProspectedInfo(browserlessNiche, browserlessCity);
+            return info.prospected ? (
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center gap-2.5 text-xs text-amber-300 animate-in fade-in">
+                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>
+                  <strong>{browserlessNiche}</strong> em <strong>{browserlessCity}</strong> — <strong>Já prospectado</strong> ({info.count} {info.count === 1 ? 'lead cadastrado' : 'leads cadastrados'} no CRM).
+                </span>
+              </div>
+            ) : (
+              <div className="p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center gap-2 text-xs text-purple-300 animate-in fade-in">
+                <Sparkles className="w-4 h-4 text-purple-400 shrink-0" />
+                <span>Nicho virgem nesta cidade (0 leads cadastrados). Excelente oportunidade de prospecção!</span>
+              </div>
+            );
+          })()}
 
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-[10px] font-mono text-evo-muted">Quantidade rápida:</span>
@@ -1581,6 +1706,198 @@ export default function LeadsPage() {
           lead={inboxLead}
         />
       )}
+
+      {/* Modal Gerenciador de Nichos (+ Adicionar Nicho) */}
+      <Modal
+        isOpen={isNicheModalOpen}
+        onClose={() => {
+          setIsNicheModalOpen(false);
+          setEditingNicheId(null);
+          setNewNicheName('');
+          setNewNicheDesc('');
+        }}
+        title="Gerenciamento de Nichos Comerciais"
+        subtitle="Cadastre novos nichos e personalize segmentos estratégicos para a prospecção da EVO PIXEL."
+        maxWidth="lg"
+      >
+        <div className="space-y-5 text-xs">
+          {/* Formulário de Adicionar / Editar Nicho */}
+          <div className="p-4 rounded-xl bg-evo-surface border border-evo-border space-y-3">
+            <h4 className="text-xs font-semibold text-evo-text uppercase tracking-wider font-mono flex items-center gap-1.5">
+              <Plus className="w-3.5 h-3.5 text-evo-accent" />
+              {editingNicheId ? 'Editar Nicho' : 'Cadastrar Novo Nicho'}
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-evo-muted mb-1 font-medium">Nome do Nicho *</label>
+                <input
+                  type="text"
+                  placeholder="Ex: Clínicas Médicas, Imobiliárias..."
+                  value={newNicheName}
+                  onChange={(e) => setNewNicheName(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-evo-deep border border-evo-border text-evo-text focus:outline-none focus:border-evo-accent text-xs"
+                />
+              </div>
+              <div>
+                <label className="block text-evo-muted mb-1 font-medium">Descrição / Foco Comercial</label>
+                <input
+                  type="text"
+                  placeholder="Ex: Ticket médio alto, necessidade de site rápido..."
+                  value={newNicheDesc}
+                  onChange={(e) => setNewNicheDesc(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-evo-deep border border-evo-border text-evo-text focus:outline-none focus:border-evo-accent text-xs"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              {editingNicheId && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    setEditingNicheId(null);
+                    setNewNicheName('');
+                    setNewNicheDesc('');
+                  }}
+                >
+                  Cancelar Edição
+                </Button>
+              )}
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  if (!newNicheName.trim()) {
+                    alert('Informe o nome do nicho.');
+                    return;
+                  }
+                  if (editingNicheId) {
+                    crmService.updateNiche(editingNicheId, {
+                      name: newNicheName.trim(),
+                      description: newNicheDesc.trim(),
+                    });
+                    setEditingNicheId(null);
+                  } else {
+                    crmService.addNiche({
+                      name: newNicheName.trim(),
+                      description: newNicheDesc.trim(),
+                      status: 'ativo',
+                    });
+                  }
+                  setNiches([...crmService.getNiches()]);
+                  setNewNicheName('');
+                  setNewNicheDesc('');
+                }}
+              >
+                {editingNicheId ? 'Salvar Alterações' : 'Salvar Nicho'}
+              </Button>
+            </div>
+          </div>
+
+          {/* Lista de Nichos Existentes */}
+          <div className="space-y-2">
+            <h4 className="text-xs font-semibold text-evo-muted uppercase tracking-wider font-mono">
+              Nichos Ativos no CRM ({niches.length})
+            </h4>
+            <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
+              {niches.map((n) => {
+                const leadCount = leads.filter(
+                  (l) => (l.segment || '').toLowerCase() === n.name.toLowerCase()
+                ).length;
+                return (
+                  <div
+                    key={n.id}
+                    className="p-3 rounded-xl bg-evo-card border border-evo-border flex items-center justify-between gap-3"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-evo-text text-xs">{n.name}</span>
+                        <span
+                          className={`px-1.5 py-0.2 rounded text-[10px] font-mono uppercase ${
+                            n.status === 'ativo'
+                              ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                              : 'bg-zinc-800 text-zinc-400'
+                          }`}
+                        >
+                          {n.status}
+                        </span>
+                        <span className="text-[10px] font-mono text-evo-muted">
+                          {leadCount} {leadCount === 1 ? 'lead' : 'leads'}
+                        </span>
+                      </div>
+                      {n.description && (
+                        <p className="text-[11px] text-evo-muted truncate mt-0.5">{n.description}</p>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newStatus = n.status === 'ativo' ? 'inativo' : 'ativo';
+                          crmService.updateNiche(n.id, { status: newStatus });
+                          setNiches([...crmService.getNiches()]);
+                        }}
+                        className="px-2 py-1 rounded-lg text-[10px] font-mono bg-evo-surface hover:bg-evo-surface2 text-evo-support border border-evo-border transition-colors"
+                        title="Alternar Ativo/Inativo"
+                      >
+                        {n.status === 'ativo' ? 'Desativar' : 'Ativar'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingNicheId(n.id);
+                          setNewNicheName(n.name);
+                          setNewNicheDesc(n.description || '');
+                        }}
+                        className="p-1.5 rounded-lg text-evo-muted hover:text-evo-text hover:bg-evo-surface transition-colors"
+                        title="Editar nicho"
+                      >
+                        <Edit className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (confirm(`Deseja excluir o nicho "${n.name}"?`)) {
+                            crmService.deleteNiche(n.id);
+                            setNiches([...crmService.getNiches()]);
+                          }
+                        }}
+                        className="p-1.5 rounded-lg text-evo-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                        title="Excluir nicho"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-3 border-t border-evo-border">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                setIsNicheModalOpen(false);
+                setEditingNicheId(null);
+                setNewNicheName('');
+                setNewNicheDesc('');
+              }}
+            >
+              Fechar
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal Decomposição Explicável do Score */}
+      <ScoreBreakdownModal
+        isOpen={Boolean(scoreModalLead)}
+        onClose={() => setScoreModalLead(null)}
+        lead={scoreModalLead}
+      />
     </div>
   );
 }

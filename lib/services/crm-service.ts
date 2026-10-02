@@ -631,7 +631,7 @@ class CrmService {
         company_name: lead.company_name || 'Empresa',
         stage_slug: targetStage,
         title: `Projeto ${lead.services?.[0] || 'Site & Automação'} — ${lead.company_name}`,
-        estimated_value: 3500,
+        estimated_value: 0,
         probability,
         score: lead.score || 80,
         temperature: lead.temperature || 'quente',
@@ -666,6 +666,18 @@ class CrmService {
     this.notify();
     dbService.deleteNiche(id).catch(() => {});
   }
+
+  public updateNiche(id: string, updates: Partial<Niche>): Niche | undefined {
+    const niche = this.niches.find(n => n.id === id);
+    if (niche) {
+      Object.assign(niche, updates);
+      this.saveToLocalStorage('niches', this.niches);
+      this.notify();
+      dbService.updateNiche(id, updates).catch(() => {});
+    }
+    return niche;
+  }
+
 
   // Serviços
   public getServices(): Service[] {
@@ -1226,6 +1238,34 @@ class CrmService {
     };
     this.messageLogs.unshift(newLog);
     this.saveToLocalStorage('messageLogs', this.messageLogs);
+
+    // Atualiza imediatamente o Lead correspondente
+    const targetLead = this.leads.find((l) => {
+      if (newLog.lead_id && l.id === newLog.lead_id) return true;
+      if (newLog.phone) {
+        const p1 = cleanPhoneNumber(newLog.phone);
+        const p2 = cleanPhoneNumber(l.whatsapp || l.phone || '');
+        if (p1 && p2 && (p1 === p2 || p1.endsWith(p2.slice(-8)) || p2.endsWith(p1.slice(-8)))) return true;
+      }
+      return false;
+    });
+
+    if (targetLead) {
+      targetLead.last_contact_at = newLog.sent_at;
+      if (newLog.direction === 'recebida') {
+        targetLead.status = 'em_conversa';
+        targetLead.conversation_archived = false; // reativação reativa automática
+        targetLead.unread_messages_count = (targetLead.unread_messages_count || 0) + 1;
+      }
+      this.saveToLocalStorage('leads', this.leads);
+      this.syncLeadToOpportunity(targetLead);
+      dbService.updateLead(targetLead.id, {
+        last_contact_at: targetLead.last_contact_at,
+        status: targetLead.status,
+        unread_messages_count: targetLead.unread_messages_count,
+      } as any).catch(() => {});
+    }
+
     this.notify();
     return newLog;
   }
@@ -1285,10 +1325,19 @@ class CrmService {
 
         const hasIncoming = syncedMessages.some((m) => m.direction === 'recebida');
         const lead = this.leads.find((l) => l.id === leadId);
-        if (lead && hasIncoming && (lead.status === 'novo' || (lead.status as any) === 'em_abordagem')) {
-          lead.status = 'em_conversa';
+        if (lead) {
+          const latestSent = syncedMessages[0]?.sent_at || new Date().toISOString();
+          lead.last_contact_at = latestSent;
+          if (hasIncoming) {
+            lead.status = 'em_conversa';
+            lead.conversation_archived = false;
+          }
           this.saveToLocalStorage('leads', this.leads);
           this.syncLeadToOpportunity(lead);
+          dbService.updateLead(lead.id, {
+            last_contact_at: lead.last_contact_at,
+            status: lead.status,
+          } as any).catch(() => {});
         }
 
         this.notify();
@@ -1300,6 +1349,7 @@ class CrmService {
       return this.getMessageLogs(leadId, phone);
     }
   }
+
 
 
   // Gestão de Tags nos Leads

@@ -50,11 +50,16 @@ function WhatsAppChatContent() {
   useCrmSync();
   const searchParams = useSearchParams();
   const initialLeadId = searchParams.get('leadId');
+  const initialFilterParam = searchParams.get('filter');
+  const defaultFilter =
+    initialFilterParam === 'respostas' || initialFilterParam === 'nao_lidas'
+      ? 'nao_lidas'
+      : 'todos';
 
   const [leads, setLeads] = useState<Lead[]>(() => crmService.getLeads());
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(initialLeadId || null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterType, setFilterType] = useState<'todos' | 'nao_lidas' | 'quentes' | 'negociacao' | 'arquivadas'>('todos');
+  const [filterType, setFilterType] = useState<'todos' | 'nao_lidas' | 'quentes' | 'negociacao' | 'arquivadas'>(defaultFilter);
   const [inputText, setInputText] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -74,6 +79,14 @@ function WhatsAppChatContent() {
     return unsub;
   }, []);
 
+  // Sincroniza alteração no query param filter
+  useEffect(() => {
+    const f = searchParams.get('filter');
+    if (f === 'respostas' || f === 'nao_lidas') {
+      setFilterType('nao_lidas');
+    }
+  }, [searchParams]);
+
   // Se nenhum lead selecionado e houver leads, seleciona o primeiro
   useEffect(() => {
     if (!selectedLeadId && leads.length > 0) {
@@ -85,6 +98,15 @@ function WhatsAppChatContent() {
       }
     }
   }, [leads, selectedLeadId, initialLeadId]);
+
+  // Limpa contador de não lidas quando uma conversa está ativa
+  useEffect(() => {
+    if (!selectedLeadId) return;
+    const current = leads.find((l) => l.id === selectedLeadId);
+    if (current && (current.unread_messages_count || 0) > 0) {
+      crmService.updateLead(selectedLeadId, { unread_messages_count: 0 });
+    }
+  }, [selectedLeadId, leads]);
 
   const selectedLead = leads.find((l) => l.id === selectedLeadId) || leads[0] || null;
 
@@ -269,39 +291,51 @@ function WhatsAppChatContent() {
     });
   };
 
-  // Filtra lista de contatos
-  const filteredLeads = leads.filter((l) => {
-    const matchesSearch =
-      l.company_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      l.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (l.segment || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (l.city || '').toLowerCase().includes(searchQuery.toLowerCase());
+  // Ordenação estrita: conversas com última mensagem/interação mais recente no topo (last_contact_at / last_message_at DESC)
+  const getLeadLastInteraction = (l: Lead) => {
+    const logs = crmService.getMessageLogs(l.id, l.whatsapp || l.phone);
+    const lastLog = logs[0];
+    const logTime = lastLog ? new Date(lastLog.sent_at).getTime() : 0;
+    const leadContactTime = l.last_contact_at ? new Date(l.last_contact_at).getTime() : 0;
+    const createdTime = l.created_at ? new Date(l.created_at).getTime() : 0;
+    return Math.max(logTime, leadContactTime, createdTime);
+  };
 
-    if (!matchesSearch) return false;
+  // Filtra e ordena lista de contatos
+  const filteredLeads = leads
+    .filter((l) => {
+      const matchesSearch =
+        l.company_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        l.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (l.segment || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (l.city || '').toLowerCase().includes(searchQuery.toLowerCase());
 
-    // Filtro de arquivados
-    if (filterType === 'arquivadas') {
-      return Boolean(l.conversation_archived);
-    }
+      if (!matchesSearch) return false;
 
-    // Se não está na aba arquivadas, esconde os arquivados
-    if (l.conversation_archived) return false;
+      // Filtro de arquivados
+      if (filterType === 'arquivadas') {
+        return Boolean(l.conversation_archived);
+      }
 
-    const logs = crmService.getMessageLogs(l.id);
-    const unreadCount = l.unread_messages_count || logs.filter((m) => m.direction === 'recebida').length;
+      // Se não está na aba arquivadas, esconde os arquivados
+      if (l.conversation_archived) return false;
 
-    if (filterType === 'nao_lidas') return unreadCount > 0;
-    if (filterType === 'quentes') return l.temperature === 'quente';
-    if (filterType === 'negociacao') {
-      return (
-        l.status === 'em_abordagem' ||
-        l.status === 'em_conversa' ||
-        (l.tags && l.tags.includes('Em Negociação'))
-      );
-    }
+      const logs = crmService.getMessageLogs(l.id, l.whatsapp || l.phone);
+      const unreadCount = l.unread_messages_count || logs.filter((m) => m.direction === 'recebida').length;
 
-    return true;
-  });
+      if (filterType === 'nao_lidas') return unreadCount > 0;
+      if (filterType === 'quentes') return l.temperature === 'quente';
+      if (filterType === 'negociacao') {
+        return (
+          l.status === 'em_abordagem' ||
+          l.status === 'em_conversa' ||
+          (l.tags && l.tags.includes('Em Negociação'))
+        );
+      }
+
+      return true;
+    })
+    .sort((a, b) => getLeadLastInteraction(b) - getLeadLastInteraction(a));
 
   const quickEmojis = ['😊', '👍', '🤝', '💼', '🚀', '🔥', '💰', '📅', '📱', '✨', '🙏', '👏', '🎯', '✅'];
   const smartReplies = selectedLead ? crmBrain.getSmartQuickReplies(selectedLead, activeMessages) : [];
@@ -394,7 +428,12 @@ function WhatsAppChatContent() {
                 return (
                   <div
                     key={lead.id}
-                    onClick={() => setSelectedLeadId(lead.id)}
+                    onClick={() => {
+                      setSelectedLeadId(lead.id);
+                      if (lead.unread_messages_count && lead.unread_messages_count > 0) {
+                        crmService.updateLead(lead.id, { unread_messages_count: 0 });
+                      }
+                    }}
                     className={`p-3.5 flex items-start gap-3 cursor-pointer transition-colors relative ${
                       isSelected
                         ? 'bg-[#2a3942]'
@@ -441,9 +480,18 @@ function WhatsAppChatContent() {
                         <p className="text-[11px] text-[#8696a0] truncate flex items-center gap-1">
                           {lastLog ? (
                             <>
-                              {lastLog.direction === 'enviada' && (
+                              {lastLog.direction === 'enviada' ? (
                                 <CheckCheck className="w-3 h-3 text-[#53bdeb] shrink-0" />
+                              ) : (
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#00a884] shrink-0" />
                               )}
+                              <span className="text-[#00a884] font-medium shrink-0">
+                                {lastLog.direction === 'recebida'
+                                  ? 'Cliente: '
+                                  : lastLog.source === 'automatica_n8n'
+                                  ? 'IA: '
+                                  : 'Você: '}
+                              </span>
                               <span className="truncate">{lastLog.sent_text}</span>
                             </>
                           ) : (

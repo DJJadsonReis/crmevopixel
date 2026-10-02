@@ -342,6 +342,8 @@ export interface Lead {
   conversation_archived?: boolean;
   suppression_status?: 'active' | 'opt_out' | 'blocked';
   unread_messages_count?: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface PipelineStage {

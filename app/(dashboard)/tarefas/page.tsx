@@ -34,14 +34,24 @@ import {
 } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon';
 
+export type TarefasTabType =
+  | 'TODAS'
+  | 'RASCUNHOS'
+  | 'AGENDADAS'
+  | 'EM_EXECUCAO'
+  | 'PAUSADAS'
+  | 'CONCLUIDAS'
+  | 'COM_ERRO'
+  | 'CANCELADAS'
+  | 'ROTINAS';
+
 export default function TarefasPage() {
   useCrmSync();
   const [leads, setLeads] = useState<Lead[]>(() => crmService.getLeads());
   const [tasks, setTasks] = useState<TaskItem[]>(() => crmService.getTasks());
   const [automationTasks, setAutomationTasks] = useState<AutomationTask[]>([]);
-  const [activeTab, setActiveTab] = useState<
-    'HOJE' | 'AGENDADAS' | 'EM_EXECUCAO' | 'CONCLUIDAS' | 'COM_ERRO' | 'ROTINAS'
-  >('HOJE');
+  const [activeTab, setActiveTab] = useState<TarefasTabType>('TODAS');
+  const [editingAutomationTask, setEditingAutomationTask] = useState<AutomationTask | null>(null);
   const [viewMode, setViewMode] = useState<'lista' | 'kanban'>('lista');
   const [filterAssignee, setFilterAssignee] = useState<'todos' | 'agente_ia' | 'operador'>('todos');
 
@@ -70,7 +80,6 @@ export default function TarefasPage() {
       if (dbTasks && dbTasks.length > 0) {
         setAutomationTasks(dbTasks);
       } else {
-        // Fallback local caso tabela esteja vazia no primeiro carregamento
         const saved = localStorage.getItem('crm_automation_tasks');
         if (saved) {
           setAutomationTasks(JSON.parse(saved));
@@ -91,30 +100,103 @@ export default function TarefasPage() {
     return unsub;
   }, []);
 
+  // Loop de Execução Automática de Lotes para Tarefas RUNNING
+  useEffect(() => {
+    const runningTasks = automationTasks.filter((t) => t.status === 'running');
+    if (runningTasks.length === 0) return;
+
+    const interval = setInterval(async () => {
+      for (const t of runningTasks) {
+        try {
+          const res = await fetch('/api/tasks/execute', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ taskId: t.id, action: 'resume', taskData: t }),
+          });
+          if (res.ok) {
+            loadAutomationTasks();
+          }
+        } catch (err) {
+          console.error('Erro no loop de lote da automação:', err);
+        }
+      }
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [automationTasks]);
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
   };
 
   const handleSaveAutomationTask = async (task: AutomationTask) => {
-    const updated = [task, ...automationTasks];
+    const exists = automationTasks.some((t) => t.id === task.id);
+    const updated = exists
+      ? automationTasks.map((t) => (t.id === task.id ? task : t))
+      : [task, ...automationTasks];
+
     setAutomationTasks(updated);
     try {
       localStorage.setItem('crm_automation_tasks', JSON.stringify(updated));
       await dbService.saveAutomationTask(task);
 
-      // Se iniciar imediatamente, aciona endpoint de execução do primeiro lote
-      if (task.start_immediately) {
+      if (task.start_immediately && task.status === 'running') {
         fetch('/api/tasks/execute', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ taskId: task.id, action: 'start' }),
+          body: JSON.stringify({ taskId: task.id, action: 'start', taskData: task }),
         }).then(() => loadAutomationTasks());
       }
     } catch (e) {
       console.warn('Erro ao salvar tarefa no Supabase:', e);
     }
-    showToast(`Automação "${task.title}" iniciada com sucesso!`);
+    setEditingAutomationTask(null);
+    showToast(`Automação "${task.title}" salva com sucesso!`);
+  };
+
+  const handleEditAutomationTask = (task: AutomationTask) => {
+    setEditingAutomationTask(task);
+    setIsAutomationDrawerOpen(true);
+  };
+
+  const handleDeleteAutomationTask = async (taskId: string) => {
+    const updated = automationTasks.filter((t) => t.id !== taskId);
+    setAutomationTasks(updated);
+    localStorage.setItem('crm_automation_tasks', JSON.stringify(updated));
+    showToast('Automação excluída com sucesso.');
+  };
+
+  const handleDuplicateAutomationTask = (task: AutomationTask) => {
+    const duplicated: AutomationTask = {
+      ...task,
+      id: crypto.randomUUID(),
+      title: `${task.title} (Cópia)`,
+      status: 'scheduled',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      progress: {
+        total: task.progress?.total || 0,
+        eligible: task.progress?.eligible || 0,
+        sent: 0,
+        delivered: 0,
+        read: 0,
+        replied: 0,
+        failed: 0,
+        opt_outs: 0,
+        current_batch_index: 0,
+        total_batches: task.progress?.total_batches || 1,
+      },
+      execution_logs: [
+        {
+          id: crypto.randomUUID(),
+          timestamp: new Date().toISOString(),
+          message: `Campanha duplicada a partir de "${task.title}".`,
+          type: 'info',
+        },
+      ],
+    };
+    handleSaveAutomationTask(duplicated);
   };
 
   const handleCreateOperationalTask = (e: React.FormEvent) => {
@@ -212,14 +294,14 @@ export default function TarefasPage() {
   const todayStr = new Date().toISOString().split('T')[0];
 
   const filteredAutomations = automationTasks.filter((task) => {
-    if (activeTab === 'EM_EXECUCAO') return task.status === 'running';
+    if (activeTab === 'TODAS') return true;
+    if (activeTab === 'RASCUNHOS') return task.status === 'draft';
     if (activeTab === 'AGENDADAS') return task.status === 'scheduled';
+    if (activeTab === 'EM_EXECUCAO') return task.status === 'running';
+    if (activeTab === 'PAUSADAS') return task.status === 'paused';
     if (activeTab === 'CONCLUIDAS') return task.status === 'completed';
     if (activeTab === 'COM_ERRO') return task.status === 'failed' || (task.progress && task.progress.failed > 0);
-    if (activeTab === 'HOJE') {
-      const taskCreatedToday = task.created_at.startsWith(todayStr);
-      return taskCreatedToday || task.status === 'running' || task.status === 'scheduled';
-    }
+    if (activeTab === 'CANCELADAS') return task.status === 'canceled';
     return true;
   });
 
@@ -337,16 +419,19 @@ export default function TarefasPage() {
       <div className="flex items-center justify-between border-b border-evo-border pb-1 overflow-x-auto no-scrollbar gap-2">
         <div className="flex items-center gap-1">
           {[
-            { id: 'HOJE', label: 'Hoje ⚡' },
+            { id: 'TODAS', label: 'Todas 🌐' },
+            { id: 'RASCUNHOS', label: 'Rascunhos 📝' },
             { id: 'AGENDADAS', label: 'Agendadas 📅' },
             { id: 'EM_EXECUCAO', label: 'Em Execução 🚀' },
+            { id: 'PAUSADAS', label: 'Pausadas ⏸️' },
             { id: 'CONCLUIDAS', label: 'Concluídas ✅' },
             { id: 'COM_ERRO', label: 'Com Erro ⚠️' },
+            { id: 'CANCELADAS', label: 'Canceladas ⛔' },
             { id: 'ROTINAS', label: 'Rotinas & Checklist 📋' },
           ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => setActiveTab(tab.id as TarefasTabType)}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
                 activeTab === tab.id
                   ? 'bg-evo-accent text-[#07100F] font-bold shadow-sm'
@@ -414,6 +499,9 @@ export default function TarefasPage() {
                   task={task}
                   onRefresh={loadAutomationTasks}
                   onViewLogs={(t) => setSelectedTaskForLogs(t)}
+                  onEdit={handleEditAutomationTask}
+                  onDelete={handleDeleteAutomationTask}
+                  onDuplicate={handleDuplicateAutomationTask}
                 />
               ))}
             </div>
@@ -566,8 +654,12 @@ export default function TarefasPage() {
       {/* Drawer de Criação de Automação & Tarefas em Lote */}
       <AutomationDrawerModal
         isOpen={isAutomationDrawerOpen}
-        onClose={() => setIsAutomationDrawerOpen(false)}
+        onClose={() => {
+          setIsAutomationDrawerOpen(false);
+          setEditingAutomationTask(null);
+        }}
         leads={leads}
+        taskToEdit={editingAutomationTask}
         onSaveTask={handleSaveAutomationTask}
       />
 

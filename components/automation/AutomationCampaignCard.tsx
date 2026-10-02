@@ -14,6 +14,10 @@ import {
   Sparkles,
   Users,
   Send,
+  Edit,
+  Copy,
+  Trash2,
+  Search,
 } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon';
 import { Button } from '@/components/ui/Button';
@@ -22,12 +26,18 @@ interface AutomationCampaignCardProps {
   task: AutomationTask;
   onRefresh: () => void;
   onViewLogs: (task: AutomationTask) => void;
+  onEdit?: (task: AutomationTask) => void;
+  onDelete?: (taskId: string) => void;
+  onDuplicate?: (task: AutomationTask) => void;
 }
 
 export function AutomationCampaignCard({
   task,
   onRefresh,
   onViewLogs,
+  onEdit,
+  onDelete,
+  onDuplicate,
 }: AutomationCampaignCardProps) {
   const [isLoading, setIsLoading] = useState(false);
 
@@ -50,7 +60,7 @@ export function AutomationCampaignCard({
       await fetch('/api/tasks/execute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ taskId: task.id, action }),
+        body: JSON.stringify({ taskId: task.id, action, taskData: task }),
       });
       onRefresh();
     } catch (err) {
@@ -91,10 +101,16 @@ export function AutomationCampaignCard({
           </span>
         );
       case 'failed':
+        return (
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-500/15 text-red-400 border border-red-500/30 flex items-center gap-1">
+            <AlertTriangle className="w-2.5 h-2.5" />
+            COM ERRO
+          </span>
+        );
       case 'canceled':
       default:
         return (
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-500/15 text-red-400 border border-red-500/30 flex items-center gap-1">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-800 text-zinc-400 border border-zinc-700 flex items-center gap-1">
             <XCircle className="w-2.5 h-2.5" />
             CANCELADO
           </span>
@@ -115,6 +131,17 @@ export function AutomationCampaignCard({
             {task.is_ai_personalized && (
               <span className="text-[10px] font-mono text-evo-accent px-1.5 py-0.2 rounded bg-evo-accent/10 border border-evo-accent/20 flex items-center gap-1">
                 <Sparkles className="w-3 h-3" /> IA Copy
+              </span>
+            )}
+            {task.priority && (
+              <span
+                className={`text-[9px] font-mono uppercase px-1.5 py-0.2 rounded border ${
+                  task.priority === 'alta'
+                    ? 'text-red-400 bg-red-500/10 border-red-500/20'
+                    : 'text-amber-400 bg-amber-500/10 border-amber-500/20'
+                }`}
+              >
+                {task.priority}
               </span>
             )}
           </div>
@@ -152,74 +179,126 @@ export function AutomationCampaignCard({
       </div>
 
       {/* Metadata & Controls */}
-      <div className="pt-2 border-t border-evo-border flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-3 text-xs text-evo-muted font-mono">
+      <div className="pt-3 border-t border-evo-border flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5 text-xs text-evo-muted font-mono">
           <span className="flex items-center gap-1">
-            <Clock className="w-3.5 h-3.5" />
+            <Clock className="w-3.5 h-3.5 text-evo-accent" />
             {task.batch_config.start_time_window} - {task.batch_config.end_time_window}
           </span>
           <span>•</span>
           <span>{task.batch_config.batch_size} / lote</span>
+          <span>•</span>
+          <span>{task.selected_lead_ids?.length || progress.total} leads</span>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        {/* Toolbar de Ações com Tooltips Completos */}
+        <div className="flex items-center gap-1">
+          {/* Ver Detalhes (🔍) */}
           <button
             type="button"
             onClick={() => onViewLogs(task)}
             className="p-1.5 rounded-lg text-evo-muted hover:text-evo-text hover:bg-evo-surface transition-colors"
-            title="Ver Logs de Execução"
+            title="Ver Detalhes & Logs de Execução (🔍)"
           >
-            <FileText className="w-4 h-4" />
+            <Search className="w-3.5 h-3.5" />
           </button>
 
-          {task.status === 'running' && (
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => handleAction('pause')}
+          {/* Editar (✏) */}
+          {onEdit && (
+            <button
+              type="button"
+              onClick={() => onEdit(task)}
               disabled={isLoading}
-              className="gap-1 text-xs py-1"
+              className="p-1.5 rounded-lg text-evo-muted hover:text-evo-text hover:bg-evo-surface transition-colors"
+              title="Editar Tarefa de Automação (✏)"
             >
-              <Pause className="w-3 h-3" />
-              <span>Pausar</span>
-            </Button>
+              <Edit className="w-3.5 h-3.5" />
+            </button>
           )}
 
-          {task.status === 'paused' && (
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => handleAction('resume')}
+          {/* Duplicar (📋) */}
+          {onDuplicate && (
+            <button
+              type="button"
+              onClick={() => onDuplicate(task)}
               disabled={isLoading}
-              className="gap-1 text-xs py-1"
+              className="p-1.5 rounded-lg text-evo-muted hover:text-evo-text hover:bg-evo-surface transition-colors"
+              title="Duplicar Campanha (📋)"
             >
-              <Play className="w-3 h-3 fill-current" />
-              <span>Retomar</span>
-            </Button>
+              <Copy className="w-3.5 h-3.5" />
+            </button>
           )}
 
+          {/* Iniciar Agora (▶) */}
           {task.status === 'scheduled' && (
-            <Button
-              variant="primary"
-              size="sm"
+            <button
+              type="button"
               onClick={() => handleAction('start')}
               disabled={isLoading}
-              className="gap-1 text-xs py-1"
+              className="p-1.5 rounded-lg bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 border border-emerald-500/30 transition-colors"
+              title="Iniciar Agora (▶)"
             >
-              <Play className="w-3 h-3 fill-current" />
-              <span>Iniciar Lote</span>
-            </Button>
+              <Play className="w-3.5 h-3.5 fill-current" />
+            </button>
           )}
 
+          {/* Pausar (⏸) */}
+          {task.status === 'running' && (
+            <button
+              type="button"
+              onClick={() => handleAction('pause')}
+              disabled={isLoading}
+              className="p-1.5 rounded-lg bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 border border-amber-500/30 transition-colors"
+              title="Pausar Envio (⏸)"
+            >
+              <Pause className="w-3.5 h-3.5" />
+            </button>
+          )}
+
+          {/* Retomar (▶) */}
+          {task.status === 'paused' && (
+            <button
+              type="button"
+              onClick={() => handleAction('resume')}
+              disabled={isLoading}
+              className="p-1.5 rounded-lg bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 border border-emerald-500/30 transition-colors"
+              title="Retomar Envio (▶)"
+            >
+              <Play className="w-3.5 h-3.5 fill-current" />
+            </button>
+          )}
+
+          {/* Cancelar Envio (⛔) */}
           {task.status !== 'completed' && task.status !== 'canceled' && (
             <button
               type="button"
-              onClick={() => handleAction('cancel')}
+              onClick={() => {
+                if (confirm(`Deseja cancelar o envio da campanha "${task.title}"?`)) {
+                  handleAction('cancel');
+                }
+              }}
               disabled={isLoading}
               className="p-1.5 rounded-lg text-evo-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
-              title="Cancelar Campanha"
+              title="Cancelar Envio (⛔)"
             >
-              <XCircle className="w-4 h-4" />
+              <XCircle className="w-3.5 h-3.5" />
+            </button>
+          )}
+
+          {/* Excluir (🗑) */}
+          {onDelete && (
+            <button
+              type="button"
+              onClick={() => {
+                if (confirm(`Deseja realmente excluir a automação "${task.title}"?`)) {
+                  onDelete(task.id);
+                }
+              }}
+              disabled={isLoading}
+              className="p-1.5 rounded-lg text-evo-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
+              title="Excluir Automação (🗑)"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
             </button>
           )}
         </div>

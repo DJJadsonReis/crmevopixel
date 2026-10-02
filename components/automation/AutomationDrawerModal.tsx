@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Lead,
   AutomationTask,
@@ -34,6 +34,7 @@ interface AutomationDrawerModalProps {
   onClose: () => void;
   leads: Lead[];
   onSaveTask: (task: AutomationTask) => void;
+  taskToEdit?: AutomationTask | null;
 }
 
 export function AutomationDrawerModal({
@@ -41,6 +42,7 @@ export function AutomationDrawerModal({
   onClose,
   leads,
   onSaveTask,
+  taskToEdit,
 }: AutomationDrawerModalProps) {
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5>(1);
 
@@ -50,7 +52,7 @@ export function AutomationDrawerModal({
   const [priority, setPriority] = useState<Priority>('alta');
   const [autoExecuteByAi, setAutoExecuteByAi] = useState(true);
 
-  // Etapa 2: Filtros de Audiência
+  // Etapa 2: Filtros de Audiência & Seleção Manual
   const [selectedCities, setSelectedCities] = useState<string[]>([]);
   const [selectedSegments, setSelectedSegments] = useState<string[]>([]);
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
@@ -59,6 +61,10 @@ export function AutomationDrawerModal({
   const [hasWebsiteFilter, setHasWebsiteFilter] = useState<'all' | 'with_site' | 'no_site' | 'broken'>('all');
   const [minScore, setMinScore] = useState<number>(0);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
+  const [tableSearch, setTableSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 8;
 
   // Etapa 3: Mensagem & IA
   const [isAiPersonalized, setIsAiPersonalized] = useState(true);
@@ -84,6 +90,55 @@ export function AutomationDrawerModal({
   const [allowWeekends, setAllowWeekends] = useState(false);
   const [startImmediately, setStartImmediately] = useState(true);
   const [scheduledFor, setScheduledFor] = useState('');
+
+  // Preenche dados quando estiver no modo Edição
+  useEffect(() => {
+    if (taskToEdit) {
+      setTitle(taskToEdit.title);
+      setTaskType(taskToEdit.task_type);
+      setPriority(taskToEdit.priority);
+      setAutoExecuteByAi(taskToEdit.auto_execute_by_ai);
+      if (taskToEdit.audience_filter) {
+        setSelectedCities(taskToEdit.audience_filter.cities || []);
+        setSelectedSegments(taskToEdit.audience_filter.segments || []);
+        setSelectedStatuses(taskToEdit.audience_filter.statuses || []);
+        setSelectedTags(taskToEdit.audience_filter.tags || []);
+        setHasWhatsappOnly(taskToEdit.audience_filter.has_whatsapp ?? true);
+        setHasWebsiteFilter(
+          taskToEdit.audience_filter.has_website === true
+            ? 'with_site'
+            : taskToEdit.audience_filter.has_website === false
+            ? 'no_site'
+            : taskToEdit.audience_filter.broken_website
+            ? 'broken'
+            : 'all'
+        );
+        setMinScore(taskToEdit.audience_filter.min_score || 0);
+      }
+      setSelectedLeadIds(taskToEdit.selected_lead_ids || []);
+      if (taskToEdit.message_template) setMessageTemplate(taskToEdit.message_template);
+      setIsAiPersonalized(Boolean(taskToEdit.is_ai_personalized));
+      if (taskToEdit.ai_copy_config) {
+        setCopyObjective(taskToEdit.ai_copy_config.objective as any);
+        setCopyTone(taskToEdit.ai_copy_config.tone as any);
+        setCopyCta(taskToEdit.ai_copy_config.cta);
+      }
+      if (taskToEdit.batch_config) {
+        setBatchSize(taskToEdit.batch_config.batch_size);
+        setBatchIntervalMinutes(taskToEdit.batch_config.batch_interval_minutes);
+        setMinMessageIntervalSeconds(taskToEdit.batch_config.min_message_interval_seconds);
+        setMaxMessageIntervalSeconds(taskToEdit.batch_config.max_message_interval_seconds);
+        setStartTimeWindow(taskToEdit.batch_config.start_time_window);
+        setEndTimeWindow(taskToEdit.batch_config.end_time_window);
+        setAllowWeekends(taskToEdit.batch_config.allow_weekends);
+      }
+      setStartImmediately(Boolean(taskToEdit.start_immediately));
+      if (taskToEdit.scheduled_for) setScheduledFor(taskToEdit.scheduled_for);
+    } else {
+      setTitle('');
+      setSelectedLeadIds([]);
+    }
+  }, [taskToEdit, isOpen]);
 
   // Extrai listas únicas de cidades, segmentos e tags da base
   const availableCities = useMemo(() => {
@@ -133,8 +188,64 @@ export function AutomationDrawerModal({
     return taskEngine.filterAudience(leads, audienceFilter);
   }, [leads, audienceFilter]);
 
+  // Inicializa selectedLeadIds na primeira filtragem se for nova tarefa
+  useEffect(() => {
+    if (!taskToEdit && selectedLeadIds.length === 0 && audienceResult.eligibleLeads.length > 0) {
+      setSelectedLeadIds(audienceResult.eligibleLeads.map((l) => l.id));
+    }
+  }, [audienceResult.eligibleLeads, taskToEdit]);
+
+  // Leads filtrados para exibição na tabela paginada
+  const tableFilteredLeads = useMemo(() => {
+    if (!tableSearch.trim()) return audienceResult.eligibleLeads;
+    const q = tableSearch.toLowerCase().trim();
+    return audienceResult.eligibleLeads.filter(
+      (l) =>
+        l.name.toLowerCase().includes(q) ||
+        l.company_name.toLowerCase().includes(q) ||
+        (l.city || '').toLowerCase().includes(q) ||
+        (l.segment || '').toLowerCase().includes(q) ||
+        (l.whatsapp || '').includes(q)
+    );
+  }, [audienceResult.eligibleLeads, tableSearch]);
+
+  const totalPages = Math.max(1, Math.ceil(tableFilteredLeads.length / pageSize));
+  const paginatedLeads = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return tableFilteredLeads.slice(start, start + pageSize);
+  }, [tableFilteredLeads, currentPage, pageSize]);
+
+  const isPageAllSelected =
+    paginatedLeads.length > 0 && paginatedLeads.every((l) => selectedLeadIds.includes(l.id));
+
+  const toggleSelectPage = () => {
+    if (isPageAllSelected) {
+      setSelectedLeadIds((prev) => prev.filter((id) => !paginatedLeads.some((l) => l.id === id)));
+    } else {
+      setSelectedLeadIds((prev) => Array.from(new Set([...prev, ...paginatedLeads.map((l) => l.id)])));
+    }
+  };
+
+  const toggleSelectLead = (id: string) => {
+    setSelectedLeadIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  // Audiência efetiva considerando a seleção manual
+  const effectiveSelectedLeads = useMemo(() => {
+    if (selectedLeadIds.length > 0) {
+      return leads.filter((l) => selectedLeadIds.includes(l.id));
+    }
+    return audienceResult.eligibleLeads;
+  }, [leads, selectedLeadIds, audienceResult.eligibleLeads]);
+
+  const activeAudienceResult = useMemo(() => {
+    return taskEngine.filterAudience(effectiveSelectedLeads, audienceFilter);
+  }, [effectiveSelectedLeads, audienceFilter]);
+
   // Lead para prévia ao vivo
-  const previewLead = audienceResult.eligibleLeads[0] || leads[0] || null;
+  const previewLead = activeAudienceResult.eligibleLeads[0] || leads[0] || null;
 
   const previewCopy = useMemo(() => {
     if (!previewLead) return 'Nenhum lead disponível para prévia.';
@@ -176,17 +287,20 @@ export function AutomationDrawerModal({
   const handleConfirmTask = () => {
     if (!title.trim()) return;
 
+    const leadsForDispatches = selectedLeadIds.length > 0 ? selectedLeadIds : audienceResult.eligibleLeads.map((l) => l.id);
+    const summary = activeAudienceResult.summary;
+
     const newTask: AutomationTask = {
-      id: crypto.randomUUID(),
+      id: taskToEdit ? taskToEdit.id : crypto.randomUUID(),
       title: title.trim(),
       task_type: taskType,
-      status: startImmediately ? 'running' : 'scheduled',
+      status: taskToEdit?.status && taskToEdit.status !== 'completed' ? taskToEdit.status : (startImmediately ? 'running' : 'scheduled'),
       priority,
       assigned_to: 'agente_ia',
       auto_execute_by_ai: autoExecuteByAi,
       audience_filter: audienceFilter,
-      selected_lead_ids: audienceResult.eligibleLeads.map((l) => l.id),
-      audience_summary: audienceResult.summary,
+      selected_lead_ids: leadsForDispatches,
+      audience_summary: summary,
       message_template: isAiPersonalized ? undefined : messageTemplate,
       is_ai_personalized: isAiPersonalized,
       ai_copy_config: {
@@ -206,9 +320,9 @@ export function AutomationDrawerModal({
         allow_weekends: allowWeekends,
         timezone: 'America/Sao_Paulo',
       },
-      progress: {
-        total: audienceResult.summary.eligible,
-        eligible: audienceResult.summary.eligible,
+      progress: taskToEdit?.progress || {
+        total: summary.eligible,
+        eligible: summary.eligible,
         sent: 0,
         delivered: 0,
         read: 0,
@@ -216,17 +330,17 @@ export function AutomationDrawerModal({
         failed: 0,
         opt_outs: 0,
         current_batch_index: 0,
-        total_batches: Math.ceil(audienceResult.summary.eligible / batchSize),
+        total_batches: Math.ceil(summary.eligible / batchSize),
       },
-      execution_logs: [
+      execution_logs: taskToEdit?.execution_logs || [
         {
           id: crypto.randomUUID(),
           timestamp: new Date().toISOString(),
-          message: `Campanha criada com ${audienceResult.summary.eligible} destinatários elegíveis. Lotes de ${batchSize} contatos.`,
+          message: `Campanha criada com ${summary.eligible} destinatários elegíveis. Lotes de ${batchSize} contatos.`,
           type: 'info',
         },
       ],
-      created_at: new Date().toISOString(),
+      created_at: taskToEdit ? taskToEdit.created_at : new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
 
@@ -566,6 +680,161 @@ export function AutomationDrawerModal({
                   </div>
                 </div>
               )}
+
+              {/* Tabela Interativa de Seleção Manual de Leads */}
+              <div className="p-4 rounded-2xl bg-evo-card border border-evo-border shadow-sm space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2 border-b border-evo-border">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-evo-accent" />
+                    <span className="text-xs font-bold text-evo-text uppercase tracking-wider font-mono">
+                      Seleção Manual de Leads ({tableFilteredLeads.length})
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-evo-accent/15 text-evo-accent border border-evo-accent/30">
+                      {selectedLeadIds.length} selecionados
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedLeadIds(audienceResult.eligibleLeads.map((l) => l.id))}
+                      className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-semibold bg-evo-surface hover:bg-evo-surface2 text-evo-accent border border-evo-accent/30 transition-colors"
+                    >
+                      Selecionar Todos do Filtro ({audienceResult.eligibleLeads.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedLeadIds([])}
+                      className="px-2.5 py-1 rounded-lg text-[10px] font-mono bg-evo-surface hover:bg-evo-surface2 text-evo-muted hover:text-red-400 border border-evo-border transition-colors"
+                    >
+                      Limpar Seleção
+                    </button>
+                  </div>
+                </div>
+
+                {/* Campo de Busca Rápida na Tabela */}
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Filtrar por nome, empresa, cidade ou whatsapp..."
+                    value={tableSearch}
+                    onChange={(e) => {
+                      setTableSearch(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="w-full px-3 py-1.5 rounded-xl bg-evo-surface border border-evo-border text-xs text-evo-text placeholder-[#65706A] focus:outline-none focus:border-evo-accent font-mono"
+                  />
+                </div>
+
+                {/* Tabela */}
+                <div className="overflow-x-auto rounded-xl border border-evo-border">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-evo-surface text-[10px] font-mono text-evo-muted border-b border-evo-border">
+                        <th className="py-2.5 px-3 w-10 text-center">
+                          <input
+                            type="checkbox"
+                            checked={isPageAllSelected}
+                            onChange={toggleSelectPage}
+                            className="w-3.5 h-3.5 accent-evo-accent cursor-pointer"
+                            title="Selecionar / Desmarcar todos desta página"
+                          />
+                        </th>
+                        <th className="py-2.5 px-3 font-semibold">Empresa / Contato</th>
+                        <th className="py-2.5 px-3 font-semibold">WhatsApp</th>
+                        <th className="py-2.5 px-3 font-semibold">Cidade / Nicho</th>
+                        <th className="py-2.5 px-3 font-semibold text-center">Score</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-evo-border/50">
+                      {paginatedLeads.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="py-6 text-center text-xs text-evo-muted">
+                            Nenhum lead encontrado com os filtros aplicados.
+                          </td>
+                        </tr>
+                      ) : (
+                        paginatedLeads.map((lead) => {
+                          const isSelected = selectedLeadIds.includes(lead.id);
+                          return (
+                            <tr
+                              key={lead.id}
+                              onClick={() => toggleSelectLead(lead.id)}
+                              className={`cursor-pointer transition-colors ${
+                                isSelected ? 'bg-evo-accent/10 hover:bg-evo-accent/15' : 'hover:bg-evo-surface/60'
+                              }`}
+                            >
+                              <td className="py-2 px-3 text-center" onClick={(e) => e.stopPropagation()}>
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => toggleSelectLead(lead.id)}
+                                  className="w-3.5 h-3.5 accent-evo-accent cursor-pointer"
+                                />
+                              </td>
+                              <td className="py-2 px-3">
+                                <div className="font-semibold text-evo-text truncate max-w-[180px]">
+                                  {lead.company_name}
+                                </div>
+                                <div className="text-[10px] text-evo-muted truncate max-w-[180px]">
+                                  {lead.name}
+                                </div>
+                              </td>
+                              <td className="py-2 px-3 font-mono text-[11px] text-evo-support">
+                                {lead.whatsapp || lead.phone || '—'}
+                              </td>
+                              <td className="py-2 px-3">
+                                <div className="text-evo-text text-[11px]">{lead.city || 'São Paulo, SP'}</div>
+                                <div className="text-[10px] text-evo-muted truncate max-w-[140px]">{lead.segment}</div>
+                              </td>
+                              <td className="py-2 px-3 text-center">
+                                <span
+                                  className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
+                                    lead.score >= 80
+                                      ? 'text-evo-accent bg-evo-accent/15'
+                                      : lead.score >= 60
+                                      ? 'text-evo-support bg-evo-support/15'
+                                      : 'text-evo-muted bg-evo-surface'
+                                  }`}
+                                >
+                                  {lead.score}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Paginação da Tabela de Seleção */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between text-[11px] font-mono text-evo-muted pt-1">
+                    <span>
+                      Página {currentPage} de {totalPages} ({tableFilteredLeads.length} leads)
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        disabled={currentPage <= 1}
+                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                        className="px-2 py-0.5 rounded bg-evo-surface border border-evo-border disabled:opacity-40 text-xs hover:text-evo-text"
+                      >
+                        Anterior
+                      </button>
+                      <button
+                        type="button"
+                        disabled={currentPage >= totalPages}
+                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                        className="px-2 py-0.5 rounded bg-evo-surface border border-evo-border disabled:opacity-40 text-xs hover:text-evo-text"
+                      >
+                        Próxima
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

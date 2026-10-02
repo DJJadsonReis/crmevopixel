@@ -22,7 +22,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const task = await dbService.getAutomationTaskById(taskId);
+    let task: AutomationTask | null = await dbService.getAutomationTaskById(taskId);
+    if (!task && body.taskData) {
+      task = body.taskData as AutomationTask;
+      if (task) {
+        await dbService.saveAutomationTask(task).catch(() => {});
+      }
+    }
+
     if (!task) {
       return NextResponse.json(
         { success: false, message: 'Tarefa de automação não encontrada' },

@@ -821,6 +821,22 @@ export class DatabaseService {
     }
   }
 
+  public async updateNiche(id: string, updates: Partial<Niche>): Promise<boolean> {
+    if (!isSupabaseConfigured()) return false;
+    try {
+      const supabase = getSupabase();
+      const payload: any = {};
+      if (updates.name !== undefined) payload.name = updates.name;
+      if (updates.description !== undefined) payload.description = updates.description;
+      if (updates.status !== undefined) payload.status = updates.status;
+      const { error } = await supabase.from('niches').update(payload).eq('id', id);
+      return !error;
+    } catch {
+      return false;
+    }
+  }
+
+
   // ============================================================================
   // SYSTEM PROMPTS DO AGENTE
   // ============================================================================

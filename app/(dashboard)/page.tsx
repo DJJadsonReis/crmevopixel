@@ -57,9 +57,13 @@ export default function DashboardPage() {
   const leadsNeedingAudit = allLeads.filter(
     (l) => l.website && (!l.enrichment_status || l.enrichment_status === 'not_analyzed')
   );
-  const leadsInConversation = allLeads.filter(
-    (l) => l.status === 'em_conversa' || l.status === 'em_abordagem'
-  );
+  const leadsNeedingWhatsAppAttention = allLeads.filter((l) => {
+    if (l.conversation_archived) return false;
+    if ((l.unread_messages_count || 0) > 0) return true;
+    const logs = crmService.getMessageLogs(l.id);
+    if (logs.length > 0 && logs[0].direction === 'recebida') return true;
+    return l.status === 'em_conversa';
+  });
   const hotLeads = allLeads.filter(
     (l) => l.temperature === 'quente' || l.score >= 70
   );
@@ -155,18 +159,18 @@ export default function DashboardPage() {
                   Atendimento WhatsApp
                 </span>
                 <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-                  {leadsInConversation.length} {leadsInConversation.length === 1 ? 'lead' : 'leads'}
+                  {leadsNeedingWhatsAppAttention.length} {leadsNeedingWhatsAppAttention.length === 1 ? 'conversa' : 'conversas'}
                 </span>
               </div>
               <p className="text-[11px] text-evo-muted leading-relaxed mb-3">
-                {leadsInConversation.length > 0
-                  ? 'Existem leads em conversa ou abordagem ativa no WhatsApp aguardando interação.'
-                  : 'Nenhum lead em conversa pendente no WhatsApp no momento.'}
+                {leadsNeedingWhatsAppAttention.length > 0
+                  ? 'Existem leads com mensagens recebidas ou em conversa ativa aguardando retorno.'
+                  : 'Nenhuma resposta pendente no WhatsApp no momento.'}
               </p>
             </div>
-            <Link href="/chat">
+            <Link href="/chat?filter=nao_lidas">
               <Button
-                variant={leadsInConversation.length > 0 ? 'primary' : 'secondary'}
+                variant={leadsNeedingWhatsAppAttention.length > 0 ? 'primary' : 'secondary'}
                 size="sm"
                 className="w-full text-xs h-8 gap-1.5"
               >
