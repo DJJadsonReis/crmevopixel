@@ -743,5 +743,91 @@ ALTER TABLE leads ADD COLUMN IF NOT EXISTS enrichment_status TEXT DEFAULT 'not_a
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS enrichment_data JSONB DEFAULT NULL;
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS commercial_funnel JSONB DEFAULT NULL;
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS last_enriched_at TIMESTAMPTZ DEFAULT NULL;
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS conversation_mode TEXT DEFAULT 'AI';
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS conversation_archived BOOLEAN DEFAULT false;
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS suppression_status TEXT DEFAULT 'active';
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS unread_messages_count INTEGER DEFAULT 0;
+
+-- Atualização das conversas e mensagens
+ALTER TABLE conversations ADD COLUMN IF NOT EXISTS mode TEXT DEFAULT 'AI';
+ALTER TABLE conversations ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT false;
+ALTER TABLE conversations ADD COLUMN IF NOT EXISTS unread_count INTEGER DEFAULT 0;
+ALTER TABLE conversations ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb;
+ALTER TABLE conversations ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS direction TEXT DEFAULT 'outgoing';
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS lead_id UUID REFERENCES leads(id) ON DELETE CASCADE;
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS idempotency_key TEXT UNIQUE;
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS provider_message_id TEXT;
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS media_url TEXT;
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS media_type TEXT;
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS error_message TEXT;
+
+-- ------------------------------------------------------------------------------
+-- 19. CENTRAL OPERACIONAL DE AUTOMAÇÕES & TAREFAS EM LOTE
+-- ------------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS automation_tasks (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    title TEXT NOT NULL,
+    description TEXT,
+    task_type TEXT NOT NULL, -- 'whatsapp_message', 'followup', 'campaign', 'cross_reference', 'site_audit', 'pagespeed', 'generate_copy', 'pipeline_move', 'reminder', 'custom_routine'
+    status TEXT NOT NULL DEFAULT 'draft', -- 'draft', 'scheduled', 'queued', 'running', 'paused', 'completed', 'partial', 'failed', 'canceled'
+    priority TEXT NOT NULL DEFAULT 'media',
+    assigned_to TEXT NOT NULL DEFAULT 'agente_ia',
+    auto_execute_by_ai BOOLEAN NOT NULL DEFAULT true,
+    allowed_tools JSONB DEFAULT '[]'::jsonb,
+    audience_filter JSONB DEFAULT '{}'::jsonb,
+    selected_lead_ids JSONB DEFAULT '[]'::jsonb,
+    excluded_lead_ids JSONB DEFAULT '[]'::jsonb,
+    audience_summary JSONB DEFAULT '{"total_selected": 0, "valid_whatsapp": 0, "invalid_whatsapp": 0, "suppressed": 0, "eligible_recipients": 0}'::jsonb,
+    batch_config JSONB DEFAULT '{"batch_size": 20, "batch_interval_minutes": 10, "min_message_interval_seconds": 15, "max_message_interval_seconds": 45, "start_time_window": "09:00", "end_time_window": "18:00", "allow_weekends": false, "timezone": "America/Sao_Paulo"}'::jsonb,
+    message_payload JSONB DEFAULT NULL,
+    scheduled_for TIMESTAMPTZ,
+    progress JSONB DEFAULT '{"total": 0, "eligible": 0, "sent": 0, "delivered": 0, "read": 0, "replied": 0, "failed": 0, "opt_outs": 0, "current_batch_index": 0, "total_batches": 0}'::jsonb,
+    execution_logs JSONB DEFAULT '[]'::jsonb,
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS task_recipients (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    automation_task_id UUID NOT NULL REFERENCES automation_tasks(id) ON DELETE CASCADE,
+    lead_id UUID NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+    phone TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending', -- 'pending', 'sent', 'failed', 'skipped', 'opt_out'
+    idempotency_key TEXT UNIQUE,
+    generated_message TEXT,
+    error_message TEXT,
+    provider_message_id TEXT,
+    sent_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Índices de alta performance
+CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_messages_lead ON messages(lead_id);
+CREATE INDEX IF NOT EXISTS idx_messages_sent_at ON messages(sent_at DESC);
+CREATE INDEX IF NOT EXISTS idx_conversations_lead ON conversations(lead_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_external ON conversations(external_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_status_archived ON conversations(status, is_archived);
+CREATE INDEX IF NOT EXISTS idx_automation_tasks_status ON automation_tasks(status);
+CREATE INDEX IF NOT EXISTS idx_task_recipients_task ON task_recipients(automation_task_id);
+CREATE INDEX IF NOT EXISTS idx_task_recipients_lead ON task_recipients(lead_id);
+
+ALTER TABLE automation_tasks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE task_recipients ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'authenticated_manage_automation_tasks') THEN
+        CREATE POLICY authenticated_manage_automation_tasks ON automation_tasks FOR ALL TO authenticated USING (true) WITH CHECK (true);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'authenticated_manage_task_recipients') THEN
+        CREATE POLICY authenticated_manage_task_recipients ON task_recipients FOR ALL TO authenticated USING (true) WITH CHECK (true);
+    END IF;
+END $$;
+
 
 

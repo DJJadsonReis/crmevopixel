@@ -2,6 +2,8 @@ export const runtime = 'edge';
 
 import { NextRequest, NextResponse } from 'next/server';
 
+import { dbService } from '@/lib/supabase/db-service';
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
@@ -9,6 +11,8 @@ export async function POST(req: NextRequest) {
       phone,
       text,
       leadId,
+      conversationId: incomingConvId,
+      idempotencyKey,
       mediaUrl,
       mediaType,
       customUrl,
@@ -87,6 +91,56 @@ export async function POST(req: NextRequest) {
 
     const messageId = evolutionResponse?.key?.id || `msg-${Date.now()}`;
     const timestamp = new Date().toISOString();
+    const finalIdempotencyKey = idempotencyKey || `send_${cleanPhone}_${Date.now()}`;
+
+    // Persistência em Banco Supabase
+    let activeConversationId = incomingConvId;
+
+    try {
+      if (!activeConversationId) {
+        // Tenta achar ou criar conversa
+        const existingConv = leadId
+          ? await dbService.getConversationByLeadId(leadId)
+          : await dbService.getConversationByPhone(cleanPhone);
+
+        if (existingConv) {
+          activeConversationId = existingConv.id;
+        } else {
+          const createdConv = await dbService.saveConversation({
+            lead_id: leadId,
+            external_id: cleanPhone,
+            channel: 'whatsapp',
+            conversation_mode: 'AI',
+            archived: false,
+            status: 'aberta',
+            last_message_at: timestamp,
+            last_message_text: text,
+            last_message_direction: 'enviada',
+          });
+          if (createdConv) {
+            activeConversationId = createdConv.id;
+          }
+        }
+      }
+
+      await dbService.saveMessage({
+        id: messageId,
+        lead_id: leadId,
+        conversation_id: activeConversationId,
+        channel: 'whatsapp',
+        sent_text: text,
+        direction: 'enviada',
+        sent_at: timestamp,
+        source: 'manual',
+        status: sentReal ? 'entregue' : 'pendente',
+        idempotency_key: finalIdempotencyKey,
+        provider_message_id: messageId,
+        media_url: mediaUrl,
+        media_type: mediaType,
+      });
+    } catch (dbErr) {
+      console.warn('Não foi possível persistir mensagem no Supabase:', dbErr);
+    }
 
     return NextResponse.json({
       success: true,
@@ -94,6 +148,7 @@ export async function POST(req: NextRequest) {
       timestamp,
       phone: cleanPhone,
       text,
+      conversationId: activeConversationId,
       sentViaEvolutionApi: sentReal,
       info: sentReal
         ? 'Mensagem transmitida diretamente via Evolution API'

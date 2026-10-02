@@ -66,9 +66,34 @@ export interface LeadSequenceProgress {
   paused_reason?: string;
 }
 
+export type ConversationMode = 'AI' | 'HUMAN' | 'PAUSED';
+
+export interface Conversation {
+  id: string;
+  lead_id: string;
+  client_id?: string;
+  channel: string;
+  external_id?: string; // remoteJid ou telefone
+  conversation_mode: ConversationMode;
+  archived: boolean;
+  archived_at?: string;
+  locked_by?: string;
+  locked_at?: string;
+  attention_recommended?: boolean;
+  attention_reason?: string;
+  last_message_at?: string;
+  last_message_text?: string;
+  last_message_direction?: 'enviada' | 'recebida';
+  status: 'aberta' | 'fechada' | 'pausada';
+  unread_count?: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface MessageLog {
   id: string;
   lead_id: string;
+  conversation_id?: string;
   phone?: string;
   sender_name?: string;
   sequence_step_id?: string;
@@ -79,6 +104,11 @@ export interface MessageLog {
   sent_at: string;
   source: 'manual' | 'automatica_n8n';
   status: 'entregue' | 'lida' | 'falhou' | 'pendente';
+  idempotency_key?: string;
+  provider_message_id?: string;
+  media_url?: string;
+  media_type?: string;
+  error_message?: string;
 }
 
 export type EnrichmentStatus = 'not_analyzed' | 'in_progress' | 'enriched' | 'partial' | 'error';
@@ -308,6 +338,10 @@ export interface Lead {
     should_approach: boolean;
     reason_if_not?: string;
   };
+  conversation_mode?: ConversationMode; // 'AI' | 'HUMAN' | 'PAUSED'
+  conversation_archived?: boolean;
+  suppression_status?: 'active' | 'opt_out' | 'blocked';
+  unread_messages_count?: number;
 }
 
 export interface PipelineStage {
@@ -436,6 +470,148 @@ export interface TaskItem {
   assigned_to?: 'operador' | 'agente_ia' | 'ambos';
   auto_execute?: boolean;
   execution_notes?: string;
+  task_type?: TaskActionType;
+  automation_task_id?: string;
+}
+
+export type TaskActionType =
+  | 'whatsapp_message'
+  | 'followup'
+  | 'campaign'
+  | 'cross_reference'
+  | 'site_audit'
+  | 'pagespeed'
+  | 'generate_copy'
+  | 'pipeline_move'
+  | 'reminder'
+  | 'custom_routine';
+
+export type AutomationTaskStatus =
+  | 'draft'
+  | 'scheduled'
+  | 'queued'
+  | 'running'
+  | 'paused'
+  | 'completed'
+  | 'partial'
+  | 'failed'
+  | 'canceled';
+
+export interface TaskAudienceFilter {
+  cities?: string[];
+  segments?: string[];
+  statuses?: string[];
+  pipeline_stages?: string[];
+  min_score?: number;
+  max_score?: number;
+  tags?: string[];
+  has_whatsapp?: boolean;
+  has_website?: boolean;
+  broken_website?: boolean;
+  responded?: boolean;
+  never_contacted?: boolean;
+  search_query?: string;
+}
+
+export interface TaskBatchConfig {
+  batch_size: number;
+  batch_interval_minutes: number;
+  min_message_interval_seconds: number;
+  max_message_interval_seconds: number;
+  start_time_window: string; // ex: '09:00'
+  end_time_window: string; // ex: '18:00'
+  allow_weekends: boolean;
+  timezone: string;
+}
+
+export interface TaskProgressStats {
+  total: number;
+  eligible: number;
+  sent: number;
+  delivered: number;
+  read: number;
+  replied: number;
+  failed: number;
+  opt_outs: number;
+  current_batch_index: number;
+  total_batches: number;
+  next_batch_at?: string;
+  last_processed_at?: string;
+}
+
+export interface TaskExecutionLogItem {
+  id: string;
+  timestamp: string;
+  message: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+  lead_id?: string;
+  lead_name?: string;
+}
+
+export interface AutomationTask {
+  id: string;
+  title: string;
+  description?: string;
+  task_type: TaskActionType;
+  status: AutomationTaskStatus;
+  priority: Priority;
+  assigned_to: 'operador' | 'agente_ia' | 'ambos';
+  auto_execute_by_ai: boolean;
+  allowed_tools?: string[];
+
+  // Público / Audiência
+  audience_filter?: TaskAudienceFilter;
+  selected_lead_ids: string[];
+  excluded_lead_ids?: string[];
+  audience_summary: {
+    total_selected: number;
+    valid_whatsapp: number;
+    invalid_whatsapp: number;
+    suppressed: number;
+    duplicates: number;
+    eligible: number;
+  };
+
+  // Mensagem & IA
+  message_template?: string;
+  is_ai_personalized: boolean;
+  ai_copy_config?: {
+    objective: 'prospeccao' | 'followup' | 'apresentacao' | 'reativacao' | 'agendamento' | 'proposta' | 'manutencao' | 'site' | 'seo';
+    tone: 'consultivo' | 'direto' | 'profissional' | 'cordial' | 'personalizado';
+    cta: 'responder' | 'marcar_reuniao' | 'solicitar_analise' | 'whatsapp';
+    custom_instructions?: string;
+  };
+
+  // Agendamento & Lotes
+  scheduled_for?: string;
+  start_immediately: boolean;
+  batch_config: TaskBatchConfig;
+  progress: TaskProgressStats;
+  execution_logs: TaskExecutionLogItem[];
+
+  created_at: string;
+  updated_at: string;
+  completed_at?: string;
+}
+
+export interface TaskRecipientRecord {
+  id: string;
+  task_id: string;
+  lead_id: string;
+  lead_name: string;
+  company_name: string;
+  phone: string;
+  idempotency_key: string;
+  status: 'pending' | 'queued' | 'sent' | 'delivered' | 'read' | 'replied' | 'failed' | 'canceled' | 'suppressed';
+  personalized_text?: string;
+  provider_message_id?: string;
+  error_message?: string;
+  retry_count: number;
+  next_retry_at?: string;
+  sent_at?: string;
+  delivered_at?: string;
+  read_at?: string;
+  replied_at?: string;
 }
 
 export interface FollowUpItem {

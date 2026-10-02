@@ -63,3 +63,4 @@ export function isUrlSafeForScraping(targetUrl: string): { safe: boolean; reason
 
   return { safe: true, url: parsed };
 }
+

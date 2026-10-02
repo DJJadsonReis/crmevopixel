@@ -1,6 +1,7 @@
 export const runtime = 'edge';
 
 import { NextRequest, NextResponse } from 'next/server';
+import { dbService } from '@/lib/supabase/db-service';
 
 export async function POST(req: NextRequest) {
   try {
@@ -165,6 +166,48 @@ export async function POST(req: NextRequest) {
 
     // Ordena do mais antigo para o mais recente (ordem cronológica)
     formattedMessages.sort((a, b) => new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime());
+
+    // Persistência automática no Supabase para garantir histórico eterno
+    try {
+      const dbMessages = (await dbService.getMessages(undefined, leadId)) || [];
+      const dbIds = new Set(dbMessages.map((m) => m.id || m.provider_message_id));
+
+      let conv = leadId ? await dbService.getConversationByLeadId(leadId) : null;
+      if (!conv) {
+        conv = await dbService.getConversationByPhone(cleanPhone);
+      }
+
+      if (!conv && leadId) {
+        conv = await dbService.saveConversation({
+          lead_id: leadId,
+          external_id: cleanPhone,
+          channel: 'whatsapp',
+          conversation_mode: 'AI',
+          archived: false,
+          status: 'aberta',
+        });
+      }
+
+      for (const m of formattedMessages) {
+        if (!dbIds.has(m.id)) {
+          await dbService.saveMessage({
+            id: m.id,
+            lead_id: leadId,
+            conversation_id: conv?.id,
+            channel: 'whatsapp',
+            sent_text: m.sent_text,
+            direction: (m.direction === 'recebida' ? 'recebida' : 'enviada') as 'enviada' | 'recebida',
+            sent_at: m.sent_at,
+            source: (m.source === 'automatica_n8n' ? 'automatica_n8n' : 'manual') as 'automatica_n8n' | 'manual',
+            status: (m.status || 'entregue') as 'entregue' | 'lida' | 'falhou' | 'pendente',
+            idempotency_key: `sync_${m.id}`,
+            provider_message_id: m.id,
+          });
+        }
+      }
+    } catch (saveErr) {
+      console.warn('Erro ao salvar mensagens sincronizadas no Supabase:', saveErr);
+    }
 
     return NextResponse.json({
       success: true,

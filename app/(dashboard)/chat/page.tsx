@@ -28,11 +28,21 @@ import {
   Tag,
   Clock,
   RefreshCw,
+  Archive,
+  ArchiveRestore,
+  Bot,
+  UserCheck,
+  PanelRightClose,
+  PanelRightOpen,
+  Globe,
+  AlertTriangle,
+  ShieldCheck,
+  Zap,
 } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon';
 import { crmService } from '@/lib/services/crm-service';
 import { useCrmSync } from '@/lib/hooks/useCrmSync';
-import { Lead, MessageLog } from '@/types/database';
+import { Lead, MessageLog, ConversationMode } from '@/types/database';
 import { crmBrain, SentimentAnalysis } from '@/lib/ai/crm-brain';
 import { cleanPhoneNumber, formatWhatsAppNumber } from '@/lib/utils/whatsapp';
 
@@ -44,13 +54,14 @@ function WhatsAppChatContent() {
   const [leads, setLeads] = useState<Lead[]>(() => crmService.getLeads());
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(initialLeadId || null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterType, setFilterType] = useState<'todos' | 'nao_lidas' | 'quentes' | 'negociacao'>('todos');
+  const [filterType, setFilterType] = useState<'todos' | 'nao_lidas' | 'quentes' | 'negociacao' | 'arquivadas'>('todos');
   const [inputText, setInputText] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isRecordingAudio, setIsRecordingAudio] = useState(false);
   const [audioSeconds, setAudioSeconds] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [showContextPanel, setShowContextPanel] = useState(true);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioIntervalRef = useRef<any>(null);
@@ -63,20 +74,21 @@ function WhatsAppChatContent() {
     return unsub;
   }, []);
 
-  // Se nenhum lead selecionado e houver leads, seleciona o primeiro por padrão
+  // Se nenhum lead selecionado e houver leads, seleciona o primeiro
   useEffect(() => {
     if (!selectedLeadId && leads.length > 0) {
       if (initialLeadId && leads.some((l) => l.id === initialLeadId)) {
         setSelectedLeadId(initialLeadId);
       } else {
-        setSelectedLeadId(leads[0].id);
+        const firstActive = leads.find((l) => !l.conversation_archived) || leads[0];
+        setSelectedLeadId(firstActive.id);
       }
     }
   }, [leads, selectedLeadId, initialLeadId]);
 
   const selectedLead = leads.find((l) => l.id === selectedLeadId) || leads[0] || null;
 
-  // Sincronização manual e automática das mensagens reais da Evolution API
+  // Sincronização de mensagens com backend e Evolution API
   const handleSyncConversation = async (silent = false) => {
     if (!selectedLead) return;
     const phone = selectedLead.whatsapp || selectedLead.phone;
@@ -84,6 +96,10 @@ function WhatsAppChatContent() {
     if (!silent) setIsSyncing(true);
     try {
       await crmService.syncWhatsAppMessages(selectedLead.id, phone);
+      // Se tiver mensagens não lidas, marca como lidas ao abrir a conversa
+      if (selectedLead.unread_messages_count && selectedLead.unread_messages_count > 0) {
+        crmService.updateLead(selectedLead.id, { unread_messages_count: 0 });
+      }
     } catch (err) {
       console.warn('Erro ao sincronizar mensagens:', err);
     } finally {
@@ -98,7 +114,7 @@ function WhatsAppChatContent() {
     }
   }, [selectedLead?.id]);
 
-  // Polling silencioso a cada 10 segundos para mensagens recebidas no WhatsApp
+  // Polling silencioso a cada 10 segundos
   useEffect(() => {
     if (!selectedLead?.id) return;
     const interval = setInterval(() => {
@@ -121,7 +137,7 @@ function WhatsAppChatContent() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [selectedLeadId, activeMessages.length]);
 
-  // Timer de gravação de áudio
+  // Timer de áudio
   useEffect(() => {
     if (isRecordingAudio) {
       setAudioSeconds(0);
@@ -143,7 +159,7 @@ function WhatsAppChatContent() {
     setIsSending(true);
 
     try {
-      // Envia via API Evolution
+      // Envia via API Evolution com persistência garantida
       await fetch('/api/whatsapp/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -176,7 +192,6 @@ function WhatsAppChatContent() {
       setTimeout(() => handleSyncConversation(true), 1200);
     } catch (err) {
       console.error('Erro ao enviar mensagem:', err);
-      // Fallback local garantido
       crmService.addMessageLog({
         lead_id: selectedLead.id,
         step_name: 'Chat WhatsApp Web',
@@ -193,6 +208,33 @@ function WhatsAppChatContent() {
     }
   };
 
+  const handleToggleMode = (newMode: ConversationMode) => {
+    if (!selectedLead) return;
+    crmService.updateLead(selectedLead.id, { conversation_mode: newMode });
+  };
+
+  const handleToggleArchive = () => {
+    if (!selectedLead) return;
+    const isCurrentlyArchived = Boolean(selectedLead.conversation_archived);
+    crmService.updateLead(selectedLead.id, {
+      conversation_archived: !isCurrentlyArchived,
+    });
+  };
+
+  const handleAddTag = (tag: string) => {
+    if (!selectedLead) return;
+    const currentTags = selectedLead.tags || [];
+    if (currentTags.includes(tag)) {
+      crmService.updateLead(selectedLead.id, {
+        tags: currentTags.filter((t) => t !== tag),
+      });
+    } else {
+      crmService.updateLead(selectedLead.id, {
+        tags: [...currentTags, tag],
+      });
+    }
+  };
+
   const handleSimulateClientReply = (replyText: string) => {
     if (!selectedLead) return;
     crmService.addMessageLog({
@@ -205,7 +247,11 @@ function WhatsAppChatContent() {
       source: 'manual',
       status: 'entregue',
     });
-    crmService.updateLead(selectedLead.id, { status: 'em_conversa' });
+    crmService.updateLead(selectedLead.id, {
+      status: 'em_conversa',
+      conversation_archived: false,
+      unread_messages_count: (selectedLead.unread_messages_count || 0) + 1,
+    });
   };
 
   const handleSendVoiceNote = () => {
@@ -233,8 +279,16 @@ function WhatsAppChatContent() {
 
     if (!matchesSearch) return false;
 
+    // Filtro de arquivados
+    if (filterType === 'arquivadas') {
+      return Boolean(l.conversation_archived);
+    }
+
+    // Se não está na aba arquivadas, esconde os arquivados
+    if (l.conversation_archived) return false;
+
     const logs = crmService.getMessageLogs(l.id);
-    const unreadCount = logs.filter((m) => m.direction === 'recebida').length;
+    const unreadCount = l.unread_messages_count || logs.filter((m) => m.direction === 'recebida').length;
 
     if (filterType === 'nao_lidas') return unreadCount > 0;
     if (filterType === 'quentes') return l.temperature === 'quente';
@@ -250,16 +304,16 @@ function WhatsAppChatContent() {
   });
 
   const quickEmojis = ['😊', '👍', '🤝', '💼', '🚀', '🔥', '💰', '📅', '📱', '✨', '🙏', '👏', '🎯', '✅'];
-
   const smartReplies = selectedLead ? crmBrain.getSmartQuickReplies(selectedLead, activeMessages) : [];
+  const currentMode: ConversationMode = selectedLead?.conversation_mode || 'AI';
 
   return (
-    <div className="h-[calc(100vh-5rem)] flex flex-col rounded-2xl border border-[#202c33] bg-[#111b21] overflow-hidden shadow-2xl">
+    <div className="h-full flex flex-col rounded-2xl border border-[#202c33] bg-[#111b21] overflow-hidden shadow-2xl">
       <div className="flex-1 flex overflow-hidden">
         {/* ========================================================================= */}
-        {/* COLUNA ESQUERDA: LISTA DE CONTATOS / CONVERSAS */}
+        {/* PAINEL 1: LISTA DE CONTATOS / CONVERSAS */}
         {/* ========================================================================= */}
-        <div className="w-80 md:w-96 border-r border-[#202c33] bg-[#111b21] flex flex-col shrink-0">
+        <div className="w-80 md:w-88 lg:w-96 border-r border-[#202c33] bg-[#111b21] flex flex-col shrink-0">
           {/* Header da Coluna */}
           <div className="p-3.5 bg-[#202c33] border-b border-[#2a3942] flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -268,10 +322,10 @@ function WhatsAppChatContent() {
               </div>
               <div>
                 <h2 className="text-sm font-semibold text-[#e9edef] font-heading">
-                  Chat WhatsApp
+                  Inbox WhatsApp
                 </h2>
                 <span className="text-[10px] text-[#8696a0] font-mono">
-                  {leads.length} contatos no CRM
+                  {leads.length} leads sincronizados
                 </span>
               </div>
             </div>
@@ -305,6 +359,7 @@ function WhatsAppChatContent() {
                 { id: 'nao_lidas', label: 'Respostas 💬' },
                 { id: 'quentes', label: 'Quentes 🔥' },
                 { id: 'negociacao', label: 'Negociação 💼' },
+                { id: 'arquivadas', label: 'Arquivadas 📦' },
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -326,14 +381,15 @@ function WhatsAppChatContent() {
             {filteredLeads.length === 0 ? (
               <div className="p-8 text-center text-xs text-[#8696a0] space-y-2">
                 <MessageSquare className="w-8 h-8 text-[#8696a0]/40 mx-auto" />
-                <p>Nenhuma conversa encontrada com este filtro.</p>
+                <p>Nenhuma conversa encontrada neste filtro.</p>
               </div>
             ) : (
               filteredLeads.map((lead) => {
                 const logs = crmService.getMessageLogs(lead.id);
                 const lastLog = logs[0];
-                const receivedCount = logs.filter((m) => m.direction === 'recebida').length;
+                const unreadCount = lead.unread_messages_count || 0;
                 const isSelected = lead.id === selectedLeadId;
+                const mode = lead.conversation_mode || 'AI';
 
                 return (
                   <div
@@ -354,6 +410,9 @@ function WhatsAppChatContent() {
                         <span className="absolute -bottom-0.5 -right-0.5 text-[10px]">
                           🔥
                         </span>
+                      )}
+                      {mode === 'HUMAN' && (
+                        <span className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-blue-500 border border-[#111b21]" title="Controle Humano" />
                       )}
                     </div>
 
@@ -392,10 +451,10 @@ function WhatsAppChatContent() {
                           )}
                         </p>
 
-                        {/* Badge de Mensagens do Lead */}
-                        {receivedCount > 0 && (
-                          <span className="px-1.5 py-0.2 rounded-full bg-[#00a884] text-[#111b21] font-bold text-[9px] font-mono shrink-0 shadow-sm">
-                            {receivedCount}
+                        {/* Badge de Mensagens Não Lidas */}
+                        {unreadCount > 0 && (
+                          <span className="px-1.5 py-0.2 rounded-full bg-[#00a884] text-[#111b21] font-bold text-[9px] font-mono shrink-0 shadow-sm animate-pulse">
+                            {unreadCount}
                           </span>
                         )}
                       </div>
@@ -422,20 +481,20 @@ function WhatsAppChatContent() {
         </div>
 
         {/* ========================================================================= */}
-        {/* COLUNA DIREITA: JANELA DO CHAT ATIVO */}
+        {/* PAINEL 2: CHAT CENTRAL */}
         {/* ========================================================================= */}
-        <div className="flex-1 flex flex-col bg-[#0b141a] overflow-hidden">
+        <div className="flex-1 flex flex-col bg-[#0b141a] overflow-hidden min-w-0">
           {selectedLead ? (
             <>
               {/* Header do Chat Ativo */}
-              <div className="px-4 py-2.5 bg-[#202c33] border-b border-[#2a3942] flex flex-col md:flex-row md:items-center justify-between gap-3 shrink-0">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-[#111b21] border border-[#2a3942] flex items-center justify-center font-bold text-xs text-[#00a884] shadow-sm">
+              <div className="px-4 py-2.5 bg-[#202c33] border-b border-[#2a3942] flex flex-wrap items-center justify-between gap-3 shrink-0">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-full bg-[#111b21] border border-[#2a3942] flex items-center justify-center font-bold text-xs text-[#00a884] shadow-sm shrink-0">
                     {selectedLead.company_name.substring(0, 2).toUpperCase()}
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-semibold text-[#e9edef] font-heading">
+                      <h3 className="text-sm font-semibold text-[#e9edef] font-heading truncate">
                         {selectedLead.company_name}
                       </h3>
                       {selectedLead.whatsapp && (
@@ -443,13 +502,13 @@ function WhatsAppChatContent() {
                           href={`https://wa.me/${cleanPhoneNumber(selectedLead.whatsapp)}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-[11px] font-mono text-[#00a884] hover:underline"
+                          className="text-[11px] font-mono text-[#00a884] hover:underline shrink-0"
                         >
                           {selectedLead.whatsapp}
                         </a>
                       )}
                     </div>
-                    <div className="text-[11px] text-[#8696a0] flex items-center gap-1.5">
+                    <div className="text-[11px] text-[#8696a0] flex items-center gap-1.5 truncate">
                       <span>{selectedLead.name}</span>
                       <span>•</span>
                       <span>{selectedLead.segment}</span>
@@ -459,51 +518,97 @@ function WhatsAppChatContent() {
                   </div>
                 </div>
 
-                {/* Termômetro e Ações no Topo do Chat */}
-                <div className="flex items-center gap-3">
-                  {sentiment && (
-                    <div className="bg-[#111b21] border border-[#2a3942] px-3 py-1.5 rounded-xl flex items-center gap-2.5 text-xs">
-                      <div>
-                        <div className="text-[10px] text-[#8696a0] flex items-center gap-1 font-mono">
-                          <span>Humor IA:</span>
-                          <span className="font-semibold text-white">
-                            {sentiment.temperatureEmoji} {sentiment.temperatureBadge}
-                          </span>
-                        </div>
-                        <div className="w-24 h-1.5 bg-[#202c33] rounded-full overflow-hidden mt-1 border border-[#2a3942]">
-                          <div
-                            className="h-full bg-gradient-to-r from-emerald-500 via-amber-400 to-purple-500 transition-all"
-                            style={{ width: `${sentiment.thermometerScore}%` }}
-                          />
-                        </div>
-                      </div>
-                      <span className="text-[11px] font-mono font-bold text-amber-400">
-                        {sentiment.thermometerScore}%
-                      </span>
-                    </div>
+                {/* Controles de Modo IA vs Humano & Arquivamento */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* Status Pill do Modo */}
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                      currentMode === 'AI'
+                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                        : currentMode === 'HUMAN'
+                        ? 'bg-blue-500/15 text-blue-400 border-blue-500/30'
+                        : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                    }`}
+                  >
+                    {currentMode === 'AI' ? (
+                      <>
+                        <Bot className="w-3.5 h-3.5" />
+                        <span>Agente IA Ativo</span>
+                      </>
+                    ) : currentMode === 'HUMAN' ? (
+                      <>
+                        <UserCheck className="w-3.5 h-3.5" />
+                        <span>Atendimento Humano</span>
+                      </>
+                    ) : (
+                      <>
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>Pausado</span>
+                      </>
+                    )}
+                  </span>
+
+                  {/* Botão de Alternância de Atendimento */}
+                  {currentMode === 'AI' ? (
+                    <button
+                      type="button"
+                      onClick={() => handleToggleMode('HUMAN')}
+                      className="px-2.5 py-1 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/40 text-xs font-medium flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
+                      title="Assumir conversa manualmente e pausar respostas autônomas da IA"
+                    >
+                      <User className="w-3.5 h-3.5" />
+                      <span>Assumir Atendimento</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleToggleMode('AI')}
+                      className="px-2.5 py-1 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-medium flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
+                      title="Devolver atendimento para o Agente IA autônomo"
+                    >
+                      <Bot className="w-3.5 h-3.5" />
+                      <span>Devolver ao Agente</span>
+                    </button>
                   )}
 
+                  {/* Botão Arquivar / Desarquivar */}
+                  <button
+                    type="button"
+                    onClick={handleToggleArchive}
+                    className="p-1.5 rounded-xl bg-[#2a3942] hover:bg-[#32424b] text-[#8696a0] hover:text-[#d1d7db] transition-colors"
+                    title={selectedLead.conversation_archived ? 'Desarquivar Conversa' : 'Arquivar Conversa'}
+                  >
+                    {selectedLead.conversation_archived ? (
+                      <ArchiveRestore className="w-4 h-4 text-amber-400" />
+                    ) : (
+                      <Archive className="w-4 h-4" />
+                    )}
+                  </button>
+
+                  {/* Sincronização Evolution API */}
                   <button
                     type="button"
                     onClick={() => handleSyncConversation(false)}
                     disabled={isSyncing}
-                    className="px-3 py-1.5 rounded-xl bg-[#2a3942] hover:bg-[#32424b] text-[#d1d7db] text-xs font-medium flex items-center gap-1.5 transition-colors border border-transparent hover:border-[#00a884]/40 disabled:opacity-50"
-                    title="Sincronizar mensagens reais do WhatsApp (Evolution API)"
+                    className="p-1.5 rounded-xl bg-[#2a3942] hover:bg-[#32424b] text-[#00a884] hover:text-[#00c99e] transition-colors disabled:opacity-50"
+                    title="Sincronizar mensagens agora"
                   >
-                    <RefreshCw className={`w-3.5 h-3.5 text-[#00a884] ${isSyncing ? 'animate-spin' : ''}`} />
-                    <span className="hidden sm:inline font-mono text-[11px]">
-                      {isSyncing ? 'Sincronizando...' : 'Sincronizar Conversa'}
-                    </span>
+                    <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
                   </button>
 
-                  <Link
-                    href={`/leads/${selectedLead.id}`}
-                    className="px-3 py-1.5 rounded-xl bg-[#2a3942] hover:bg-[#32424b] text-[#d1d7db] text-xs font-medium flex items-center gap-1.5 transition-colors border border-transparent hover:border-[#00a884]/40"
-                    title="Ver perfil completo do lead"
+                  {/* Toggle Painel Contexto */}
+                  <button
+                    type="button"
+                    onClick={() => setShowContextPanel(!showContextPanel)}
+                    className="p-1.5 rounded-xl bg-[#2a3942] hover:bg-[#32424b] text-[#8696a0] hover:text-[#d1d7db] transition-colors"
+                    title={showContextPanel ? 'Ocultar Contexto do Lead' : 'Ver Contexto do Lead'}
                   >
-                    <span>Ver Perfil</span>
-                    <ArrowUpRight className="w-3.5 h-3.5" />
-                  </Link>
+                    {showContextPanel ? (
+                      <PanelRightClose className="w-4 h-4" />
+                    ) : (
+                      <PanelRightOpen className="w-4 h-4" />
+                    )}
+                  </button>
                 </div>
               </div>
 
@@ -575,10 +680,10 @@ function WhatsAppChatContent() {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Botões Rápidos de IA & Teste */}
+              {/* Botões Rápidos de IA & Simulação */}
               <div className="bg-[#111b21] border-t border-[#202c33] px-4 py-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
                 <span className="text-[10px] font-mono text-[#8696a0] shrink-0 mr-1 flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-amber-400" /> Respostas Rápidas:
+                  <Sparkles className="w-3 h-3 text-amber-400" /> Respostas Rápidas IA:
                 </span>
                 {smartReplies.map((reply, i) => (
                   <button
@@ -592,17 +697,16 @@ function WhatsAppChatContent() {
                   </button>
                 ))}
 
-                {/* Botão de Teste: Simular Resposta do Lead */}
                 <div className="ml-auto flex items-center gap-1 shrink-0">
                   <button
                     type="button"
                     onClick={() =>
                       handleSimulateClientReply(
-                        'Olá! Vi sua mensagem sobre o site e a automação. Qual seria o investimento aproximado para o nosso escritório?'
+                        'Olá! Vi a proposta de vocês sobre o site e a automação. Qual seria o investimento aproximado para o nosso escritório?'
                       )
                     }
                     className="px-2 py-0.5 rounded bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[10px] font-mono transition-colors"
-                    title="Simula cliente respondendo com interesse para testar o termômetro e notificações"
+                    title="Simula resposta de lead para testar o termômetro, fila de notificações e desativação de automação"
                   >
                     + Simular Resposta Lead
                   </button>
@@ -692,11 +796,159 @@ function WhatsAppChatContent() {
               <WhatsAppIcon className="w-16 h-16 fill-[#8696a0]/30" />
               <h3 className="text-base font-semibold text-white">Nenhum contato selecionado</h3>
               <p className="text-xs text-[#8696a0] max-w-sm">
-                Selecione uma empresa na lista lateral para abrir o chat completo, visualizar sentimentos e disparar abordagens.
+                Selecione uma empresa na lista lateral para abrir o chat completo e disparar abordagens.
               </p>
             </div>
           )}
         </div>
+
+        {/* ========================================================================= */}
+        {/* PAINEL 3: CONTEXTO DO LEAD (COMERCIAL & TÉCNICO) */}
+        {/* ========================================================================= */}
+        {showContextPanel && selectedLead && (
+          <div className="w-80 lg:w-96 border-l border-[#202c33] bg-[#111b21] flex flex-col shrink-0 overflow-y-auto p-4 space-y-5 animate-in slide-in-from-right-4 duration-200">
+            {/* Header do Painel de Contexto */}
+            <div className="flex items-center justify-between pb-3 border-b border-[#202c33]">
+              <div>
+                <h3 className="text-xs font-semibold text-[#e9edef] uppercase tracking-wider font-mono">
+                  Contexto Comercial
+                </h3>
+                <span className="text-[10px] text-[#8696a0]">
+                  Dados e diagnóstico de inteligência
+                </span>
+              </div>
+              <Link
+                href={`/leads/${selectedLead.id}`}
+                className="text-xs text-[#00a884] hover:underline flex items-center gap-1 font-medium"
+              >
+                <span>Ver Lead</span>
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            {/* Score & Temperatura */}
+            <div className="p-3.5 rounded-xl bg-[#202c33]/60 border border-[#2a3942] space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-[#8696a0]">Score Geral:</span>
+                <span className="text-sm font-bold text-[#00a884] font-mono">
+                  {selectedLead.score}/100
+                </span>
+              </div>
+              <div className="w-full h-1.5 bg-[#111b21] rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-[#00a884]"
+                  style={{ width: `${selectedLead.score}%` }}
+                />
+              </div>
+              <div className="flex items-center justify-between pt-1 text-[11px]">
+                <span className="text-[#8696a0]">Status do Lead:</span>
+                <span className="font-semibold text-white uppercase">{selectedLead.status}</span>
+              </div>
+            </div>
+
+            {/* Presença Digital & Saúde do Site */}
+            <div className="space-y-2">
+              <h4 className="text-[11px] font-semibold text-[#8696a0] uppercase font-mono flex items-center gap-1.5">
+                <Globe className="w-3.5 h-3.5 text-[#00a884]" /> Presença Digital
+              </h4>
+              <div className="p-3 rounded-xl bg-[#202c33]/40 border border-[#2a3942] space-y-1.5 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-[#8696a0]">Website:</span>
+                  {selectedLead.website ? (
+                    <a
+                      href={selectedLead.website.startsWith('http') ? selectedLead.website : `https://${selectedLead.website}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[#00a884] hover:underline truncate max-w-[150px] inline-flex items-center gap-1"
+                    >
+                      {selectedLead.website.replace(/^https?:\/\//, '')}
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  ) : (
+                    <span className="text-red-400 font-medium">Sem Site</span>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-[#8696a0]">Saúde do Site:</span>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                    selectedLead.site_health_status === 'ONLINE_OK'
+                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                      : selectedLead.site_health_status === 'OFFLINE' || selectedLead.site_health_status === 'NO_WEBSITE'
+                      ? 'bg-red-500/10 text-red-400 border-red-500/30'
+                      : 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                  }`}>
+                    {selectedLead.site_health_status || 'Não auditado'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Diagnóstico Comercial EVO IA */}
+            {selectedLead.enrichment_data?.diagnosis && selectedLead.enrichment_data.diagnosis.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-[11px] font-semibold text-amber-400 uppercase font-mono flex items-center gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5" /> Diagnóstico Crítico
+                </h4>
+                <div className="space-y-1.5">
+                  {selectedLead.enrichment_data.diagnosis.slice(0, 3).map((item, idx) => (
+                    <div
+                      key={idx}
+                      className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-[#d1d7db]"
+                    >
+                      {item}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Oportunidades & Serviços Recomendados */}
+            {selectedLead.enrichment_data?.opportunities && selectedLead.enrichment_data.opportunities.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-[11px] font-semibold text-[#00a884] uppercase font-mono flex items-center gap-1.5">
+                  <Zap className="w-3.5 h-3.5" /> Oportunidades Identificadas
+                </h4>
+                <div className="space-y-1.5">
+                  {selectedLead.enrichment_data.opportunities.slice(0, 2).map((op, idx) => (
+                    <div
+                      key={idx}
+                      className="p-2.5 rounded-xl bg-[#00a884]/10 border border-[#00a884]/20 text-xs text-[#d1d7db]"
+                    >
+                      {op}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Post-it / Tags Rápidas */}
+            <div className="space-y-2 pt-2 border-t border-[#202c33]">
+              <h4 className="text-[11px] font-semibold text-[#8696a0] uppercase font-mono flex items-center gap-1.5">
+                <Tag className="w-3.5 h-3.5" /> Etiquetas Rápidas
+              </h4>
+              <div className="flex flex-wrap gap-1.5">
+                {['Em Negociação', 'Proposta Enviada', 'Aguardando Retorno', 'Fechado', 'Sem Interesse'].map((tag) => {
+                  const isTagged = (selectedLead.tags || []).includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => handleAddTag(tag)}
+                      className={`px-2 py-1 rounded-lg text-xs font-medium transition-all ${
+                        isTagged
+                          ? 'bg-amber-500 text-[#111b21] font-bold shadow-sm'
+                          : 'bg-[#202c33] text-[#8696a0] hover:text-[#d1d7db] border border-[#2a3942]'
+                      }`}
+                    >
+                      {tag}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
