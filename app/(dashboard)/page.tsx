@@ -25,6 +25,8 @@ import {
   BarChart2,
   ExternalLink,
   CalendarCheck,
+  MessageSquare,
+  Gauge,
 } from 'lucide-react';
 
 import { useUser } from '@/lib/hooks/useUser';
@@ -49,6 +51,19 @@ export default function DashboardPage() {
 
   // Filtra prospects recomendados para hoje (ICP >= 80 e status priority)
   const prospectsToProspectToday = prospects.filter((p) => p.status === 'priority').slice(0, 3);
+
+  // Leads para o Quadro do Dia operacional
+  const allLeads = crmService.getLeads();
+  const leadsNeedingAudit = allLeads.filter(
+    (l) => l.website && (!l.enrichment_status || l.enrichment_status === 'not_analyzed')
+  );
+  const leadsInConversation = allLeads.filter(
+    (l) => l.status === 'em_conversa' || l.status === 'em_abordagem'
+  );
+  const hotLeads = allLeads.filter(
+    (l) => l.temperature === 'quente' || l.score >= 70
+  );
+  const followUps = crmService.getFollowUps().filter((f) => f.status === 'pendente');
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
@@ -100,6 +115,156 @@ export default function DashboardPage() {
               <span>Prospects</span>
             </Button>
           </Link>
+        </div>
+      </div>
+
+      {/* 1.5. QUADRO DO DIA — O QUE PRECISO FAZER HOJE? */}
+      <div className="bg-gradient-to-r from-evo-card via-evo-surface/30 to-evo-card border border-evo-accent/25 rounded-2xl p-6 shadow-sm relative overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-evo-accent/10 border border-evo-accent/30 flex items-center justify-center text-evo-accent">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-semibold text-evo-text font-heading">
+                  Quadro do Dia — O que preciso fazer hoje?
+                </h2>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-evo-accent/15 text-evo-accent font-semibold border border-evo-accent/30">
+                  Rotina Operacional
+                </span>
+              </div>
+              <p className="text-xs text-evo-muted mt-0.5">
+                Ações prioritárias para responder clientes, auditar leads e avançar o pipeline de vendas hoje.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 text-[11px] font-mono text-evo-muted">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Atualizado em tempo real</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Card 1: WhatsApp */}
+          <div className="p-4 rounded-xl bg-evo-deep border border-emerald-500/20 hover:border-emerald-500/40 transition-all flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-medium text-emerald-400 flex items-center gap-1.5 font-heading">
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  Atendimento WhatsApp
+                </span>
+                <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                  {leadsInConversation.length} {leadsInConversation.length === 1 ? 'lead' : 'leads'}
+                </span>
+              </div>
+              <p className="text-[11px] text-evo-muted leading-relaxed mb-3">
+                {leadsInConversation.length > 0
+                  ? 'Existem leads em conversa ou abordagem ativa no WhatsApp aguardando interação.'
+                  : 'Nenhum lead em conversa pendente no WhatsApp no momento.'}
+              </p>
+            </div>
+            <Link href="/chat">
+              <Button
+                variant={leadsInConversation.length > 0 ? 'primary' : 'secondary'}
+                size="sm"
+                className="w-full text-xs h-8 gap-1.5"
+              >
+                <span>Abrir Chat WhatsApp</span>
+                <ArrowRight className="w-3 h-3" />
+              </Button>
+            </Link>
+          </div>
+
+          {/* Card 2: Auditoria Técnica & Cruzar Dados */}
+          <div className="p-4 rounded-xl bg-evo-deep border border-amber-500/20 hover:border-amber-500/40 transition-all flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-medium text-amber-400 flex items-center gap-1.5 font-heading">
+                  <Gauge className="w-3.5 h-3.5" />
+                  Auditoria & PageSpeed
+                </span>
+                <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                  {leadsNeedingAudit.length} {leadsNeedingAudit.length === 1 ? 'pendente' : 'pendentes'}
+                </span>
+              </div>
+              <p className="text-[11px] text-evo-muted leading-relaxed mb-3">
+                {leadsNeedingAudit.length > 0
+                  ? 'Leads com site captado aguardando diagnóstico técnico e Core Web Vitals.'
+                  : 'Todos os sites captados já foram auditados com sucesso.'}
+              </p>
+            </div>
+            <Link href="/leads?status=todos">
+              <Button
+                variant={leadsNeedingAudit.length > 0 ? 'primary' : 'secondary'}
+                size="sm"
+                className="w-full text-xs h-8 gap-1.5"
+              >
+                <span>Cruzar Dados em Leads</span>
+                <ArrowRight className="w-3 h-3" />
+              </Button>
+            </Link>
+          </div>
+
+          {/* Card 3: Leads Quentes & Scores Altos */}
+          <div className="p-4 rounded-xl bg-evo-deep border border-rose-500/20 hover:border-rose-500/40 transition-all flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-medium text-rose-400 flex items-center gap-1.5 font-heading">
+                  <Flame className="w-3.5 h-3.5 text-rose-400" />
+                  Leads Quentes (Score ≥ 70)
+                </span>
+                <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-rose-500/15 text-rose-300 border border-rose-500/30">
+                  {hotLeads.length} {hotLeads.length === 1 ? 'lead' : 'leads'}
+                </span>
+              </div>
+              <p className="text-[11px] text-evo-muted leading-relaxed mb-3">
+                {hotLeads.length > 0
+                  ? 'Empresas com dores técnicas graves identificadas e alto potencial de fechamento.'
+                  : 'Sem leads classificados como quentes neste ciclo.'}
+              </p>
+            </div>
+            <Link href="/pipeline">
+              <Button
+                variant={hotLeads.length > 0 ? 'primary' : 'secondary'}
+                size="sm"
+                className="w-full text-xs h-8 gap-1.5"
+              >
+                <span>Ver Pipeline Kanban</span>
+                <ArrowRight className="w-3 h-3" />
+              </Button>
+            </Link>
+          </div>
+
+          {/* Card 4: Follow-ups Programados */}
+          <div className="p-4 rounded-xl bg-evo-deep border border-blue-500/20 hover:border-blue-500/40 transition-all flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-medium text-blue-400 flex items-center gap-1.5 font-heading">
+                  <Clock className="w-3.5 h-3.5" />
+                  Follow-ups Programados
+                </span>
+                <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-blue-500/15 text-blue-300 border border-blue-500/30">
+                  {followUps.length} {followUps.length === 1 ? 'ativo' : 'ativos'}
+                </span>
+              </div>
+              <p className="text-[11px] text-evo-muted leading-relaxed mb-3">
+                {followUps.length > 0
+                  ? 'Contatos com lembrete de retorno manual ou régua de nutrição em andamento.'
+                  : 'Nenhum follow-up com atraso ou pendência no momento.'}
+              </p>
+            </div>
+            <Link href="/follow-ups">
+              <Button
+                variant="secondary"
+                size="sm"
+                className="w-full text-xs h-8 gap-1.5"
+              >
+                <span>Ver Follow-ups</span>
+                <ArrowRight className="w-3 h-3" />
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
 

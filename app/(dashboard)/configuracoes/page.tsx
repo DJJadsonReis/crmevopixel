@@ -31,7 +31,12 @@ import {
   Zap,
   Trash2,
   CloudDownload,
+  Gauge,
+  BookmarkCheck,
+  Star,
+  Activity,
 } from 'lucide-react';
+import { AIPrompt } from '@/types/database';
 import { aiProvider, AIProviderConfig } from '@/lib/ai/ai-provider';
 import { updateClientConfig } from '@/lib/supabase/client';
 import { createClient } from '@/utils/supabase/client';
@@ -111,6 +116,32 @@ export default function ConfiguracoesPage() {
   const [browserlessStatusMsg, setBrowserlessStatusMsg] = useState('Browserless Headless Chrome Conectado e Operacional.');
   const [isSavingBrowserless, setIsSavingBrowserless] = useState(false);
   const [browserlessSaveSuccess, setBrowserlessSaveSuccess] = useState(false);
+
+  // Integração Google PageSpeed Insights API v5 (Auditoria Técnica & Core Web Vitals)
+  const [pageSpeedApiKey, setPageSpeedApiKey] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('EVO_pageSpeedApiKey') || '';
+    }
+    return '';
+  });
+  const [showPageSpeedKey, setShowPageSpeedKey] = useState(false);
+  const [pageSpeedStatus, setPageSpeedStatus] = useState<'idle' | 'loading' | 'online' | 'offline'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('EVO_pageSpeedStatus');
+      if (saved === 'online' || saved === 'offline') return saved as any;
+      if (localStorage.getItem('EVO_pageSpeedApiKey')) return 'online';
+    }
+    return 'idle';
+  });
+  const [pageSpeedStatusMsg, setPageSpeedStatusMsg] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('EVO_pageSpeedStatus');
+      if (saved === 'online') return 'Google PageSpeed Insights v5 Conectado e Operacional.';
+    }
+    return '';
+  });
+  const [isSavingPageSpeed, setIsSavingPageSpeed] = useState(false);
+  const [pageSpeedSaveSuccess, setPageSpeedSaveSuccess] = useState(false);
 
   // Salvar credenciais no localStorage E no banco Supabase
   const saveEvolutionSettings = async (
@@ -292,6 +323,69 @@ export default function ConfiguracoesPage() {
     }
   };
 
+  // Salvar PageSpeed no localStorage e Supabase
+  const handleSavePageSpeed = async (keyVal?: string, statusVal?: 'online' | 'offline') => {
+    const finalKey = keyVal !== undefined ? keyVal : pageSpeedApiKey;
+    const finalStatus = statusVal !== undefined ? statusVal : pageSpeedStatus;
+
+    setIsSavingPageSpeed(true);
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('EVO_pageSpeedApiKey', finalKey);
+      if (finalStatus === 'online' || finalStatus === 'offline') {
+        localStorage.setItem('EVO_pageSpeedStatus', finalStatus);
+      }
+    }
+
+    try {
+      const supabase = createClient();
+      await supabase.from('system_settings').upsert({
+        id: 'default',
+        pagespeed_api_key: finalKey,
+        updated_at: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.warn('Erro ao salvar PageSpeed no Supabase:', err);
+    }
+
+    setIsSavingPageSpeed(false);
+    setPageSpeedSaveSuccess(true);
+    setTimeout(() => setPageSpeedSaveSuccess(false), 3000);
+  };
+
+  const handleTestPageSpeed = async () => {
+    if (!pageSpeedApiKey.trim()) {
+      setPageSpeedStatus('offline');
+      setPageSpeedStatusMsg('Informe a API Key do Google PageSpeed para testar.');
+      return;
+    }
+    setPageSpeedStatus('loading');
+    setPageSpeedStatusMsg('Testando conexão com Google PageSpeed Insights API v5...');
+
+    try {
+      const res = await fetch('/api/pagespeed/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: pageSpeedApiKey.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && data.success) {
+        setPageSpeedStatus('online');
+        setPageSpeedStatusMsg(data.message || 'Google PageSpeed Insights API v5 conectada com sucesso!');
+        await handleSavePageSpeed(pageSpeedApiKey, 'online');
+      } else {
+        setPageSpeedStatus('offline');
+        setPageSpeedStatusMsg(data.error || `Falha na API (HTTP ${res.status}): Chave inválida ou cota excedida.`);
+        if (typeof window !== 'undefined') localStorage.setItem('EVO_pageSpeedStatus', 'offline');
+      }
+    } catch (err: any) {
+      setPageSpeedStatus('offline');
+      setPageSpeedStatusMsg(`Erro de conexão com PageSpeed: ${err?.message || 'Falha de rede'}`);
+      if (typeof window !== 'undefined') localStorage.setItem('EVO_pageSpeedStatus', 'offline');
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
 
@@ -322,6 +416,8 @@ export default function ConfiguracoesPage() {
         if (savedApify) setApifyToken(savedApify);
         if (savedBLToken) setBrowserlessToken(savedBLToken);
         if (savedBLEndpoint) setBrowserlessEndpoint(savedBLEndpoint);
+        const savedPageSpeed = localStorage.getItem('EVO_pageSpeedApiKey');
+        if (savedPageSpeed) setPageSpeedApiKey(savedPageSpeed);
       }
 
       // 2. Sincroniza do banco de dados Supabase
@@ -359,6 +455,10 @@ export default function ConfiguracoesPage() {
           if (data.browserless_endpoint) {
             setBrowserlessEndpoint(data.browserless_endpoint);
             localStorage.setItem('EVO_browserlessEndpoint', data.browserless_endpoint);
+          }
+          if (data.pagespeed_api_key) {
+            setPageSpeedApiKey(data.pagespeed_api_key);
+            localStorage.setItem('EVO_pageSpeedApiKey', data.pagespeed_api_key);
           }
         }
       } catch (e) {}
@@ -525,21 +625,71 @@ export default function ConfiguracoesPage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [promptSaveSuccess, setPromptSaveSuccess] = useState(false);
   const [isCopiedPrompt, setIsCopiedPrompt] = useState(false);
+  const [promptsList, setPromptsList] = useState<AIPrompt[]>(() => crmService.getAiPromptsSync());
+  const [selectedPromptId, setSelectedPromptId] = useState<string>(() => crmService.getDefaultAiPrompt()?.id || 'prompt-default-atendimento');
+  const [isSettingDefault, setIsSettingDefault] = useState(false);
+  const [defaultPromptSuccess, setDefaultPromptSuccess] = useState(false);
+
+  useEffect(() => {
+    async function loadPrompts() {
+      const list = await crmService.getAiPrompts();
+      setPromptsList(list);
+      const def = crmService.getDefaultAiPrompt();
+      if (def?.id) {
+        setSelectedPromptId(def.id);
+      }
+    }
+    loadPrompts();
+
+    const unsub = crmService.subscribe(() => {
+      setPromptsList([...crmService.getAiPromptsSync()]);
+    });
+    return unsub;
+  }, []);
+
+  const handleSelectPrompt = (promptId: string) => {
+    setSelectedPromptId(promptId);
+    const found = promptsList.find((p) => p.id === promptId);
+    if (found && found.prompt) {
+      setAiConfig((prev) => ({ ...prev, systemPrompt: found.prompt }));
+    }
+  };
 
   const handleSaveSystemPrompt = async () => {
     aiProvider.saveConfig(aiConfig);
+    const current = promptsList.find((p) => p.id === selectedPromptId);
+    await crmService.saveAiPrompt({
+      id: selectedPromptId,
+      name: current?.name || 'System Prompt — EVO PIXEL',
+      description: current?.description || 'Diretriz mestre operacional de IA',
+      prompt: aiConfig.systemPrompt,
+      prompt_type: current?.prompt_type || 'atendimento',
+      is_default: current?.is_default ?? true,
+    });
+    setPromptsList([...crmService.getAiPromptsSync()]);
+
     try {
       const supabase = createClient();
       await supabase.from('system_settings').upsert({
-        key: 'ai_system_prompt',
-        value: aiConfig.systemPrompt,
+        id: 'default',
+        ai_system_prompt: aiConfig.systemPrompt,
         updated_at: new Date().toISOString(),
-      }, { onConflict: 'key' });
+      });
     } catch (e) {
       console.error('Error saving prompt to supabase:', e);
     }
     setPromptSaveSuccess(true);
     setTimeout(() => setPromptSaveSuccess(false), 3000);
+  };
+
+  const handleSetDefaultPrompt = async () => {
+    setIsSettingDefault(true);
+    await crmService.setDefaultAiPrompt(selectedPromptId);
+    aiProvider.saveConfig({ ...aiConfig, systemPrompt: aiConfig.systemPrompt });
+    setPromptsList([...crmService.getAiPromptsSync()]);
+    setIsSettingDefault(false);
+    setDefaultPromptSuccess(true);
+    setTimeout(() => setDefaultPromptSuccess(false), 3000);
   };
 
   const handleCopyPrompt = () => {
@@ -1278,7 +1428,7 @@ export default function ConfiguracoesPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="secondary"
               size="sm"
@@ -1298,6 +1448,16 @@ export default function ConfiguracoesPage() {
               )}
             </Button>
             <Button
+              variant="secondary"
+              size="sm"
+              className="text-xs gap-1.5 border-purple-500/40 text-purple-300 hover:bg-purple-500/10"
+              onClick={handleSetDefaultPrompt}
+              disabled={isSettingDefault}
+            >
+              <BookmarkCheck className="w-3.5 h-3.5 text-purple-400" />
+              <span>{defaultPromptSuccess ? 'Definido como Padrão!' : 'Definir como Padrão'}</span>
+            </Button>
+            <Button
               variant="primary"
               size="sm"
               className="text-xs gap-1.5 bg-purple-600 hover:bg-purple-700 text-white font-semibold"
@@ -1308,6 +1468,46 @@ export default function ConfiguracoesPage() {
             </Button>
           </div>
         </div>
+
+        {/* Catálogo de Prompts Cadastrados */}
+        {promptsList.length > 0 && (
+          <div className="p-3 rounded-xl bg-evo-deep border border-evo-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] font-medium text-evo-text flex items-center gap-1.5">
+                <Star className="w-3.5 h-3.5 text-amber-400" />
+                Catálogo de Prompts:
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {promptsList.map((p) => {
+                  const isSelected = selectedPromptId === p.id;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => handleSelectPrompt(p.id)}
+                      className={`text-[11px] px-2.5 py-1 rounded-lg border transition-all flex items-center gap-1.5 ${
+                        isSelected
+                          ? 'bg-purple-500/25 border-purple-500 text-purple-200 font-semibold shadow-sm'
+                          : 'bg-evo-surface border-evo-border text-evo-muted hover:text-evo-text hover:border-evo-support/40'
+                      }`}
+                    >
+                      {p.is_default && <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />}
+                      <span>{p.name}</span>
+                      {p.is_default && (
+                        <span className="text-[9px] px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 font-mono">
+                          Padrão
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <span className="text-[10px] text-evo-muted font-mono">
+              Selecione para carregar ou definir como padrão
+            </span>
+          </div>
+        )}
 
         {/* Explicação Didática da Arquitetura do Prompt */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
@@ -1591,9 +1791,121 @@ export default function ConfiguracoesPage() {
       </div>
 
       {/* =========================================================================
-          SEÇÃO: PROSPECÇÃO ATIVA & SCRAPING (APIFY & BROWSERLESS)
+          SEÇÃO: PROSPECÇÃO ATIVA, AUDITORIA TÉCNICA & SCRAPING (PAGESPEED, APIFY & BROWSERLESS)
           ========================================================================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Card Google PageSpeed Insights API v5 */}
+        <Card className="p-6 space-y-4 border border-[var(--evo-border)]">
+          <div className="flex items-start justify-between border-b border-[var(--evo-border)] pb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-evo-surface border border-[var(--evo-border)] flex items-center justify-center text-amber-400">
+                <Gauge className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-[var(--evo-text)] font-heading">
+                  Google PageSpeed v5
+                </h3>
+                <span className="text-[11px] text-[var(--evo-muted)]">
+                  Auditoria técnica, Lighthouse e Core Web Vitals (CrUX)
+                </span>
+              </div>
+            </div>
+            {pageSpeedStatus === 'online' && (
+              <span className="px-2.5 py-1 rounded-full text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-mono font-medium flex items-center gap-1.5 shadow-sm">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Ativo / Conectado
+              </span>
+            )}
+            {pageSpeedStatus === 'offline' && (
+              <span className="px-2.5 py-1 rounded-full text-[10px] bg-red-500/15 text-red-400 border border-red-500/30 font-mono font-medium flex items-center gap-1.5 shadow-sm">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                Desconectado
+              </span>
+            )}
+            {pageSpeedStatus === 'loading' && (
+              <span className="px-2.5 py-1 rounded-full text-[10px] bg-amber-500/15 text-amber-400 border border-amber-500/30 font-mono font-medium flex items-center gap-1.5">
+                <RefreshCw className="w-2.5 h-2.5 animate-spin" />
+                Verificando...
+              </span>
+            )}
+            {pageSpeedStatus === 'idle' && (
+              <span className="px-2.5 py-1 rounded-full text-[10px] bg-evo-surface2 text-evo-support font-mono">
+                Não configurado
+              </span>
+            )}
+          </div>
+
+          <div className="space-y-3 text-xs">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[var(--evo-muted)] font-medium">PageSpeed API Key</label>
+                <a
+                  href="https://developers.google.com/speed/docs/insights/v5/get-started"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[10px] text-amber-400 hover:underline flex items-center gap-1"
+                >
+                  Obter Chave <ExternalLink className="w-2.5 h-2.5" />
+                </a>
+              </div>
+              <div className="relative">
+                <input
+                  type={showPageSpeedKey ? 'text' : 'password'}
+                  value={pageSpeedApiKey}
+                  onChange={(e) => setPageSpeedApiKey(e.target.value)}
+                  placeholder="AIzaSy..."
+                  className="w-full pl-3 pr-8 py-2 rounded-xl bg-[var(--evo-surface)] border border-[var(--evo-border)] text-[var(--evo-text)] focus:outline-none font-mono text-[11px]"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPageSpeedKey(!showPageSpeedKey)}
+                  className="absolute right-2.5 top-2.5 text-[var(--evo-muted)] hover:text-[var(--evo-text)]"
+                >
+                  {showPageSpeedKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-[var(--evo-surface)] border border-[var(--evo-border)] text-[11px] text-[var(--evo-muted)] leading-relaxed">
+              Alimenta o botão <strong>Cruzar Dados</strong> com auditoria real de Core Web Vitals (LCP, INP, CLS), métricas de laboratório e notas Lighthouse Mobile & Desktop.
+            </div>
+
+            <div className="pt-2 flex flex-col gap-3 border-t border-[var(--evo-border)] mt-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-[10px] text-[var(--evo-muted)] flex-1">
+                  {pageSpeedStatusMsg && (
+                    <span className={pageSpeedStatus === 'online' ? 'text-evo-support' : 'text-amber-500'}>
+                      {pageSpeedStatusMsg}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="text-xs h-8 gap-1.5"
+                    onClick={handleTestPageSpeed}
+                    disabled={pageSpeedStatus === 'loading' || !pageSpeedApiKey.trim()}
+                  >
+                    {pageSpeedStatus === 'loading' ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
+                    Testar
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    className="text-xs h-8 gap-1.5 bg-amber-600 text-white font-semibold hover:bg-amber-500"
+                    onClick={() => handleSavePageSpeed()}
+                    disabled={isSavingPageSpeed}
+                  >
+                    {pageSpeedSaveSuccess ? <Check className="w-3.5 h-3.5" /> : <Save className="w-3.5 h-3.5" />}
+                    {pageSpeedSaveSuccess ? 'Salvo!' : 'Salvar'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+
         {/* Card Apify */}
         <Card className="p-6 space-y-4 border border-[var(--evo-border)]">
           <div className="flex items-start justify-between border-b border-[var(--evo-border)] pb-4">

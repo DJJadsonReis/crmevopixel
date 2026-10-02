@@ -81,6 +81,191 @@ export interface MessageLog {
   status: 'entregue' | 'lida' | 'falhou' | 'pendente';
 }
 
+export type EnrichmentStatus = 'not_analyzed' | 'in_progress' | 'enriched' | 'partial' | 'error';
+
+export interface EnrichmentEvidenceItem {
+  key: string;
+  label: string;
+  value: any;
+  source: string; // ex: 'Website HTML', 'Google Maps', 'Instagram', 'DuckDuckGo'
+  confidence: number; // 0.0 a 1.0
+  collected_at: string;
+  type: 'DADO' | 'INFERENCIA' | 'HIPOTESE' | 'NAO_ENCONTRADO';
+  verified: boolean;
+}
+
+export interface EnrichmentData {
+  company_summary: string;
+  digital_presence: {
+    has_website: boolean;
+    website_url?: string;
+    website_status?: number;
+    ssl_active?: boolean;
+    mobile_friendly?: boolean;
+    has_whatsapp_cta?: boolean;
+    whatsapp_links?: string[];
+    apparent_tech?: string;
+    has_contact_form?: boolean;
+    page_title?: string;
+    meta_description?: string;
+    has_schema?: boolean;
+    google_maps_found?: boolean;
+    google_rating?: number;
+    google_reviews_count?: number;
+    instagram_found?: boolean;
+    instagram_handle?: string;
+    identified_emails?: string[];
+    identified_phones?: string[];
+  };
+  evidence_items: EnrichmentEvidenceItem[];
+  diagnosis: string[]; // Problemas, falhas e ausências reais identificadas
+  opportunities: string[]; // Oportunidades comerciais de alto impacto
+  compatible_services: string[]; // Serviços EVO PIXEL indicados
+  sales_arguments: string[]; // Motivos e justificativas financeiras
+  sales_hooks: string[]; // 3 ganchos personalizados e específicos
+  possible_objections: {
+    objection: string;
+    suggested_response: string;
+  }[];
+  approach_strategy: string; // Como abordar sem parecer spam
+  next_best_action: string;
+  score_breakdown: {
+    total: number;
+    website_score: number;
+    local_seo_score: number;
+    whatsapp_score: number;
+    service_fit_score: number;
+    rationale: string;
+  };
+  analyzed_at: string;
+  model_used?: string;
+  site_health_status?: SiteHealthStatus;
+  pagespeed_report?: PageSpeedReport;
+  technical_audit?: TechnicalAuditReport;
+}
+
+export type SiteHealthStatus =
+  | 'ONLINE_OK'
+  | 'ONLINE_WITH_ISSUES'
+  | 'PARTIALLY_BROKEN'
+  | 'MAINTENANCE_REQUIRED'
+  | 'CRITICAL'
+  | 'OFFLINE'
+  | 'DNS_ERROR'
+  | 'SSL_ERROR'
+  | 'APPLICATION_ERROR'
+  | 'NO_WEBSITE'
+  | 'INCONCLUSIVE';
+
+export type CoreWebVitalsRating = 'GOOD' | 'NEEDS_IMPROVEMENT' | 'POOR';
+
+export interface LighthouseScores {
+  performance: number | null;
+  accessibility: number | null;
+  best_practices: number | null;
+  seo: number | null;
+}
+
+export interface LabMetrics {
+  fcp_ms?: number | null;
+  lcp_ms?: number | null;
+  tbt_ms?: number | null;
+  cls?: number | null;
+  speed_index_ms?: number | null;
+  ttfb_ms?: number | null;
+  page_size_kb?: number | null;
+  request_count?: number | null;
+}
+
+export interface FieldMetrics {
+  available: boolean;
+  lcp?: { value: number; rating: CoreWebVitalsRating };
+  inp?: { value: number; rating: CoreWebVitalsRating };
+  cls?: { value: number; rating: CoreWebVitalsRating };
+  fcp?: { value: number; rating: CoreWebVitalsRating };
+  ttfb?: { value: number; rating: CoreWebVitalsRating };
+}
+
+export interface LighthouseIssue {
+  audit_id: string;
+  title: string;
+  description: string;
+  score: number | null;
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  display_value?: string;
+  commercial_explanation: string;
+}
+
+export interface PageSpeedSnapshot {
+  strategy: 'mobile' | 'desktop';
+  analyzed_at: string;
+  scores: LighthouseScores;
+  lab_metrics: LabMetrics;
+  field_metrics: FieldMetrics;
+  top_issues: LighthouseIssue[];
+}
+
+export interface TechnicalIssueItem {
+  type: 'broken_image' | 'broken_link' | 'ssl_missing' | 'mobile_overflow' | 'no_whatsapp_cta' | 'slow_server';
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  resource_url?: string;
+  location: string;
+  description: string;
+  commercial_impact: string;
+}
+
+export interface TechnicalAuditReport {
+  site_health_status: SiteHealthStatus;
+  http_status: number;
+  ssl_valid: boolean;
+  response_time_ms: number;
+  mobile_responsive: boolean;
+  broken_images: { url: string; status: number }[];
+  broken_links: { url: string; status: number }[];
+  has_whatsapp_cta: boolean;
+  detected_technologies: string[];
+  issues: TechnicalIssueItem[];
+  audited_at: string;
+}
+
+export interface PageSpeedReport {
+  mobile: PageSpeedSnapshot | null;
+  desktop: PageSpeedSnapshot | null;
+  status:
+    | 'SUCCESS'
+    | 'PARTIAL'
+    | 'RATE_LIMITED'
+    | 'TIMEOUT'
+    | 'INVALID_KEY'
+    | 'PROVIDER_ERROR'
+    | 'SITE_NOT_ANALYZABLE'
+    | 'NO_WEBSITE';
+  cached: boolean;
+  last_audit_at: string;
+}
+
+export interface CommercialFunnelStep {
+  step_order: number;
+  title: string;
+  phase: string; // Ex: '1. Abertura', '2. Contexto', '3. Diagnóstico', '4. Transformação', '5. CTA', '6. Follow-up 1'...
+  objective: string;
+  message_template: string;
+  channel: 'whatsapp' | 'email' | 'instagram';
+  wait_hours_or_days?: string;
+}
+
+export interface AIPrompt {
+  id: string;
+  name: string;
+  description?: string;
+  prompt: string;
+  prompt_type: 'atendimento' | 'prospeccao' | 'closer' | 'aduaneiro' | 'personalizado';
+  is_default: boolean;
+  version: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Lead {
   id: string;
   name: string;
@@ -108,6 +293,13 @@ export interface Lead {
   next_action_at?: string;
   notes?: string;
   sequence_progress?: LeadSequenceProgress;
+  enrichment_status?: EnrichmentStatus;
+  enrichment_data?: EnrichmentData;
+  commercial_funnel?: CommercialFunnelStep[];
+  last_enriched_at?: string;
+  site_health_status?: SiteHealthStatus;
+  pagespeed_report?: PageSpeedReport;
+  technical_audit?: TechnicalAuditReport;
   ai_analysis?: {
     data_points: string[];
     inferences: string[];

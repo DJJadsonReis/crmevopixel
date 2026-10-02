@@ -52,6 +52,7 @@ import {
   AIActionLog,
   AIFeedback,
   MonthlyClient,
+  AIPrompt,
 } from '@/types/database';
 import { dbService } from '@/lib/supabase/db-service';
 
@@ -82,6 +83,7 @@ class CrmService {
   private aiCommands: AICommand[] = [...INITIAL_AI_COMMANDS];
   private aiActionLogs: AIActionLog[] = [...INITIAL_AI_ACTION_LOGS];
   private aiFeedbacks: AIFeedback[] = [];
+  private aiPrompts: AIPrompt[] = [];
   private initializedFromSupabase = false;
   private syncPromise: Promise<void> | null = null;
   private listeners: Set<() => void> = new Set();
@@ -1522,6 +1524,189 @@ class CrmService {
       status: 'pago',
       message: `Pagamento de R$ ${amount.toLocaleString('pt-BR')} registrado com sucesso para ${clientName}.`,
     };
+  }
+
+  // ============================================================================
+  // CRUZAMENTO DE DADOS & INTELIGÊNCIA COMERCIAL (ENRICHMENT & AUDIT)
+  // ============================================================================
+  public async enrichLead(
+    leadId: string,
+    options?: { forceRefresh?: boolean; customPageSpeedKey?: string }
+  ): Promise<Lead | undefined> {
+    const lead = this.leads.find((l) => l.id === leadId);
+    if (!lead) return undefined;
+
+    // Atualiza status local para in_progress
+    lead.enrichment_status = 'in_progress';
+    this.saveToLocalStorage('leads', this.leads);
+    this.notify();
+
+    try {
+      const res = await fetch('/api/enrichment/cross-reference', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lead,
+          forceRefresh: options?.forceRefresh,
+          customPageSpeedKey: options?.customPageSpeedKey,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.lead) {
+          const updated = data.lead as Lead;
+          Object.assign(lead, updated);
+          this.saveToLocalStorage('leads', this.leads);
+          dbService.updateLead(lead.id, updated);
+          this.notify();
+          return lead;
+        }
+      }
+
+      lead.enrichment_status = 'error';
+      this.saveToLocalStorage('leads', this.leads);
+      this.notify();
+      return lead;
+    } catch (err) {
+      console.error('Erro ao enriquecer lead via crmService:', err);
+      lead.enrichment_status = 'error';
+      this.saveToLocalStorage('leads', this.leads);
+      this.notify();
+      return lead;
+    }
+  }
+
+  public async reanalyzeSite(leadId: string): Promise<Lead | undefined> {
+    return this.enrichLead(leadId, { forceRefresh: true });
+  }
+
+  public async reanalyzePageSpeed(leadId: string, customApiKey?: string): Promise<Lead | undefined> {
+    return this.enrichLead(leadId, { forceRefresh: true, customPageSpeedKey: customApiKey });
+  }
+
+  // ============================================================================
+  // GESTÃO DE SYSTEM PROMPTS (IA & ATENDIMENTO)
+  // ============================================================================
+  public async getAiPrompts(): Promise<AIPrompt[]> {
+    if (this.aiPrompts.length === 0) {
+      if (typeof window !== 'undefined') {
+        const cached = localStorage.getItem('evocrm_ai_prompts');
+        if (cached) {
+          try {
+            this.aiPrompts = JSON.parse(cached);
+          } catch {}
+        }
+      }
+
+      try {
+        const fromDb = await dbService.getAiPrompts();
+        if (fromDb && fromDb.length > 0) {
+          this.aiPrompts = fromDb;
+        }
+      } catch {}
+
+      if (this.aiPrompts.length === 0) {
+        this.aiPrompts = [
+          {
+            id: 'prompt-default-atendimento',
+            name: 'System Prompt Padrão — EVO PIXEL',
+            description: 'Prompt comercial para atendimento, qualificação e agendamento via WhatsApp',
+            prompt: `Você é o Assistente Virtual Comercial da EVO PIXEL (Agência Especializada em Sites de Alta Performance, SEO Local e Automação de Atendimento com IA).
+Sua missão é atender leads com cordialidade, rapidez, empatia e tom profissional consultivo.
+
+DIRETRIZES FUNDAMENTAIS:
+1. Apresente-se como especialista da EVO PIXEL.
+2. Seja objetivo, respeitoso e acolhedor. Nunca use jargões excessivamente técnicos ou agressivos.
+3. Identifique a necessidade do lead (criação de site, reformulação, automação de WhatsApp, SEO Local).
+4. Utilize as informações de auditoria técnica do lead caso disponíveis (tempo de resposta, mobile, SSL) para demonstrar autoridade com delicadeza.
+5. Sempre conduza para o próximo passo: agendamento de uma demonstração rápida de 15 minutos pelo Google Meet ou envio de proposta consultiva.`,
+            prompt_type: 'atendimento',
+            is_default: true,
+            version: 1,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+        ];
+      }
+      this.saveToLocalStorage('ai_prompts', this.aiPrompts);
+    }
+    return this.aiPrompts;
+  }
+
+  public getAiPromptsSync(): AIPrompt[] {
+    return this.aiPrompts;
+  }
+
+  public getDefaultAiPrompt(): AIPrompt {
+    return (
+      this.aiPrompts.find((p) => p.is_default) ||
+      this.aiPrompts[0] || {
+        id: 'prompt-default-atendimento',
+        name: 'System Prompt Padrão — EVO PIXEL',
+        description: 'Prompt comercial para atendimento, qualificação e agendamento via WhatsApp',
+        prompt: `Você é o Assistente Virtual Comercial da EVO PIXEL.`,
+        prompt_type: 'atendimento',
+        is_default: true,
+        version: 1,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }
+    );
+  }
+
+  public async saveAiPrompt(promptData: Partial<AIPrompt>): Promise<AIPrompt> {
+    const existingIndex = this.aiPrompts.findIndex((p) => p.id === promptData.id);
+    let saved: AIPrompt;
+
+    if (existingIndex >= 0) {
+      const prev = this.aiPrompts[existingIndex];
+      saved = {
+        ...prev,
+        ...promptData,
+        version: (prev.version || 1) + 1,
+        updated_at: new Date().toISOString(),
+      };
+      this.aiPrompts[existingIndex] = saved;
+    } else {
+      saved = {
+        id: promptData.id || `prompt-${Date.now()}`,
+        name: promptData.name || 'Novo Prompt',
+        description: promptData.description || '',
+        prompt: promptData.prompt || '',
+        prompt_type: promptData.prompt_type || 'atendimento',
+        is_default: Boolean(promptData.is_default),
+        version: 1,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      this.aiPrompts.push(saved);
+    }
+
+    if (saved.is_default) {
+      this.aiPrompts.forEach((p) => {
+        if (p.id !== saved.id) p.is_default = false;
+      });
+    }
+
+    this.saveToLocalStorage('ai_prompts', this.aiPrompts);
+    try {
+      await dbService.saveAiPrompt(saved);
+    } catch {}
+    this.notify();
+    return saved;
+  }
+
+  public async setDefaultAiPrompt(promptId: string): Promise<boolean> {
+    this.aiPrompts.forEach((p) => {
+      p.is_default = p.id === promptId;
+    });
+    this.saveToLocalStorage('ai_prompts', this.aiPrompts);
+    try {
+      await dbService.setDefaultAiPrompt(promptId);
+    } catch {}
+    this.notify();
+    return true;
   }
 }
 

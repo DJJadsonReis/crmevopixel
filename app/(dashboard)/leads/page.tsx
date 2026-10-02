@@ -46,9 +46,42 @@ export default function LeadsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTemperature, setSelectedTemperature] = useState<string>('todos');
   const [selectedNiche, setSelectedNiche] = useState<string>('todos');
+  const [selectedEnrichmentStatus, setSelectedEnrichmentStatus] = useState<string>('todos');
+  const [enrichingIds, setEnrichingIds] = useState<Set<string>>(new Set());
   const [inboxLead, setInboxLead] = useState<Lead | null>(null);
   const [tagModalLead, setTagModalLead] = useState<Lead | null>(null);
   const [isNewLeadModalOpen, setIsNewLeadModalOpen] = useState(false);
+
+  const handleQuickEnrich = async (leadId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEnrichingIds((prev) => new Set(prev).add(leadId));
+    try {
+      await crmService.enrichLead(leadId);
+    } catch (err) {
+      console.error('Erro ao cruzar dados do lead:', err);
+    } finally {
+      setEnrichingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(leadId);
+        return next;
+      });
+    }
+  };
+
+  const getEnrichmentBadge = (status?: string) => {
+    switch (status) {
+      case 'enriched':
+        return { label: '🟢 Enriquecido', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' };
+      case 'partial':
+        return { label: '🟡 Parcial', color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' };
+      case 'in_progress':
+        return { label: '⏳ Analisando...', color: 'bg-blue-500/10 text-blue-400 border-blue-500/20' };
+      case 'error':
+        return { label: '🔴 Erro', color: 'bg-rose-500/10 text-rose-400 border-rose-500/20' };
+      default:
+        return { label: '⚪ Não analisado', color: 'bg-zinc-800 text-zinc-400 border-zinc-700' };
+    }
+  };
 
   // Import states
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -566,7 +599,12 @@ export default function LeadsPage() {
     const matchesNiche =
       selectedNiche === 'todos' || lead.segment.toLowerCase() === selectedNiche.toLowerCase();
 
-    return matchesSearch && matchesTemp && matchesNiche;
+    const matchesEnrichment =
+      selectedEnrichmentStatus === 'todos' ||
+      (selectedEnrichmentStatus === 'not_analyzed' && (!lead.enrichment_status || lead.enrichment_status === 'not_analyzed')) ||
+      lead.enrichment_status === selectedEnrichmentStatus;
+
+    return matchesSearch && matchesTemp && matchesNiche && matchesEnrichment;
   });
 
   return (
@@ -678,6 +716,18 @@ export default function LeadsPage() {
             ))}
             {!niches.some(n => n.name === 'Geral') && <option value="Geral">Outro / Geral</option>}
           </select>
+
+          <select
+            value={selectedEnrichmentStatus}
+            onChange={(e) => setSelectedEnrichmentStatus(e.target.value)}
+            className="px-3 py-1.5 rounded-xl bg-evo-card border border-evo-border text-xs text-evo-text focus:outline-none focus:border-evo-support appearance-none cursor-pointer"
+          >
+            <option value="todos">Status da Auditoria</option>
+            <option value="enriched">🟢 Enriquecido</option>
+            <option value="partial">🟡 Parcial</option>
+            <option value="not_analyzed">⚪ Não analisado</option>
+            <option value="error">🔴 Erro</option>
+          </select>
         </div>
       </div>
 
@@ -707,6 +757,7 @@ export default function LeadsPage() {
                 </th>
                 <th className="py-3 px-4">Lead / Empresa</th>
                 <th className="py-3 px-4">Segmento</th>
+                <th className="py-3 px-4">Auditoria / Site</th>
                 <th className="py-3 px-4">Temperatura</th>
                 <th className="py-3 px-4 text-center">Score IA</th>
                 <th className="py-3 px-4">Serviços Sugeridos</th>
@@ -861,6 +912,32 @@ export default function LeadsPage() {
                       </span>
                     </td>
 
+                    {/* Auditoria / Presença / PageSpeed */}
+                    <td className="py-3.5 px-4">
+                      <div className="flex flex-col gap-1 min-w-[130px]">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${getEnrichmentBadge(lead.enrichment_status).color}`}>
+                            {getEnrichmentBadge(lead.enrichment_status).label}
+                          </span>
+                          {lead.pagespeed_report?.mobile?.scores?.performance != null && (
+                            <span
+                              className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-evo-surface text-amber-400 border border-amber-500/20 font-semibold"
+                              title="Google PageSpeed Insights Mobile Score"
+                            >
+                              ⚡ {lead.pagespeed_report.mobile.scores.performance}
+                            </span>
+                          )}
+                        </div>
+                        {lead.website ? (
+                          <span className="text-[11px] text-evo-muted truncate max-w-[130px] font-mono" title={lead.website}>
+                            {lead.website.replace(/^https?:\/\//, '')}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-zinc-500 font-mono">Sem site</span>
+                        )}
+                      </div>
+                    </td>
+
                     {/* Temperatura */}
                     <td className="py-3.5 px-4">
                       <Badge temperature={lead.temperature}>
@@ -908,6 +985,17 @@ export default function LeadsPage() {
                     {/* Ações: WhatsApp, Gerar Mensagem, Olho & Excluir */}
                     <td className="py-3.5 px-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
+                        {/* Botão Rápido Cruzar Dados */}
+                        <button
+                          type="button"
+                          onClick={(e) => handleQuickEnrich(lead.id, e)}
+                          disabled={enrichingIds.has(lead.id)}
+                          className="p-1.5 rounded-xl bg-evo-surface hover:bg-evo-surface2 border border-evo-border text-evo-support hover:text-evo-accent transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center"
+                          title="Cruzar Dados & Auditoria Técnica do Lead"
+                        >
+                          <Sparkles className={`w-3.5 h-3.5 ${enrichingIds.has(lead.id) ? 'animate-spin text-evo-accent' : ''}`} />
+                        </button>
+
                         {/* Botão Chamar no WhatsApp (Abre Inbox Oficial com IA) */}
                         <button
                           onClick={() => handleDirectWhatsApp(lead)}

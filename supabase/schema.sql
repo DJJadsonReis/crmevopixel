@@ -713,4 +713,35 @@ BEGIN
     END IF;
 END $$;
 
+-- ------------------------------------------------------------------------------
+-- 18. SYSTEM PROMPTS & INTELIGÊNCIA COMERCIAL DO AGENTE (CRUZAR DADOS)
+-- ------------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS ai_prompts (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name TEXT NOT NULL,
+    description TEXT,
+    prompt TEXT NOT NULL,
+    prompt_type TEXT NOT NULL DEFAULT 'atendimento', -- 'atendimento', 'prospeccao', 'closer', 'aduaneiro', 'personalizado'
+    is_default BOOLEAN NOT NULL DEFAULT false,
+    version INTEGER NOT NULL DEFAULT 1,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE ai_prompts ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'authenticated_manage_ai_prompts') THEN
+        CREATE POLICY authenticated_manage_ai_prompts ON ai_prompts FOR ALL TO authenticated USING (true) WITH CHECK (true);
+    END IF;
+END $$;
+
+-- Colunas de enriquecimento e funil comercial estruturado na tabela leads
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS enrichment_status TEXT DEFAULT 'not_analyzed';
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS enrichment_data JSONB DEFAULT NULL;
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS commercial_funnel JSONB DEFAULT NULL;
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS last_enriched_at TIMESTAMPTZ DEFAULT NULL;
+
 

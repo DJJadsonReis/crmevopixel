@@ -12,6 +12,7 @@ import {
   TaskItem,
   FinancialTransaction,
   Niche,
+  AIPrompt,
 } from '@/types/database';
 
 function isValidUUID(str?: string | null): boolean {
@@ -27,6 +28,10 @@ function sanitizeLeadForSupabase(lead: Partial<Lead>): any {
   if (Array.isArray(lead.tags) && lead.tags.length > 0) metadata.tags = lead.tags;
   if (lead.sequence_progress) metadata.sequence_progress = lead.sequence_progress;
   if (lead.ai_analysis) metadata.ai_analysis = lead.ai_analysis;
+  if (lead.enrichment_status) metadata.enrichment_status = lead.enrichment_status;
+  if (lead.enrichment_data) metadata.enrichment_data = lead.enrichment_data;
+  if (lead.commercial_funnel) metadata.commercial_funnel = lead.commercial_funnel;
+  if (lead.last_enriched_at) metadata.last_enriched_at = lead.last_enriched_at;
 
   if (Object.keys(metadata).length > 0) {
     const cleanedNotes = notes.replace(/<!--METADATA:[\s\S]*?-->/, '').trim();
@@ -69,6 +74,10 @@ function parseLeadFromSupabase(row: any): Lead {
   let tags: string[] = Array.isArray(row.tags) ? row.tags : [];
   let sequence_progress = row.sequence_progress;
   let ai_analysis = row.ai_analysis;
+  let enrichment_status = row.enrichment_status || 'not_analyzed';
+  let enrichment_data = row.enrichment_data || undefined;
+  let commercial_funnel = row.commercial_funnel || undefined;
+  let last_enriched_at = row.last_enriched_at || undefined;
   let notes = row.notes || '';
 
   if (notes && notes.includes('<!--METADATA:')) {
@@ -81,6 +90,10 @@ function parseLeadFromSupabase(row: any): Lead {
         if (Array.isArray(parsed.tags) && tags.length === 0) tags = parsed.tags;
         if (parsed.sequence_progress && !sequence_progress) sequence_progress = parsed.sequence_progress;
         if (parsed.ai_analysis && !ai_analysis) ai_analysis = parsed.ai_analysis;
+        if (parsed.enrichment_status) enrichment_status = parsed.enrichment_status;
+        if (parsed.enrichment_data) enrichment_data = parsed.enrichment_data;
+        if (parsed.commercial_funnel) commercial_funnel = parsed.commercial_funnel;
+        if (parsed.last_enriched_at) last_enriched_at = parsed.last_enriched_at;
         notes = notes.replace(/<!--METADATA:[\s\S]*?-->/, '').trim();
       } catch (e) {}
     }
@@ -99,6 +112,10 @@ function parseLeadFromSupabase(row: any): Lead {
     tags,
     sequence_progress,
     ai_analysis,
+    enrichment_status,
+    enrichment_data,
+    commercial_funnel,
+    last_enriched_at,
   } as Lead;
 }
 
@@ -759,6 +776,60 @@ export class DatabaseService {
     try {
       const supabase = getSupabase();
       const { error } = await supabase.from('niches').delete().eq('id', id);
+      return !error;
+    } catch {
+      return false;
+    }
+  }
+
+  // ============================================================================
+  // SYSTEM PROMPTS DO AGENTE
+  // ============================================================================
+  public async getAiPrompts(): Promise<AIPrompt[] | null> {
+    if (!isSupabaseConfigured()) return null;
+    try {
+      const supabase = getSupabase();
+      const { data, error } = await supabase
+        .from('ai_prompts')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error || !data) return null;
+      return data as AIPrompt[];
+    } catch {
+      return null;
+    }
+  }
+
+  public async saveAiPrompt(prompt: AIPrompt): Promise<boolean> {
+    if (!isSupabaseConfigured()) return false;
+    try {
+      const supabase = getSupabase();
+      const toUpsert: any = {
+        name: prompt.name,
+        description: prompt.description || null,
+        prompt: prompt.prompt,
+        prompt_type: prompt.prompt_type || 'atendimento',
+        is_default: prompt.is_default || false,
+        version: prompt.version || 1,
+        updated_at: new Date().toISOString(),
+      };
+      if (isValidUUID(prompt.id)) {
+        toUpsert.id = prompt.id;
+      }
+      const { error } = await supabase.from('ai_prompts').upsert([toUpsert]);
+      return !error;
+    } catch {
+      return false;
+    }
+  }
+
+  public async setDefaultAiPrompt(id: string): Promise<boolean> {
+    if (!isSupabaseConfigured()) return false;
+    try {
+      const supabase = getSupabase();
+      // Remove default dos outros
+      await supabase.from('ai_prompts').update({ is_default: false }).neq('id', id);
+      const { error } = await supabase.from('ai_prompts').update({ is_default: true }).eq('id', id);
       return !error;
     } catch {
       return false;
