@@ -66,9 +66,25 @@ export function WhatsAppInboxModal({
   const [audioSeconds, setAudioSeconds] = useState(0);
   const [sentiment, setSentiment] = useState<SentimentAnalysis | null>(null);
   const [isGeneratingAiReply, setIsGeneratingAiReply] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioIntervalRef = useRef<any>(null);
+
+  // Sincronização manual e automática das mensagens reais da Evolution API
+  const handleSyncConversation = async (silent = false) => {
+    if (!lead) return;
+    const phone = lead.whatsapp || lead.phone;
+    if (!phone) return;
+    if (!silent) setIsSyncing(true);
+    try {
+      await crmService.syncWhatsAppMessages(lead.id, phone);
+    } catch (err) {
+      console.warn('Erro ao sincronizar mensagens:', err);
+    } finally {
+      if (!silent) setIsSyncing(false);
+    }
+  };
 
   // Carrega histórico de mensagens do lead com sincronização em tempo real
   useEffect(() => {
@@ -90,6 +106,17 @@ export function WhatsAppInboxModal({
     const unsubscribe = crmService.subscribe(loadLogs);
     return () => unsubscribe();
   }, [lead, isOpen, initialMessage]);
+
+  // Sincroniza com Evolution API ao abrir modal e a cada 10s
+  useEffect(() => {
+    if (isOpen && lead) {
+      handleSyncConversation(false);
+      const interval = setInterval(() => {
+        handleSyncConversation(true);
+      }, 10000);
+      return () => clearInterval(interval);
+    }
+  }, [isOpen, lead?.id]);
 
   // Rola até o final das mensagens
   useEffect(() => {
@@ -151,6 +178,7 @@ export function WhatsAppInboxModal({
       refreshSentiment(updated);
       setInputText('');
       setShowEmojiPicker(false);
+      setTimeout(() => handleSyncConversation(true), 1200);
     } catch (err) {
       console.error('Erro ao enviar mensagem:', err);
       // Fallback local garantido
@@ -339,6 +367,19 @@ export function WhatsAppInboxModal({
                 </div>
               </div>
             )}
+
+            <button
+              type="button"
+              onClick={() => handleSyncConversation(false)}
+              disabled={isSyncing}
+              className="px-2.5 py-1.5 rounded-lg text-[#8696a0] hover:text-white hover:bg-[#374248] transition-colors flex items-center gap-1.5 text-xs border border-[#2a3942] disabled:opacity-50"
+              title="Sincronizar mensagens reais da Evolution API"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-[#00a884] ${isSyncing ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline font-mono text-[10px]">
+                {isSyncing ? 'Sincronizando...' : 'Sincronizar'}
+              </span>
+            </button>
 
             <button
               onClick={onClose}

@@ -30,8 +30,8 @@ export async function POST(req: NextRequest) {
     }
 
     const evolutionUrl = (customUrl || process.env.NEXT_PUBLIC_EVOLUTION_URL || 'https://api-evolution-api.1h7ium.easypanel.host').replace(/\/+$/, '');
-    const evolutionApiKey = (customApiKey || process.env.NEXT_PUBLIC_EVOLUTION_API_KEY || '').trim();
-    const evolutionInstance = (customInstance || process.env.NEXT_PUBLIC_EVOLUTION_INSTANCE || 'evocrm-prod').trim();
+    const evolutionApiKey = (customApiKey || process.env.NEXT_PUBLIC_EVOLUTION_API_KEY || '429683C4C977415CAAFCCE10F7D57E11').trim();
+    const evolutionInstance = (customInstance || process.env.NEXT_PUBLIC_EVOLUTION_INSTANCE || 'rafaelgomescosta_653ded30').trim();
 
     // Se temos URL e instância, tenta enviar via Evolution API real
     let sentReal = false;

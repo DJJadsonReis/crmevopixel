@@ -50,6 +50,7 @@ function WhatsAppChatContent() {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isRecordingAudio, setIsRecordingAudio] = useState(false);
   const [audioSeconds, setAudioSeconds] = useState(0);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioIntervalRef = useRef<any>(null);
@@ -75,9 +76,40 @@ function WhatsAppChatContent() {
 
   const selectedLead = leads.find((l) => l.id === selectedLeadId) || leads[0] || null;
 
+  // Sincronização manual e automática das mensagens reais da Evolution API
+  const handleSyncConversation = async (silent = false) => {
+    if (!selectedLead) return;
+    const phone = selectedLead.whatsapp || selectedLead.phone;
+    if (!phone) return;
+    if (!silent) setIsSyncing(true);
+    try {
+      await crmService.syncWhatsAppMessages(selectedLead.id, phone);
+    } catch (err) {
+      console.warn('Erro ao sincronizar mensagens:', err);
+    } finally {
+      if (!silent) setIsSyncing(false);
+    }
+  };
+
+  // Sincroniza conversa automaticamente ao abrir ou trocar de lead
+  useEffect(() => {
+    if (selectedLead?.id) {
+      handleSyncConversation(true);
+    }
+  }, [selectedLead?.id]);
+
+  // Polling silencioso a cada 10 segundos para mensagens recebidas no WhatsApp
+  useEffect(() => {
+    if (!selectedLead?.id) return;
+    const interval = setInterval(() => {
+      handleSyncConversation(true);
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [selectedLead?.id, selectedLead?.whatsapp, selectedLead?.phone]);
+
   // Carrega mensagens do lead selecionado
   const activeMessages = selectedLead
-    ? [...crmService.getMessageLogs(selectedLead.id)].reverse()
+    ? [...crmService.getMessageLogs(selectedLead.id, selectedLead.whatsapp || selectedLead.phone)].reverse()
     : [];
 
   const sentiment: SentimentAnalysis | null = selectedLead
@@ -141,6 +173,7 @@ function WhatsAppChatContent() {
 
       setInputText('');
       setShowEmojiPicker(false);
+      setTimeout(() => handleSyncConversation(true), 1200);
     } catch (err) {
       console.error('Erro ao enviar mensagem:', err);
       // Fallback local garantido
@@ -449,6 +482,19 @@ function WhatsAppChatContent() {
                       </span>
                     </div>
                   )}
+
+                  <button
+                    type="button"
+                    onClick={() => handleSyncConversation(false)}
+                    disabled={isSyncing}
+                    className="px-3 py-1.5 rounded-xl bg-[#2a3942] hover:bg-[#32424b] text-[#d1d7db] text-xs font-medium flex items-center gap-1.5 transition-colors border border-transparent hover:border-[#00a884]/40 disabled:opacity-50"
+                    title="Sincronizar mensagens reais do WhatsApp (Evolution API)"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 text-[#00a884] ${isSyncing ? 'animate-spin' : ''}`} />
+                    <span className="hidden sm:inline font-mono text-[11px]">
+                      {isSyncing ? 'Sincronizando...' : 'Sincronizar Conversa'}
+                    </span>
+                  </button>
 
                   <Link
                     href={`/leads/${selectedLead.id}`}

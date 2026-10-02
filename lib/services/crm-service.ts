@@ -1201,6 +1201,18 @@ class CrmService {
 
       if (cleanTarget1 && (mPhone === cleanTarget1 || mLeadIdClean === cleanTarget1)) return true;
       if (cleanTarget2 && (mPhone === cleanTarget2 || mLeadIdClean === cleanTarget2)) return true;
+
+      if (cleanTarget1 && cleanTarget1.length >= 8) {
+        const t1 = cleanTarget1.slice(-8);
+        if (mPhone && mPhone.length >= 8 && mPhone.endsWith(t1)) return true;
+        if (mLeadIdClean && mLeadIdClean.length >= 8 && mLeadIdClean.endsWith(t1)) return true;
+      }
+      if (cleanTarget2 && cleanTarget2.length >= 8) {
+        const t2 = cleanTarget2.slice(-8);
+        if (mPhone && mPhone.length >= 8 && mPhone.endsWith(t2)) return true;
+        if (mLeadIdClean && mLeadIdClean.length >= 8 && mLeadIdClean.endsWith(t2)) return true;
+      }
+
       return false;
     });
   }
@@ -1215,6 +1227,78 @@ class CrmService {
     this.notify();
     return newLog;
   }
+
+  // Sincronização direta de mensagens com a Evolution API (WhatsApp Real)
+  public async syncWhatsAppMessages(leadId: string, phone?: string): Promise<MessageLog[]> {
+    if (!phone) {
+      const lead = this.leads.find((l) => l.id === leadId);
+      phone = lead?.whatsapp || lead?.phone;
+    }
+    if (!phone) return this.getMessageLogs(leadId);
+
+    try {
+      const customUrl = typeof window !== 'undefined' ? localStorage.getItem('EVO_evolutionUrl') || undefined : undefined;
+      const customApiKey = typeof window !== 'undefined' ? localStorage.getItem('EVO_evolutionApiKey') || undefined : undefined;
+      const customInstance = typeof window !== 'undefined' ? localStorage.getItem('EVO_evolutionInstance') || undefined : undefined;
+
+      const res = await fetch('/api/whatsapp/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          leadId,
+          phone,
+          customUrl,
+          customApiKey,
+          customInstance,
+        }),
+      });
+
+      if (!res.ok) return this.getMessageLogs(leadId, phone);
+
+      const data = await res.json();
+      if (!data.success || !Array.isArray(data.messages)) return this.getMessageLogs(leadId, phone);
+
+      const syncedMessages: MessageLog[] = data.messages;
+      if (syncedMessages.length === 0) return this.getMessageLogs(leadId, phone);
+
+      let addedCount = 0;
+      syncedMessages.forEach((msg) => {
+        if (leadId) msg.lead_id = leadId;
+        if (phone && !msg.phone) msg.phone = phone;
+
+        const exists = this.messageLogs.some(
+          (existing) =>
+            existing.id === msg.id ||
+            (existing.sent_at === msg.sent_at && existing.sent_text === msg.sent_text)
+        );
+        if (!exists) {
+          this.messageLogs.unshift(msg);
+          addedCount++;
+        }
+      });
+
+      if (addedCount > 0) {
+        this.messageLogs.sort((a, b) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime());
+        this.saveToLocalStorage('messageLogs', this.messageLogs);
+
+        const hasIncoming = syncedMessages.some((m) => m.direction === 'recebida');
+        const lead = this.leads.find((l) => l.id === leadId);
+        if (lead && hasIncoming && (lead.status === 'novo' || (lead.status as any) === 'em_abordagem')) {
+          lead.status = 'em_conversa';
+          this.saveToLocalStorage('leads', this.leads);
+          this.syncLeadToOpportunity(lead);
+        }
+
+        this.notify();
+      }
+
+      return this.getMessageLogs(leadId, phone);
+    } catch (err) {
+      console.warn('Erro ao sincronizar mensagens do WhatsApp:', err);
+      return this.getMessageLogs(leadId, phone);
+    }
+  }
+
 
   // Gestão de Tags nos Leads
   public setLeadTags(id: string, tags: string[]): Lead | undefined {
