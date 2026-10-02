@@ -1,30 +1,28 @@
 'use client';
 
 import React, { useState } from 'react';
-import { AutomationTask } from '@/types/database';
+import { AutomationTask, Lead } from '@/types/database';
 import {
   Play,
   Pause,
   RotateCcw,
   XCircle,
-  FileText,
   Clock,
   CheckCircle2,
   AlertTriangle,
   Sparkles,
-  Users,
-  Send,
   Edit,
   Copy,
   Trash2,
   Search,
+  Loader2,
 } from 'lucide-react';
-import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon';
-import { Button } from '@/components/ui/Button';
 
 interface AutomationCampaignCardProps {
   task: AutomationTask;
+  leads?: Lead[];
   onRefresh: () => void;
+  onUpdateTask?: (updatedTask: AutomationTask) => void;
   onViewLogs: (task: AutomationTask) => void;
   onEdit?: (task: AutomationTask) => void;
   onDelete?: (taskId: string) => void;
@@ -33,13 +31,16 @@ interface AutomationCampaignCardProps {
 
 export function AutomationCampaignCard({
   task,
+  leads = [],
   onRefresh,
+  onUpdateTask,
   onViewLogs,
   onEdit,
   onDelete,
   onDuplicate,
 }: AutomationCampaignCardProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [actionFeedback, setActionFeedback] = useState<string | null>(null);
 
   const progress = task.progress || {
     total: 0,
@@ -54,19 +55,75 @@ export function AutomationCampaignCard({
   const total = progress.total || 1;
   const percentage = Math.min(100, Math.round(((progress.sent + progress.failed) / total) * 100));
 
-  const handleAction = async (action: 'start' | 'pause' | 'resume' | 'cancel') => {
+  const handleAction = async (action: 'start' | 'pause' | 'resume' | 'cancel' | 'force_start', force = false) => {
     setIsLoading(true);
+    setActionFeedback(
+      action === 'pause'
+        ? 'Pausando...'
+        : action === 'cancel'
+        ? 'Cancelando...'
+        : 'Iniciando disparo...'
+    );
+
+    // 1. Optimistic Update Imediato no Cliente (atualiza UI e localStorage na hora)
+    let nextStatus = task.status;
+    let logMessage = '';
+
+    if (action === 'pause') {
+      nextStatus = 'paused';
+      logMessage = 'Tarefa pausada manualmente pelo operador.';
+    } else if (action === 'start' || action === 'resume' || action === 'force_start') {
+      nextStatus = 'running';
+      logMessage = force ? 'Disparo imediato disparado pelo operador.' : 'Tarefa colocada em execução.';
+    } else if (action === 'cancel') {
+      nextStatus = 'canceled';
+      logMessage = 'Tarefa cancelada pelo operador.';
+    }
+
+    const optimisticTask: AutomationTask = {
+      ...task,
+      status: nextStatus,
+      execution_logs: [
+        {
+          id: crypto.randomUUID(),
+          timestamp: new Date().toISOString(),
+          message: logMessage,
+          type: action === 'pause' ? 'warning' : action === 'cancel' ? 'error' : 'info',
+        },
+        ...(task.execution_logs || []),
+      ],
+      updated_at: new Date().toISOString(),
+    };
+
+    if (onUpdateTask) {
+      onUpdateTask(optimisticTask);
+    }
+
     try {
-      await fetch('/api/tasks/execute', {
+      const res = await fetch('/api/tasks/execute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ taskId: task.id, action, taskData: task }),
+        body: JSON.stringify({
+          taskId: task.id,
+          action,
+          taskData: optimisticTask,
+          leads: leads || [],
+          force: force || action === 'start' || action === 'force_start',
+        }),
       });
-      onRefresh();
+
+      const data = await res.json().catch(() => null);
+
+      if (data && data.task && onUpdateTask) {
+        onUpdateTask(data.task);
+      } else {
+        onRefresh();
+      }
     } catch (err) {
       console.error('Erro na ação da automação:', err);
     } finally {
       setIsLoading(false);
+      setTimeout(() => setActionFeedback(null), 2500);
     }
   };
 
@@ -74,35 +131,35 @@ export function AutomationCampaignCard({
     switch (status) {
       case 'running':
         return (
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 animate-pulse">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5 shadow-sm">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             EM EXECUÇÃO
           </span>
         );
       case 'paused':
         return (
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center gap-1">
+          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center gap-1 shadow-sm">
             <Pause className="w-2.5 h-2.5" />
             PAUSADO
           </span>
         );
       case 'completed':
         return (
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30 flex items-center gap-1">
+          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30 flex items-center gap-1 shadow-sm">
             <CheckCircle2 className="w-2.5 h-2.5" />
             CONCLUÍDO
           </span>
         );
       case 'scheduled':
         return (
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/15 text-purple-400 border border-purple-500/30 flex items-center gap-1">
+          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/15 text-purple-400 border border-purple-500/30 flex items-center gap-1 shadow-sm">
             <Clock className="w-2.5 h-2.5" />
             AGENDADO
           </span>
         );
       case 'failed':
         return (
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-500/15 text-red-400 border border-red-500/30 flex items-center gap-1">
+          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-red-500/15 text-red-400 border border-red-500/30 flex items-center gap-1 shadow-sm">
             <AlertTriangle className="w-2.5 h-2.5" />
             COM ERRO
           </span>
@@ -110,7 +167,7 @@ export function AutomationCampaignCard({
       case 'canceled':
       default:
         return (
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-800 text-zinc-400 border border-zinc-700 flex items-center gap-1">
+          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-zinc-800 text-zinc-400 border border-zinc-700 flex items-center gap-1 shadow-sm">
             <XCircle className="w-2.5 h-2.5" />
             CANCELADO
           </span>
@@ -119,10 +176,18 @@ export function AutomationCampaignCard({
   };
 
   return (
-    <div className="p-5 rounded-2xl bg-evo-card border border-evo-border shadow-sm hover:border-evo-accent/40 transition-all flex flex-col justify-between space-y-4">
+    <div className="p-5 rounded-2xl bg-evo-card border border-evo-border shadow-sm hover:border-evo-accent/40 transition-all flex flex-col justify-between space-y-4 relative">
+      {/* Feedback Toast Overlay */}
+      {actionFeedback && (
+        <div className="absolute top-2 right-4 px-2.5 py-1 rounded-lg bg-evo-accent/20 border border-evo-accent/40 text-evo-accent text-[11px] font-mono animate-in fade-in flex items-center gap-1 z-10">
+          <Loader2 className="w-3 h-3 animate-spin" />
+          <span>{actionFeedback}</span>
+        </div>
+      )}
+
       {/* Top Header */}
       <div className="flex items-start justify-between gap-3">
-        <div className="space-y-1 min-w-0">
+        <div className="space-y-1.5 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             {getStatusBadge(task.status)}
             <span className="text-[10px] font-mono text-evo-muted px-2 py-0.5 rounded bg-evo-surface border border-evo-border">
@@ -145,16 +210,16 @@ export function AutomationCampaignCard({
               </span>
             )}
           </div>
-          <h3 className="text-sm font-semibold text-evo-text font-heading truncate">
+          <h3 className="text-base font-semibold text-evo-text font-heading truncate">
             {task.title}
           </h3>
         </div>
 
         <div className="text-right shrink-0">
-          <span className="text-xs font-mono font-bold text-evo-accent">
+          <span className="text-sm font-mono font-bold text-evo-accent">
             {percentage}%
           </span>
-          <div className="text-[10px] font-mono text-evo-muted">
+          <div className="text-[11px] font-mono text-evo-muted">
             Lote {progress.current_batch_index || 0}/{progress.total_batches || 1}
           </div>
         </div>
@@ -162,37 +227,89 @@ export function AutomationCampaignCard({
 
       {/* Progress Bar */}
       <div className="space-y-1.5">
-        <div className="w-full h-2 bg-evo-surface rounded-full overflow-hidden border border-evo-border">
+        <div className="w-full h-2.5 bg-evo-surface rounded-full overflow-hidden border border-evo-border">
           <div
-            className="h-full bg-gradient-to-r from-emerald-500 to-evo-accent transition-all duration-500"
+            className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-evo-accent transition-all duration-500"
             style={{ width: `${percentage}%` }}
           />
         </div>
 
         <div className="flex items-center justify-between text-[11px] font-mono text-evo-muted">
-          <span>{progress.sent} enviados</span>
+          <span className="font-semibold text-evo-text">{progress.sent} enviados</span>
           {progress.failed > 0 && (
             <span className="text-red-400">{progress.failed} falhas</span>
           )}
-          <span>{progress.total} total</span>
+          <span>{progress.total || task.selected_lead_ids?.length || 0} total</span>
         </div>
       </div>
 
       {/* Metadata & Controls */}
-      <div className="pt-3 border-t border-evo-border flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2.5 text-xs text-evo-muted font-mono">
+      <div className="pt-3 border-t border-evo-border flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-xs text-evo-muted font-mono">
           <span className="flex items-center gap-1">
             <Clock className="w-3.5 h-3.5 text-evo-accent" />
-            {task.batch_config.start_time_window} - {task.batch_config.end_time_window}
+            {task.batch_config?.start_time_window || '09:00'} - {task.batch_config?.end_time_window || '19:30'}
           </span>
           <span>•</span>
-          <span>{task.batch_config.batch_size} / lote</span>
+          <span>{task.batch_config?.batch_size || 10} / lote</span>
           <span>•</span>
           <span>{task.selected_lead_ids?.length || progress.total} leads</span>
         </div>
 
-        {/* Toolbar de Ações com Tooltips Completos */}
-        <div className="flex items-center gap-1">
+        {/* Toolbar de Ações */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {/* BOTÃO PRINCIPAL: INICIAR AGORA (VERDE COM PLAY) */}
+          {task.status !== 'completed' && task.status !== 'canceled' && (
+            <button
+              type="button"
+              onClick={() => handleAction('start', true)}
+              disabled={isLoading}
+              className="px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-[#07100F] font-bold text-xs shadow-lg shadow-emerald-500/25 flex items-center gap-1.5 transition-all disabled:opacity-60"
+              title="Iniciar envio imediatamente agora (burlar espera e disparar lote) (▶)"
+            >
+              {isLoading ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Play className="w-3.5 h-3.5 fill-current" />
+              )}
+              <span>
+                {isLoading
+                  ? 'Disparando...'
+                  : task.status === 'running'
+                  ? 'Iniciar Agora (▶)'
+                  : 'Iniciar Agora'}
+              </span>
+            </button>
+          )}
+
+          {/* Se a tarefa já foi concluída, permitir reiniciar */}
+          {task.status === 'completed' && (
+            <button
+              type="button"
+              onClick={() => handleAction('start', true)}
+              disabled={isLoading}
+              className="px-3 py-1.5 rounded-xl bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 border border-blue-500/40 text-xs font-semibold flex items-center gap-1.5 transition-all"
+              title="Reiniciar Campanha (🔄)"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Reiniciar</span>
+            </button>
+          )}
+
+          {/* BOTÃO PAUSAR (⏸) — VISÍVEL QUANDO EM EXECUÇÃO */}
+          {task.status === 'running' && (
+            <button
+              type="button"
+              onClick={() => handleAction('pause')}
+              disabled={isLoading}
+              className="px-3 py-1.5 rounded-xl bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 border border-amber-500/40 flex items-center gap-1.5 text-xs font-semibold transition-all active:scale-95"
+              title="Pausar Envio da Campanha (⏸)"
+            >
+              <Pause className="w-3.5 h-3.5" />
+              <span>Pausar</span>
+            </button>
+          )}
+
           {/* Ver Detalhes (🔍) */}
           <button
             type="button"
@@ -226,45 +343,6 @@ export function AutomationCampaignCard({
               title="Duplicar Campanha (📋)"
             >
               <Copy className="w-3.5 h-3.5" />
-            </button>
-          )}
-
-          {/* Iniciar Agora (▶) */}
-          {task.status === 'scheduled' && (
-            <button
-              type="button"
-              onClick={() => handleAction('start')}
-              disabled={isLoading}
-              className="p-1.5 rounded-lg bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 border border-emerald-500/30 transition-colors"
-              title="Iniciar Agora (▶)"
-            >
-              <Play className="w-3.5 h-3.5 fill-current" />
-            </button>
-          )}
-
-          {/* Pausar (⏸) */}
-          {task.status === 'running' && (
-            <button
-              type="button"
-              onClick={() => handleAction('pause')}
-              disabled={isLoading}
-              className="p-1.5 rounded-lg bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 border border-amber-500/30 transition-colors"
-              title="Pausar Envio (⏸)"
-            >
-              <Pause className="w-3.5 h-3.5" />
-            </button>
-          )}
-
-          {/* Retomar (▶) */}
-          {task.status === 'paused' && (
-            <button
-              type="button"
-              onClick={() => handleAction('resume')}
-              disabled={isLoading}
-              className="p-1.5 rounded-lg bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 border border-emerald-500/30 transition-colors"
-              title="Retomar Envio (▶)"
-            >
-              <Play className="w-3.5 h-3.5 fill-current" />
             </button>
           )}
 

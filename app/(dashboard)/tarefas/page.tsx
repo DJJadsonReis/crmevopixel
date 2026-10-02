@@ -100,6 +100,18 @@ export default function TarefasPage() {
     return unsub;
   }, []);
 
+  const handleUpdateSingleTask = (updatedTask: AutomationTask) => {
+    setAutomationTasks((prev) => {
+      const next = prev.map((t) => (t.id === updatedTask.id ? updatedTask : t));
+      try {
+        localStorage.setItem('crm_automation_tasks', JSON.stringify(next));
+      } catch (e) {
+        console.warn('Erro ao salvar no localStorage:', e);
+      }
+      return next;
+    });
+  };
+
   // Loop de Execução Automática de Lotes para Tarefas RUNNING
   useEffect(() => {
     const runningTasks = automationTasks.filter((t) => t.status === 'running');
@@ -111,10 +123,15 @@ export default function TarefasPage() {
           const res = await fetch('/api/tasks/execute', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ taskId: t.id, action: 'resume', taskData: t }),
+            body: JSON.stringify({ taskId: t.id, action: 'resume', taskData: t, leads }),
           });
           if (res.ok) {
-            loadAutomationTasks();
+            const data = await res.json().catch(() => null);
+            if (data?.task) {
+              handleUpdateSingleTask(data.task);
+            } else {
+              loadAutomationTasks();
+            }
           }
         } catch (err) {
           console.error('Erro no loop de lote da automação:', err);
@@ -123,7 +140,7 @@ export default function TarefasPage() {
     }, 10000);
 
     return () => clearInterval(interval);
-  }, [automationTasks]);
+  }, [automationTasks, leads]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -145,8 +162,17 @@ export default function TarefasPage() {
         fetch('/api/tasks/execute', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ taskId: task.id, action: 'start', taskData: task }),
-        }).then(() => loadAutomationTasks());
+          body: JSON.stringify({ taskId: task.id, action: 'start', taskData: task, leads, force: true }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data?.task) {
+              handleUpdateSingleTask(data.task);
+            } else {
+              loadAutomationTasks();
+            }
+          })
+          .catch(() => loadAutomationTasks());
       }
     } catch (e) {
       console.warn('Erro ao salvar tarefa no Supabase:', e);
@@ -497,6 +523,8 @@ export default function TarefasPage() {
                 <AutomationCampaignCard
                   key={task.id}
                   task={task}
+                  leads={leads}
+                  onUpdateTask={handleUpdateSingleTask}
                   onRefresh={loadAutomationTasks}
                   onViewLogs={(t) => setSelectedTaskForLogs(t)}
                   onEdit={handleEditAutomationTask}

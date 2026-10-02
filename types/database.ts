@@ -590,6 +590,7 @@ export interface AutomationTask {
   batch_config: TaskBatchConfig;
   progress: TaskProgressStats;
   execution_logs: TaskExecutionLogItem[];
+  recipients_data?: TaskRecipientRecord[];
 
   created_at: string;
   updated_at: string;
