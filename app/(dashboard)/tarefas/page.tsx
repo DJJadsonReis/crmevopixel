@@ -112,6 +112,9 @@ export default function TarefasPage() {
     });
   };
 
+  // In-flight guard para evitar disparos concorrentes para a mesma tarefa
+  const inFlightTasksRef = React.useRef<Set<string>>(new Set());
+
   // Loop de Execução Automática de Lotes para Tarefas RUNNING
   useEffect(() => {
     const runningTasks = automationTasks.filter((t) => t.status === 'running');
@@ -119,6 +122,19 @@ export default function TarefasPage() {
 
     const interval = setInterval(async () => {
       for (const t of runningTasks) {
+        // Se a tarefa já está executando uma requisição em paralelo, aguarda
+        if (inFlightTasksRef.current.has(t.id)) continue;
+
+        // Se a tarefa está em pausa programada entre lotes (next_batch_at), respeita o tempo
+        if (t.progress?.next_batch_at) {
+          const nextTime = new Date(t.progress.next_batch_at).getTime();
+          if (Date.now() < nextTime) {
+            continue; // Aguarda o fim do intervalo configurado
+          }
+        }
+
+        inFlightTasksRef.current.add(t.id);
+
         try {
           const res = await fetch('/api/tasks/execute', {
             method: 'POST',
@@ -127,6 +143,14 @@ export default function TarefasPage() {
           });
           if (res.ok) {
             const data = await res.json().catch(() => null);
+
+            // Sincroniza mensagens disparadas diretamente no Inbox e no crmService
+            if (data?.dispatchedMessages && Array.isArray(data.dispatchedMessages)) {
+              data.dispatchedMessages.forEach((msg: any) => {
+                crmService.addMessageLog(msg);
+              });
+            }
+
             if (data?.task) {
               handleUpdateSingleTask(data.task);
             } else {
@@ -135,6 +159,8 @@ export default function TarefasPage() {
           }
         } catch (err) {
           console.error('Erro no loop de lote da automação:', err);
+        } finally {
+          inFlightTasksRef.current.delete(t.id);
         }
       }
     }, 10000);
@@ -166,6 +192,11 @@ export default function TarefasPage() {
         })
           .then((res) => res.json())
           .then((data) => {
+            if (data?.dispatchedMessages && Array.isArray(data.dispatchedMessages)) {
+              data.dispatchedMessages.forEach((msg: any) => {
+                crmService.addMessageLog(msg);
+              });
+            }
             if (data?.task) {
               handleUpdateSingleTask(data.task);
             } else {
@@ -231,7 +262,7 @@ export default function TarefasPage() {
 
     crmService.addTask({
       title: newTitle.trim(),
-      related_to: newRelated.trim() || 'Operação EVO PIXEL',
+      related_to: newRelated.trim() || 'Operação Comercial',
       start_date: newStartDate,
       due_date: newDueDate,
       start_time: newStartTime,

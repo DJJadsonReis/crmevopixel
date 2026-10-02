@@ -35,8 +35,16 @@ import {
   BookmarkCheck,
   Star,
   Activity,
+  Briefcase,
+  Building2,
+  ShieldAlert,
+  Plus,
+  X,
+  Send,
 } from 'lucide-react';
 import { AIPrompt } from '@/types/database';
+import { CompanyPersona } from '@/types/persona';
+import { AgentContextBuilder } from '@/lib/ai/agent-context-builder';
 import { aiProvider, AIProviderConfig } from '@/lib/ai/ai-provider';
 import { updateClientConfig } from '@/lib/supabase/client';
 import { createClient } from '@/utils/supabase/client';
@@ -142,6 +150,87 @@ export default function ConfiguracoesPage() {
   });
   const [isSavingPageSpeed, setIsSavingPageSpeed] = useState(false);
   const [pageSpeedSaveSuccess, setPageSpeedSaveSuccess] = useState(false);
+
+  // Configuração da Persona da Empresa (Identidade, Serviços, Termos Proibidos e Anti-Spam)
+  const [persona, setPersona] = useState<CompanyPersona>(() => {
+    return AgentContextBuilder.getPersona();
+  });
+  const [isSavingPersona, setIsSavingPersona] = useState(false);
+  const [personaSaveSuccess, setPersonaSaveSuccess] = useState(false);
+  const [newServiceInput, setNewServiceInput] = useState('');
+  const [newForbiddenInput, setNewForbiddenInput] = useState('');
+  const [simTestMessage, setSimTestMessage] = useState('Quanto custa para refazer meu site e colocar atendimento automático no WhatsApp?');
+  const [simResponse, setSimResponse] = useState<string | null>(null);
+  const [isSimulatingPersona, setIsSimulatingPersona] = useState(false);
+
+  const handleSavePersona = async () => {
+    setIsSavingPersona(true);
+    try {
+      await AgentContextBuilder.savePersona(persona);
+      setPersonaSaveSuccess(true);
+      setTimeout(() => setPersonaSaveSuccess(false), 3000);
+    } catch (err) {
+      console.error('Erro ao salvar Persona da Empresa:', err);
+    } finally {
+      setIsSavingPersona(false);
+    }
+  };
+
+  const handleAddService = () => {
+    const trimmed = newServiceInput.trim();
+    if (!trimmed) return;
+    if (!persona.services.includes(trimmed)) {
+      setPersona((prev) => ({
+        ...prev,
+        services: [...prev.services, trimmed],
+      }));
+    }
+    setNewServiceInput('');
+  };
+
+  const handleRemoveService = (index: number) => {
+    setPersona((prev) => ({
+      ...prev,
+      services: prev.services.filter((_, i) => i !== index),
+    }));
+  };
+
+  const handleAddForbiddenTerm = () => {
+    const trimmed = newForbiddenInput.trim();
+    if (!trimmed) return;
+    if (!persona.forbidden_terms.includes(trimmed)) {
+      setPersona((prev) => ({
+        ...prev,
+        forbidden_terms: [...prev.forbidden_terms, trimmed],
+      }));
+    }
+    setNewForbiddenInput('');
+  };
+
+  const handleRemoveForbiddenTerm = (index: number) => {
+    const termToRemove = persona.forbidden_terms[index];
+    if (termToRemove && termToRemove.toUpperCase() === 'EVO PIXEL') {
+      return; // Mantém proibição de 'EVO PIXEL' para proteção da marca do usuário
+    }
+    setPersona((prev) => ({
+      ...prev,
+      forbidden_terms: prev.forbidden_terms.filter((_, i) => i !== index),
+    }));
+  };
+
+  const handleTestPersona = async () => {
+    if (!simTestMessage.trim()) return;
+    setIsSimulatingPersona(true);
+    setSimResponse(null);
+    try {
+      const resp = await AgentContextBuilder.simulatePersonaResponse(simTestMessage);
+      setSimResponse(resp);
+    } catch (e: any) {
+      setSimResponse('Erro ao simular: ' + (e?.message || 'Falha na IA'));
+    } finally {
+      setIsSimulatingPersona(false);
+    }
+  };
 
   // Salvar credenciais no localStorage E no banco Supabase
   const saveEvolutionSettings = async (
@@ -1403,6 +1492,328 @@ export default function ConfiguracoesPage() {
 
 
       
+
+      {/* =========================================================================
+          SEÇÃO 2.2: PERSONA DA EMPRESA & IDENTIDADE OPERACIONAL
+          ========================================================================= */}
+      <Card className="p-6 space-y-6 border border-evo-border bg-gradient-to-b from-evo-card via-evo-surface/30 to-evo-card">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-evo-border pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+              <Building2 className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-evo-text font-heading">
+                  Persona da Empresa & Identidade Comercial
+                </h3>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 font-semibold border border-emerald-500/30">
+                  Anti-Spam & Tom de Voz
+                </span>
+              </div>
+              <p className="text-xs text-evo-muted mt-0.5">
+                Define o nome da sua empresa, remetente, serviços, termos estritamente proibidos para clientes e regras de transbordo humano.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="primary"
+              size="sm"
+              className="text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold transition-all shadow-sm"
+              onClick={handleSavePersona}
+              disabled={isSavingPersona}
+            >
+              <Save className="w-3.5 h-3.5" />
+              <span>{personaSaveSuccess ? '✓ Persona Salva com Sucesso!' : 'Salvar Persona da Empresa'}</span>
+            </Button>
+          </div>
+        </div>
+
+        {/* Formulário Principal da Persona */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-[11px] text-evo-muted mb-1 font-medium">
+              Nome Oficial da sua Empresa / Agência
+            </label>
+            <input
+              type="text"
+              value={persona.company_name}
+              onChange={(e) => setPersona({ ...persona, company_name: e.target.value })}
+              placeholder="Ex: Minha Agência Digital"
+              className="w-full px-3 py-2 rounded-xl bg-evo-surface border border-evo-border text-evo-text focus:outline-none focus:border-emerald-500 text-xs font-medium"
+            />
+            <p className="text-[10px] text-evo-muted mt-1">
+              Substituirá qualquer menção genérica nas mensagens e apresentações aos leads.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-[11px] text-evo-muted mb-1 font-medium">
+              Slogan / Posicionamento no Mercado
+            </label>
+            <input
+              type="text"
+              value={persona.slogan}
+              onChange={(e) => setPersona({ ...persona, slogan: e.target.value })}
+              placeholder="Ex: Especialistas em Presença Digital & Automação Comercial"
+              className="w-full px-3 py-2 rounded-xl bg-evo-surface border border-evo-border text-evo-text focus:outline-none focus:border-emerald-500 text-xs"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] text-evo-muted mb-1 font-medium">
+              Segmento / Nicho de Atuação
+            </label>
+            <input
+              type="text"
+              value={persona.segment}
+              onChange={(e) => setPersona({ ...persona, segment: e.target.value })}
+              placeholder="Ex: Assessoria de Crescimento, Sites e Automação de Vendas"
+              className="w-full px-3 py-2 rounded-xl bg-evo-surface border border-evo-border text-evo-text focus:outline-none focus:border-emerald-500 text-xs"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] text-evo-muted mb-1 font-medium">
+                Tom de Voz do Atendimento
+              </label>
+              <select
+                value={persona.tone_of_voice}
+                onChange={(e) => setPersona({ ...persona, tone_of_voice: e.target.value as any })}
+                className="w-full px-3 py-2 rounded-xl bg-evo-surface border border-evo-border text-evo-text focus:outline-none focus:border-emerald-500 text-xs capitalize"
+              >
+                <option value="consultivo">Consultivo & Estratégico (Recomendado)</option>
+                <option value="formal">Formal & Corporativo</option>
+                <option value="amigavel">Amigável & Próximo</option>
+                <option value="direto">Direto & Comercial</option>
+                <option value="energico">Enérgico & Persuasivo</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[11px] text-evo-muted mb-1 font-medium">
+                Nome do Remetente / Atendente
+              </label>
+              <input
+                type="text"
+                value={persona.sender_name || ''}
+                onChange={(e) => setPersona({ ...persona, sender_name: e.target.value })}
+                placeholder="Ex: Rafael Costa"
+                className="w-full px-3 py-2 rounded-xl bg-evo-surface border border-evo-border text-evo-text focus:outline-none focus:border-emerald-500 text-xs"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* CTA Padrão e Template de Apresentação */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-[11px] text-evo-muted font-medium">
+                Template de Apresentação WhatsApp
+              </label>
+              <span className="text-[10px] text-evo-muted font-mono">
+                Variáveis: {'{contato}'}, {'{empresa_nome}'}, {'{empresa_alvo}'}, {'{cidade}'}, {'{remetente}'}
+              </span>
+            </div>
+            <textarea
+              rows={3}
+              value={persona.presentation_template}
+              onChange={(e) => setPersona({ ...persona, presentation_template: e.target.value })}
+              className="w-full p-2.5 rounded-xl bg-evo-surface border border-evo-border text-evo-text focus:outline-none focus:border-emerald-500 text-xs font-mono resize-none leading-relaxed"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] text-evo-muted mb-1 font-medium">
+              Chamada para Ação (CTA) Padrão
+            </label>
+            <textarea
+              rows={3}
+              value={persona.standard_cta}
+              onChange={(e) => setPersona({ ...persona, standard_cta: e.target.value })}
+              placeholder="Ex: Você teria 5 minutinhos esta semana para avaliarmos essa oportunidade sem compromisso?"
+              className="w-full p-2.5 rounded-xl bg-evo-surface border border-evo-border text-evo-text focus:outline-none focus:border-emerald-500 text-xs resize-none leading-relaxed"
+            />
+          </div>
+        </div>
+
+        {/* Regras de Transbordo Humano */}
+        <div>
+          <label className="block text-[11px] text-evo-muted mb-1 font-medium">
+            Regras de Transbordo Humano (Quando a IA deve pausar e chamar um operador)
+          </label>
+          <textarea
+            rows={2}
+            value={persona.human_handover_rules}
+            onChange={(e) => setPersona({ ...persona, human_handover_rules: e.target.value })}
+            placeholder="Ex: Transferir imediatamente caso o lead solicite falar com atendente, negociar desconto ou após 3 objeções."
+            className="w-full p-2.5 rounded-xl bg-evo-surface border border-evo-border text-evo-text focus:outline-none focus:border-emerald-500 text-xs resize-none leading-relaxed"
+          />
+        </div>
+
+        {/* Seção de Tags: Serviços e Termos Proibidos */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+          {/* Serviços Oferecidos */}
+          <div className="p-4 rounded-xl bg-evo-surface border border-evo-border space-y-3">
+            <div className="flex items-center justify-between border-b border-evo-border pb-2">
+              <div className="flex items-center gap-2 font-semibold text-xs text-evo-text">
+                <Briefcase className="w-4 h-4 text-emerald-400" />
+                <span>Serviços Oferecidos</span>
+              </div>
+              <span className="text-[10px] text-evo-muted font-mono">{persona.services.length} ativos</span>
+            </div>
+
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newServiceInput}
+                onChange={(e) => setNewServiceInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddService())}
+                placeholder="Ex: Tráfego Pago & Google Ads"
+                className="flex-1 px-3 py-1.5 rounded-lg bg-evo-card border border-evo-border text-evo-text text-xs focus:outline-none focus:border-emerald-500"
+              />
+              <Button
+                variant="secondary"
+                size="sm"
+                className="text-xs gap-1 px-2.5 py-1.5"
+                onClick={handleAddService}
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Adicionar</span>
+              </Button>
+            </div>
+
+            <div className="flex flex-wrap gap-1.5 min-h-[48px] max-h-[140px] overflow-y-auto p-1">
+              {persona.services.map((srv, idx) => (
+                <span
+                  key={idx}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs bg-emerald-500/10 text-emerald-300 border border-emerald-500/25"
+                >
+                  <span>{srv}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveService(idx)}
+                    className="hover:text-red-400 transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Termos Estritamente Proibidos */}
+          <div className="p-4 rounded-xl bg-evo-surface border border-evo-border space-y-3">
+            <div className="flex items-center justify-between border-b border-evo-border pb-2">
+              <div className="flex items-center gap-2 font-semibold text-xs text-evo-text">
+                <ShieldAlert className="w-4 h-4 text-amber-400" />
+                <span>Termos Proibidos (Anti-Spam & Blindagem)</span>
+              </div>
+              <span className="text-[10px] text-amber-400/90 font-mono">Filtro Ativo</span>
+            </div>
+
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newForbiddenInput}
+                onChange={(e) => setNewForbiddenInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddForbiddenTerm())}
+                placeholder="Ex: imperdível, pirata, 100% garantido"
+                className="flex-1 px-3 py-1.5 rounded-lg bg-evo-card border border-evo-border text-evo-text text-xs focus:outline-none focus:border-amber-500"
+              />
+              <Button
+                variant="secondary"
+                size="sm"
+                className="text-xs gap-1 px-2.5 py-1.5"
+                onClick={handleAddForbiddenTerm}
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Adicionar</span>
+              </Button>
+            </div>
+
+            <div className="flex flex-wrap gap-1.5 min-h-[48px] max-h-[140px] overflow-y-auto p-1">
+              {/* Termo Obrigatório Permanente */}
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs bg-red-500/15 text-red-300 border border-red-500/30 font-semibold" title="Termo reservado interno — bloqueado de envio aos leads">
+                <span>🚫 EVO PIXEL</span>
+                <span className="text-[9px] uppercase px-1 rounded bg-red-500/20 text-red-400 font-mono">Protegido</span>
+              </span>
+
+              {persona.forbidden_terms.filter((t) => t.toUpperCase() !== 'EVO PIXEL').map((term, idx) => (
+                <span
+                  key={idx}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs bg-amber-500/10 text-amber-300 border border-amber-500/25"
+                >
+                  <span>{term}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveForbiddenTerm(persona.forbidden_terms.indexOf(term))}
+                    className="hover:text-red-400 transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Simulador Interativo de Atendimento com a Persona */}
+        <div className="p-4 rounded-xl bg-evo-deep border border-evo-border space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-emerald-400" />
+              <span className="text-xs font-semibold text-evo-text">
+                Simulador Interativo da Persona
+              </span>
+            </div>
+            <span className="text-[10px] text-evo-muted font-mono">
+              Valida tom de voz e sanitização de termos em tempo real
+            </span>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-2">
+            <input
+              type="text"
+              value={simTestMessage}
+              onChange={(e) => setSimTestMessage(e.target.value)}
+              placeholder="Digite uma mensagem que um lead enviaria..."
+              className="flex-1 px-3 py-2 rounded-xl bg-evo-surface border border-evo-border text-evo-text text-xs focus:outline-none focus:border-emerald-500"
+            />
+            <Button
+              variant="secondary"
+              size="sm"
+              className="text-xs gap-1.5 bg-emerald-600/20 text-emerald-300 border-emerald-500/30 hover:bg-emerald-600/30 font-medium px-4 py-2"
+              onClick={handleTestPersona}
+              disabled={isSimulatingPersona || !simTestMessage.trim()}
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isSimulatingPersona ? 'animate-spin' : ''}`} />
+              <span>{isSimulatingPersona ? 'Gerando com IA...' : 'Testar Resposta da IA'}</span>
+            </Button>
+          </div>
+
+          {simResponse && (
+            <div className="mt-3 p-3.5 rounded-xl bg-evo-surface border border-emerald-500/25 space-y-2 animate-in fade-in duration-200">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="font-semibold text-emerald-400 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  Resposta do Agente Comercial ({persona.company_name}):
+                </span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                  Tom: {persona.tone_of_voice} • 0 termos proibidos
+                </span>
+              </div>
+              <p className="text-xs text-evo-text leading-relaxed whitespace-pre-wrap bg-evo-card p-3 rounded-lg border border-evo-border">
+                {simResponse}
+              </p>
+            </div>
+          )}
+        </div>
+      </Card>
 
       {/* =========================================================================
           SEÇÃO 2.5: SYSTEM PROMPT & DIRETRIZES DO CÉREBRO DE IA

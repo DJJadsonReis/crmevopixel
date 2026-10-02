@@ -182,7 +182,7 @@ function WhatsAppChatContent() {
 
     try {
       // Envia via API Evolution com persistência garantida
-      await fetch('/api/whatsapp/send', {
+      const res = await fetch('/api/whatsapp/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -192,16 +192,23 @@ function WhatsAppChatContent() {
         }),
       });
 
+      const data = await res.json().catch(() => ({}));
+      const msgId = data?.messageId;
+
       // Grava no crmService
       crmService.addMessageLog({
+        id: msgId,
         lead_id: selectedLead.id,
+        phone: selectedLead.whatsapp || selectedLead.phone,
+        sender_name: 'Você',
         step_name: 'Chat WhatsApp Web',
         channel: 'WhatsApp (Evolution API)',
         sent_text: text,
         direction: 'enviada',
         sent_at: new Date().toISOString(),
         source: 'manual',
-        status: 'entregue',
+        status: data?.sentViaEvolutionApi ? 'entregue' : (data?.error ? 'falhou' : 'entregue'),
+        provider_message_id: msgId,
       });
 
       // Atualiza status do lead se estava novo
@@ -216,6 +223,8 @@ function WhatsAppChatContent() {
       console.error('Erro ao enviar mensagem:', err);
       crmService.addMessageLog({
         lead_id: selectedLead.id,
+        phone: selectedLead.whatsapp || selectedLead.phone,
+        sender_name: 'Você',
         step_name: 'Chat WhatsApp Web',
         channel: 'WhatsApp (Evolution API)',
         sent_text: text,
@@ -419,7 +428,7 @@ function WhatsAppChatContent() {
               </div>
             ) : (
               filteredLeads.map((lead) => {
-                const logs = crmService.getMessageLogs(lead.id);
+                const logs = crmService.getMessageLogs(lead.id, lead.whatsapp || lead.phone);
                 const lastLog = logs[0];
                 const unreadCount = lead.unread_messages_count || 0;
                 const isSelected = lead.id === selectedLeadId;

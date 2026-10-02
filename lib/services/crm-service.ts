@@ -1,5 +1,5 @@
 import { getRecommendedServices } from '@/lib/ai/qualification';
-import { cleanPhoneNumber } from '@/lib/utils/whatsapp';
+import { cleanPhoneNumber, normalizeWhatsAppNumber } from '@/lib/utils/whatsapp';
 import {
   INITIAL_CLIENTS,
   INITIAL_CONTRATOS,
@@ -1206,37 +1206,76 @@ class CrmService {
     if (!leadIdOrPhone && !optionalPhone) return this.messageLogs;
     const cleanTarget1 = leadIdOrPhone ? cleanPhoneNumber(leadIdOrPhone) : '';
     const cleanTarget2 = optionalPhone ? cleanPhoneNumber(optionalPhone) : '';
+    const normTarget1 = leadIdOrPhone ? normalizeWhatsAppNumber(leadIdOrPhone) : '';
+    const normTarget2 = optionalPhone ? normalizeWhatsAppNumber(optionalPhone) : '';
 
     return this.messageLogs.filter((m) => {
+      // 1. Match direto por ID do lead
       if (leadIdOrPhone && m.lead_id === leadIdOrPhone) return true;
       if (optionalPhone && m.lead_id === optionalPhone) return true;
-      const mPhone = m.phone ? cleanPhoneNumber(m.phone) : '';
+
+      const mPhoneClean = m.phone ? cleanPhoneNumber(m.phone) : '';
+      const mPhoneNorm = m.phone ? normalizeWhatsAppNumber(m.phone) : '';
       const mLeadIdClean = m.lead_id ? cleanPhoneNumber(m.lead_id) : '';
+      const mLeadIdNorm = m.lead_id ? normalizeWhatsAppNumber(m.lead_id) : '';
 
-      if (cleanTarget1 && (mPhone === cleanTarget1 || mLeadIdClean === cleanTarget1)) return true;
-      if (cleanTarget2 && (mPhone === cleanTarget2 || mLeadIdClean === cleanTarget2)) return true;
+      // 2. Match por telefone normalizado com DDI 55
+      if (normTarget1 && (mPhoneNorm === normTarget1 || mLeadIdNorm === normTarget1)) return true;
+      if (normTarget2 && (mPhoneNorm === normTarget2 || mLeadIdNorm === normTarget2)) return true;
 
+      // 3. Match por telefone limpo
+      if (cleanTarget1 && (mPhoneClean === cleanTarget1 || mLeadIdClean === cleanTarget1)) return true;
+      if (cleanTarget2 && (mPhoneClean === cleanTarget2 || mLeadIdClean === cleanTarget2)) return true;
+
+      // 4. Match por sufixo de 8 ou 9 dígitos (resolução perfeita entre com/sem nono dígito)
       if (cleanTarget1 && cleanTarget1.length >= 8) {
         const t1 = cleanTarget1.slice(-8);
-        if (mPhone && mPhone.length >= 8 && mPhone.endsWith(t1)) return true;
-        if (mLeadIdClean && mLeadIdClean.length >= 8 && mLeadIdClean.endsWith(t1)) return true;
+        if (mPhoneClean && mPhoneClean.endsWith(t1)) return true;
+        if (mLeadIdClean && mLeadIdClean.endsWith(t1)) return true;
       }
       if (cleanTarget2 && cleanTarget2.length >= 8) {
         const t2 = cleanTarget2.slice(-8);
-        if (mPhone && mPhone.length >= 8 && mPhone.endsWith(t2)) return true;
-        if (mLeadIdClean && mLeadIdClean.length >= 8 && mLeadIdClean.endsWith(t2)) return true;
+        if (mPhoneClean && mPhoneClean.endsWith(t2)) return true;
+        if (mLeadIdClean && mLeadIdClean.endsWith(t2)) return true;
       }
 
       return false;
     });
   }
 
-  public addMessageLog(logData: Omit<MessageLog, 'id'>): MessageLog {
+  public addMessageLog(logData: Partial<MessageLog> & { sent_text: string }): MessageLog {
+    const normPhone = logData.phone ? normalizeWhatsAppNumber(logData.phone) : undefined;
     const newLog: MessageLog = {
-      ...logData,
-      id: `ml-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      id: logData.id || `ml-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      lead_id: logData.lead_id || '',
+      phone: normPhone,
+      sender_name: logData.sender_name || (logData.direction === 'recebida' ? 'Cliente' : 'Você'),
+      step_name: logData.step_name || 'Conversa WhatsApp',
+      channel: logData.channel || 'WhatsApp (Evolution API)',
+      sent_text: logData.sent_text,
+      direction: logData.direction || 'enviada',
+      sent_at: logData.sent_at || new Date().toISOString(),
+      source: logData.source || 'manual',
+      status: logData.status || 'entregue',
+      provider_message_id: logData.provider_message_id,
+      media_url: logData.media_url,
+      media_type: logData.media_type,
     };
-    this.messageLogs.unshift(newLog);
+
+    // Evita duplicatas idênticas no array em memória
+    const existingIndex = this.messageLogs.findIndex(
+      (m) =>
+        (newLog.id && m.id === newLog.id) ||
+        (newLog.provider_message_id && m.provider_message_id === newLog.provider_message_id) ||
+        (m.sent_at === newLog.sent_at && m.sent_text === newLog.sent_text && m.direction === newLog.direction)
+    );
+
+    if (existingIndex >= 0) {
+      this.messageLogs[existingIndex] = { ...this.messageLogs[existingIndex], ...newLog };
+    } else {
+      this.messageLogs.unshift(newLog);
+    }
+
     this.saveToLocalStorage('messageLogs', this.messageLogs);
 
     // Atualiza imediatamente o Lead correspondente
@@ -1277,6 +1316,7 @@ class CrmService {
       phone = lead?.whatsapp || lead?.phone;
     }
     if (!phone) return this.getMessageLogs(leadId);
+    const normPhone = normalizeWhatsAppNumber(phone);
 
     try {
       const customUrl = typeof window !== 'undefined' ? localStorage.getItem('EVO_evolutionUrl') || undefined : undefined;
@@ -1288,7 +1328,7 @@ class CrmService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           leadId,
-          phone,
+          phone: normPhone,
           customUrl,
           customApiKey,
           customInstance,
@@ -1660,13 +1700,13 @@ class CrmService {
         this.aiPrompts = [
           {
             id: 'prompt-default-atendimento',
-            name: 'System Prompt Padrão — EVO PIXEL',
+            name: 'System Prompt Padrão — Atendimento & Qualificação',
             description: 'Prompt comercial para atendimento, qualificação e agendamento via WhatsApp',
-            prompt: `Você é o Assistente Virtual Comercial da EVO PIXEL (Agência Especializada em Sites de Alta Performance, SEO Local e Automação de Atendimento com IA).
+            prompt: `Você é o Atendente Comercial e Consultor Digital da nossa agência.
 Sua missão é atender leads com cordialidade, rapidez, empatia e tom profissional consultivo.
 
 DIRETRIZES FUNDAMENTAIS:
-1. Apresente-se como especialista da EVO PIXEL.
+1. Apresente-se como especialista da nossa agência parceira.
 2. Seja objetivo, respeitoso e acolhedor. Nunca use jargões excessivamente técnicos ou agressivos.
 3. Identifique a necessidade do lead (criação de site, reformulação, automação de WhatsApp, SEO Local).
 4. Utilize as informações de auditoria técnica do lead caso disponíveis (tempo de resposta, mobile, SSL) para demonstrar autoridade com delicadeza.
@@ -1693,9 +1733,9 @@ DIRETRIZES FUNDAMENTAIS:
       this.aiPrompts.find((p) => p.is_default) ||
       this.aiPrompts[0] || {
         id: 'prompt-default-atendimento',
-        name: 'System Prompt Padrão — EVO PIXEL',
+        name: 'System Prompt Padrão — Atendimento & Qualificação',
         description: 'Prompt comercial para atendimento, qualificação e agendamento via WhatsApp',
-        prompt: `Você é o Assistente Virtual Comercial da EVO PIXEL.`,
+        prompt: `Você é o Atendente Comercial e Consultor Digital da nossa agência.`,
         prompt_type: 'atendimento',
         is_default: true,
         version: 1,

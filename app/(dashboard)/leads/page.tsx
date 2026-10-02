@@ -120,6 +120,7 @@ export default function LeadsPage() {
   const [apifyNiche, setApifyNiche] = useState('Advogado Aduaneiro');
   const [apifyCity, setApifyCity] = useState('São Paulo, SP');
   const [apifyLimit, setApifyLimit] = useState<number>(10);
+  const [apifyWebsiteFilter, setApifyWebsiteFilter] = useState<'TODOS' | 'COM_SITE' | 'SEM_SITE' | 'NAO_IDENTIFICADO'>('TODOS');
   const [apifyToken, setApifyToken] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('EVO_apifyToken') || '';
@@ -322,17 +323,29 @@ export default function LeadsPage() {
         const data = await res.json();
         const rawList = Array.isArray(data) ? data : [];
 
-        extractedLeads = rawList.slice(0, targetLimit).map((item: any) => ({
+        const mapped = rawList.map((item: any) => ({
           nome: item.title || 'Empresa Local',
           empresa: item.title || `${apifyNiche} - ${item.city || apifyCity}`,
           telefone: item.phone || item.phoneUnformatted || '',
           email: item.email || item.emails?.[0] || '',
           cidade: item.city || item.addressParsed?.city || apifyCity,
           segment: item.categories?.[0] || apifyNiche,
-          site: item.website || '',
+          site: item.website || item.url || '',
           google_business: item.placeUrl || item.url || item.title || '',
           instagram: item.instagram || '',
         }));
+
+        // Aplicação do Filtro de Presença de Site
+        let filtered = mapped;
+        if (apifyWebsiteFilter === 'COM_SITE') {
+          filtered = mapped.filter((l) => Boolean(l.site && l.site.trim() !== ''));
+        } else if (apifyWebsiteFilter === 'SEM_SITE') {
+          filtered = mapped.filter((l) => !l.site || l.site.trim() === '');
+        } else if (apifyWebsiteFilter === 'NAO_IDENTIFICADO') {
+          filtered = mapped.filter((l) => !l.site || l.site.toLowerCase().includes('nao') || l.site.trim() === '');
+        }
+
+        extractedLeads = filtered.slice(0, targetLimit);
       } else {
         setExtractionLog('Nenhum Token Apify fornecido. Usando Simulação com busca local...');
         await new Promise((r) => setTimeout(r, 1000));
@@ -344,6 +357,15 @@ export default function LeadsPage() {
           const bairro = bairros[b];
           for (let i = 0; i < 15 && generated < targetLimit; i++) {
             const rawPhone = `(${b + 11}) 9` + Math.floor(10000000 + Math.random() * 90000000);
+            const hasSite =
+              apifyWebsiteFilter === 'SEM_SITE'
+                ? false
+                : apifyWebsiteFilter === 'COM_SITE'
+                ? true
+                : apifyWebsiteFilter === 'NAO_IDENTIFICADO'
+                ? false
+                : i % 2 === 0;
+
             extractedLeads.push({
               nome: `Dr(a). Contato ${bairro} ${i + 1}`,
               empresa: `${apifyNiche} ${bairro} ${i + 1}`,
@@ -351,6 +373,7 @@ export default function LeadsPage() {
               email: i % 2 === 0 ? `contato@${bairro.toLowerCase().replace(/\s/g, '')}.com.br` : '',
               cidade: apifyCity,
               segment: apifyNiche,
+              site: hasSite ? `https://www.${bairro.toLowerCase().replace(/\s/g, '')}advocacia.com.br` : '',
               google_business: `${apifyNiche} - ${bairro} (Verificado)`,
               instagram: `@${apifyNiche.toLowerCase().replace(/\s/g, '')}_${bairro.toLowerCase().replace(/\s/g, '')}`,
             });
@@ -1268,7 +1291,7 @@ export default function LeadsPage() {
       >
         <div className="space-y-4 text-xs">
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-            <div className="sm:col-span-5">
+            <div className="sm:col-span-4">
               <label className="block font-mono text-evo-muted mb-1">Nicho Alvo</label>
               <select
                 value={apifyNiche}
@@ -1284,7 +1307,7 @@ export default function LeadsPage() {
               </select>
             </div>
 
-            <div className="sm:col-span-4">
+            <div className="sm:col-span-3">
               <label className="block font-mono text-evo-muted mb-1">Cidade / Região</label>
               <input
                 type="text"
@@ -1297,7 +1320,22 @@ export default function LeadsPage() {
             </div>
 
             <div className="sm:col-span-3">
-              <label className="block font-mono text-evo-muted mb-1">Qtd. de Leads</label>
+              <label className="block font-mono text-evo-muted mb-1">Presença de Site</label>
+              <select
+                value={apifyWebsiteFilter}
+                onChange={(e) => setApifyWebsiteFilter(e.target.value as any)}
+                disabled={isExtracting}
+                className="w-full bg-evo-card border border-evo-border rounded-xl px-3 py-2 text-xs text-evo-text focus:outline-none focus:border-evo-support appearance-none"
+              >
+                <option value="TODOS">TODOS (Padrão)</option>
+                <option value="COM_SITE">COM SITE</option>
+                <option value="SEM_SITE">SEM SITE</option>
+                <option value="NAO_IDENTIFICADO">NÃO IDENTIFICADO</option>
+              </select>
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="block font-mono text-evo-muted mb-1">Qtd. Leads</label>
               <input
                 type="number"
                 min={1}

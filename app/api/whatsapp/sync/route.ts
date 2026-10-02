@@ -2,6 +2,7 @@ export const runtime = 'edge';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { dbService } from '@/lib/supabase/db-service';
+import { normalizeWhatsAppNumber } from '@/lib/utils/whatsapp';
 
 export async function POST(req: NextRequest) {
   try {
@@ -33,20 +34,17 @@ export async function POST(req: NextRequest) {
       'rafaelgomescosta_653ded30'
     ).trim();
 
-    // Limpa telefone
-    let cleanPhone = phone.toString().replace(/\D/g, '');
-    if (cleanPhone.length >= 10 && cleanPhone.length <= 11) {
-      cleanPhone = `55${cleanPhone}`;
-    }
+    // Normalização estrita do telefone
+    const cleanPhone = normalizeWhatsAppNumber(phone);
 
-    // Variantes possíveis para o número brasileiro (com ou sem o nono dígito)
+    // Variantes possíveis para número brasileiro (com e sem o nono dígito)
     const phoneVariants: string[] = [cleanPhone];
     if (cleanPhone.startsWith('55') && cleanPhone.length === 13) {
       // Ex: 5547999999999 -> 554799999999
       const without9 = cleanPhone.slice(0, 4) + cleanPhone.slice(5);
       phoneVariants.push(without9);
     } else if (cleanPhone.startsWith('55') && cleanPhone.length === 12) {
-      // Ex: 55479999999 -> 554799999999
+      // Ex: 554799999999 -> 5547999999999
       const with9 = cleanPhone.slice(0, 4) + '9' + cleanPhone.slice(4);
       phoneVariants.push(with9);
     }
@@ -153,7 +151,7 @@ export async function POST(req: NextRequest) {
         id: key.id || r.id || `evo-${Date.now()}-${Math.random()}`,
         lead_id: leadId || cleanPhone,
         phone: cleanPhone,
-        sender_name: fromMe ? 'Você (EVO PIXEL)' : r.pushName || 'Cliente',
+        sender_name: fromMe ? 'Você' : r.pushName || 'Cliente',
         step_name: fromMe ? 'Mensagem Enviada' : 'Mensagem Recebida',
         channel: 'WhatsApp (Evolution API)',
         sent_text: text,

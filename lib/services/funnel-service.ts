@@ -61,7 +61,7 @@ export const INITIAL_FUNNEL_COPYS: FunnelCopy[] = [
     stage: 'primeiro_contato',
     niche: 'Geral B2B',
     objective: 'Demonstrar perda de receita por demora no atendimento e oferecer agente inteligente',
-    text: `Olá {contato}! Tudo bem? 😊\n\nAqui é o {remetente} da EVO PIXEL. Acompanho a relevância da *{empresa}* no segmento de {nicho}.\n\nA maioria das empresas em {cidade} perde até 40% das oportunidades por demorar mais de 10 minutos para responder no WhatsApp ou não ter um fluxo ativo fora do horário comercial.\n\nDesenvolvemos atendentes inteligentes e automações integradas que qualificam o lead na hora, respondem dúvidas e já entregam o cliente pronto para fechar no WhatsApp.\n\nFaria sentido conversarmos 5 minutos esta semana para ver como aplicar isso na *{empresa}*?`,
+    text: `Olá {contato}! Tudo bem? 😊\n\nAqui é o {remetente}, especialista em atendimento e presença digital. Acompanho a relevância da *{empresa}* no segmento de {nicho}.\n\nA maioria das empresas em {cidade} perde até 40% das oportunidades por demorar mais de 10 minutos para responder no WhatsApp ou não ter um fluxo ativo fora do horário comercial.\n\nDesenvolvemos atendentes inteligentes e automações integradas que qualificam o lead na hora, respondem dúvidas e já entregam o cliente pronto para fechar no WhatsApp.\n\nFaria sentido conversarmos 5 minutos esta semana para ver como aplicar isso na *{empresa}*?`,
     score: 92,
     conversion_rate: 38.6,
     sends_count: 245,
@@ -302,7 +302,7 @@ class FunnelService {
         ? 'Follow-up'
         : 'Fechamento';
 
-    const text = `Olá {contato}! Tudo bem? 😊\n\nAqui é o {remetente} da EVO PIXEL. Acompanho o crescimento da *{empresa}* em {cidade}.\n\nDesenvolvemos uma estrutura de alta conversão para o segmento de ${niche}, focada em ${objective.toLowerCase()}.\n\nVocê teria 5 minutinhos hoje para avaliarmos essa oportunidade sem compromisso?`;
+    const text = `Olá {contato}! Tudo bem? 😊\n\nAqui é o {remetente}, consultor de presença digital e vendas. Acompanho o crescimento da *{empresa}* em {cidade}.\n\nDesenvolvemos uma estrutura de alta conversão para o segmento de ${niche}, focada em ${objective.toLowerCase()}.\n\nVocê teria 5 minutinhos hoje para avaliarmos essa oportunidade sem compromisso?`;
 
     return this.addCopy({
       title: `${stageName} de Alta Conversão — ${niche}`,

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { AutomationTask, Lead } from '@/types/database';
+import { crmService } from '@/lib/services/crm-service';
 import {
   Play,
   Pause,
@@ -113,6 +114,12 @@ export function AutomationCampaignCard({
       });
 
       const data = await res.json().catch(() => null);
+
+      if (data?.dispatchedMessages && Array.isArray(data.dispatchedMessages)) {
+        data.dispatchedMessages.forEach((msg: any) => {
+          crmService.addMessageLog(msg);
+        });
+      }
 
       if (data && data.task && onUpdateTask) {
         onUpdateTask(data.task);
@@ -241,6 +248,19 @@ export function AutomationCampaignCard({
           )}
           <span>{progress.total || task.selected_lead_ids?.length || 0} total</span>
         </div>
+
+        {/* Banner de Pausa Anti-bloqueio Entre Lotes */}
+        {task.status === 'running' && task.progress?.next_batch_at && new Date(task.progress.next_batch_at).getTime() > Date.now() && (
+          <div className="mt-2.5 p-2 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-between text-xs text-amber-300">
+            <span className="flex items-center gap-1.5 font-mono text-[11px]">
+              <Clock className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+              <span>Pausa de proteção: próximo lote às <strong>{new Date(task.progress.next_batch_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</strong></span>
+            </span>
+            <span className="text-[10px] text-amber-400 font-mono px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
+              {Math.max(1, Math.ceil((new Date(task.progress.next_batch_at).getTime() - Date.now()) / 60000))} min restantes
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Metadata & Controls */}

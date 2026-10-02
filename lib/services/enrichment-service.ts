@@ -540,7 +540,7 @@ export function buildPersonalizedFunnel(
       title: 'Quebra de Padrão & Apresentação Respeitosa',
       objective: 'Iniciar contato sem parecer panfletagem ou spam, citando o nome e cidade.',
       channel: 'whatsapp',
-      message_template: `Olá, ${contactName}! Tudo bem? 😊\n\nSou especialista em tecnologia e presença digital na EVO PIXEL. Estava acompanhando empresas referências em ${niche} em ${city} e cheguei até a *${company}*.`,
+      message_template: `Olá, ${contactName}! Tudo bem? 😊\n\nSou consultor especialista em tecnologia e presença digital. Estava acompanhando empresas referências em ${niche} em ${city} e cheguei até a *${company}*.`,
     },
     {
       step_order: 2,
@@ -577,10 +577,10 @@ export function buildPersonalizedFunnel(
     {
       step_order: 6,
       phase: '6. Apresentação da Transformação',
-      title: 'Solução Especializada EVO PIXEL',
+      title: 'Solução Especializada de Alto Impacto',
       objective: 'Apresentar o serviço exato que resolve o problema sem complexidade técnica.',
       channel: 'whatsapp',
-      message_template: `Nós da EVO PIXEL estruturamos exatamente ${solutionFocus}, entregando um canal profissional, responsivo e pronto para converter visitantes em clientes pagantes.`,
+      message_template: `Nossa equipe estrutura exatamente ${solutionFocus}, entregando um canal profissional, responsivo e pronto para converter visitantes em clientes pagantes.`,
     },
     {
       step_order: 7,
@@ -750,7 +750,7 @@ export async function executeCrossReferenceEnrichment(
     },
     {
       objection: '"Não temos tempo para gerenciar site ou tecnologia."',
-      suggested_response: 'Essa é a maior vantagem do modelo EVO PIXEL: nós assumimos todo o escopo operacional de design, hospedagem e manutenção, sem exigir tempo da sua equipe.',
+      suggested_response: 'Essa é a maior vantagem do nosso modelo de atendimento: nós assumimos todo o escopo operacional de design, hospedagem e manutenção, sem exigir tempo da sua equipe.',
     },
     {
       objection: '"Quanto custa? / Não temos orçamento agora."',

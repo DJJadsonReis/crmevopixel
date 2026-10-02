@@ -1,15 +1,15 @@
 export const runtime = 'edge';
 
 import { NextRequest, NextResponse } from 'next/server';
-
 import { dbService } from '@/lib/supabase/db-service';
+import { normalizeWhatsAppNumber, sanitizeOutboundCustomerMessage } from '@/lib/utils/whatsapp';
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
     const {
       phone,
-      text,
+      text: rawText,
       leadId,
       conversationId: incomingConvId,
       idempotencyKey,
@@ -20,26 +20,33 @@ export async function POST(req: NextRequest) {
       customInstance,
     } = body;
 
-    if (!phone || !text) {
+    if (!phone || !rawText) {
       return NextResponse.json(
         { success: false, message: 'Telefone e texto da mensagem são obrigatórios.' },
         { status: 400 }
       );
     }
 
-    // Limpa o número de telefone (apenas dígitos, garantindo DDI 55)
-    let cleanPhone = phone.toString().replace(/\D/g, '');
-    if (cleanPhone.length >= 10 && cleanPhone.length <= 11) {
-      cleanPhone = `55${cleanPhone}`;
+    // Normaliza número de telefone (garante DDI 55, elimina duplicações 5555)
+    const cleanPhone = normalizeWhatsAppNumber(phone);
+    if (!cleanPhone || cleanPhone.length < 10) {
+      return NextResponse.json(
+        { success: false, message: 'Número de WhatsApp inválido fornecido.' },
+        { status: 400 }
+      );
     }
+
+    // Sanitiza contra termos proibidos para cliente externo
+    const text = sanitizeOutboundCustomerMessage(rawText);
 
     const evolutionUrl = (customUrl || process.env.NEXT_PUBLIC_EVOLUTION_URL || 'https://api-evolution-api.1h7ium.easypanel.host').replace(/\/+$/, '');
     const evolutionApiKey = (customApiKey || process.env.NEXT_PUBLIC_EVOLUTION_API_KEY || '429683C4C977415CAAFCCE10F7D57E11').trim();
     const evolutionInstance = (customInstance || process.env.NEXT_PUBLIC_EVOLUTION_INSTANCE || 'rafaelgomescosta_653ded30').trim();
 
-    // Se temos URL e instância, tenta enviar via Evolution API real
+    // Envio via Evolution API
     let sentReal = false;
     let evolutionResponse: any = null;
+    let providerError: string | null = null;
 
     if (evolutionUrl && evolutionInstance) {
       try {
@@ -82,10 +89,12 @@ export async function POST(req: NextRequest) {
           evolutionResponse = await evoRes.json().catch(() => ({}));
         } else {
           const errText = await evoRes.text().catch(() => '');
-          console.warn(`Evolution API HTTP ${evoRes.status}:`, errText);
+          providerError = `Evolution API HTTP ${evoRes.status}: ${errText}`;
+          console.warn(providerError);
         }
       } catch (evoErr: any) {
-        console.warn('Erro ao conectar na Evolution API:', evoErr?.message);
+        providerError = evoErr?.message || 'Erro de rede ao conectar na Evolution API';
+        console.warn('Erro ao conectar na Evolution API:', providerError);
       }
     }
 
@@ -98,7 +107,6 @@ export async function POST(req: NextRequest) {
 
     try {
       if (!activeConversationId) {
-        // Tenta achar ou criar conversa
         const existingConv = leadId
           ? await dbService.getConversationByLeadId(leadId)
           : await dbService.getConversationByPhone(cleanPhone);
@@ -132,27 +140,29 @@ export async function POST(req: NextRequest) {
         direction: 'enviada',
         sent_at: timestamp,
         source: 'manual',
-        status: sentReal ? 'entregue' : 'pendente',
+        status: sentReal ? 'entregue' : (providerError ? 'falhou' : 'pendente'),
         idempotency_key: finalIdempotencyKey,
         provider_message_id: messageId,
         media_url: mediaUrl,
         media_type: mediaType,
+        error_message: providerError || undefined,
       });
     } catch (dbErr) {
       console.warn('Não foi possível persistir mensagem no Supabase:', dbErr);
     }
 
     return NextResponse.json({
-      success: true,
+      success: sentReal || !providerError,
       messageId,
       timestamp,
       phone: cleanPhone,
       text,
       conversationId: activeConversationId,
       sentViaEvolutionApi: sentReal,
+      error: providerError,
       info: sentReal
         ? 'Mensagem transmitida diretamente via Evolution API'
-        : 'Mensagem registrada no fluxo do CRM (modo offline / simulação ativa)',
+        : (providerError ? `Falha no envio: ${providerError}` : 'Mensagem registrada no fluxo do CRM'),
     });
   } catch (err: any) {
     return NextResponse.json(

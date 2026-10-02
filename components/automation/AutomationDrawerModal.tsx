@@ -882,7 +882,7 @@ export function AutomationDrawerModal({
                       >
                         <option value="prospeccao">Prospecção Fria</option>
                         <option value="followup">Follow-up Acompanhamento</option>
-                        <option value="apresentacao">Apresentação EVO PIXEL</option>
+                        <option value="apresentacao">Apresentação da Empresa</option>
                         <option value="reativacao">Reativação de Contato</option>
                         <option value="agendamento">Agendamento de Demonstração</option>
                       </select>
